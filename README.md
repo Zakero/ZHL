@@ -7,7 +7,7 @@ to each library to learn what they depend on.  Or just add all of them to
 your project and not worry about it.  :-)
 
 The documentation is available locally, if cloned, at `api/index.html` as 
-well as [online](https://zhl.zakero.com/api).  The official website for the 
+well as [online](https://zhl.zakero.com/doc/trunk/api/index.html).  The official website for the 
 project is [zhl.zakero.com](https://zhl.zakero.com).
 
 | Library             | Description                                                       |

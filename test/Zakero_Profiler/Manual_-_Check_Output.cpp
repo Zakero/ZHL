@@ -6,12 +6,12 @@
 
 void func1()
 {
-	ZAKERO_PROFILER("test", "empty")
+	ZAKERO_PROFILER_DURATION("test", "empty")
 }
 
 void func2()
 {
-	ZAKERO_PROFILER("test", "work")
+	ZAKERO_PROFILER_DURATION("test", "work")
 
 	int total = 0;
 	for(int i = 1; i < 10; i++)
@@ -29,7 +29,7 @@ void func2()
 
 void func3()
 {
-	ZAKERO_PROFILER("test", "layer")
+	ZAKERO_PROFILER_DURATION("test", "layer")
 
 	//ZAKERO_PROFILER_DEACTIVATE
 
@@ -40,12 +40,12 @@ void func3()
 
 		if(i % 2)
 		{
-			ZAKERO_PROFILER("test", "sub")
+			ZAKERO_PROFILER_DURATION("test", "sub")
 			total -= i;
 		}
 		else
 		{
-			ZAKERO_PROFILER("test", "add")
+			ZAKERO_PROFILER_DURATION("test", "add")
 			total += i;
 		}
 	}

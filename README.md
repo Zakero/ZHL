@@ -10,10 +10,10 @@ The documentation is available locally, if cloned, at `html/index.html` as
 well as [online](https://zhl.zakero.com/doc/trunk/html/index.html).  The 
 official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 
-| Library             | Description                                                       |
-|---------------------|-------------------------------------------------------------------|
-| Zakero_Profiler.h   | Generate profiling data that can be visualized in Chrome/Chromium |
-| _More coming soon_  |                                                                   |
+| Library             | Version | Description                                                       |
+|---------------------|---------| ------------------------------------------------------------------|
+| Zakero_Profiler.h   |  0.8.1  | Generate profiling data that can be visualized in Chrome/Chromium |
+| _More coming soon_  |         |                                                                   |
 
 # License
 

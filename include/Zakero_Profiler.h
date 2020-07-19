@@ -18,11 +18,11 @@
  *    #define ZAKERO_PROFILER_IMPLEMENTATION
  *    #include "path/to/Zakero_Profiler.h"
  *    ~~~
- * 2. Add the profiler to where it is used:
+ * 2. Add the library to where it is used:
  *    ~~~
  *    #include "path/to/Zakero_Profiler.h"
  *    ~~~
- * 3. Enable the profile at compile time by defining ZAKERO_PROFILER_ENABLE
+ * 3. Enable the profile at compile time by defining ZAKERO_PROFILER_ENABLE:
  *    ~~~
  *    #define ZAKERO_PROFILER_ENABLE
  *    ~~~
@@ -186,10 +186,9 @@
  * Next, drag the _Zakero Profiler_ output file into the tab to see your data.
  * \endparblock
  *
- * \version Future
- * - Add meta data to ZAKERO_PROFILER
- * - Add meta data to ZAKERO_PROFILER_INSTANT
- * - Add support for std::filesystem
+ * \version 0.8.1
+ * - Bug fixes
+ * - Macro name changes
  *
  * \version 0.8.0
  * - Profile time duration in C++ code blocks
@@ -200,10 +199,15 @@
  *
  * \author Andrew "Zakero" Moore
  * 	- Original Author
+ *
+ * \todo Add meta data to ZAKERO_PROFILER
+ * \todo Add meta data to ZAKERO_PROFILER_INSTANT
+ * \todo Add support for std::filesystem
+ * \todo Add error handling
  */
 
-#ifndef ZAKERO_PROFILER_H
-#define ZAKERO_PROFILER_H
+#ifndef zakero_Profiler_h
+#define zakero_Profiler_h
 
 #include <chrono>
 #include <ctime>
@@ -212,6 +216,8 @@
 #include <iostream>
 #include <map>
 #include <thread>
+
+// {{{ Macros
 
 #if defined(ZAKERO_PROFILER_ENABLE)
 
@@ -445,13 +451,12 @@
  * \param category_ The category of the data
  * \param name_     The name of the data
  */
-#define ZAKERO_PROFILER(category_, name_)                                    \
-	zakero::Profiler::Data ZAKERO_PROFILER_UNIQUE(zakero_profiler_data_) \
-	( 'B'                                                                \
-	, category_                                                          \
-	, name_                                                              \
-	, std::experimental::source_location::current()                      \
-	);                                                                   \
+#define ZAKERO_PROFILER_DURATION(category_, name_)                                   \
+	zakero::Profiler::Duration ZAKERO_PROFILER_UNIQUE(zakero_profiler_duration_) \
+	( category_                                                                  \
+	, name_                                                                      \
+	, std::experimental::source_location::current()                              \
+	);                                                                           \
 
 /**
  * \brief Generate profiler data.
@@ -465,15 +470,14 @@
  * \param category_ The category of the data
  * \param name_     The name of the data
  */
-#define ZAKERO_PROFILER_INSTANT(category_, name_)                            \
-	{                                                                    \
-	zakero::Profiler::Data ZAKERO_PROFILER_UNIQUE(zakero_profiler_data_) \
-	( 'I'                                                                \
-	, category_                                                          \
-	, name_                                                              \
-	, std::experimental::source_location::current()                      \
-	);                                                                   \
-	}                                                                    \
+#define ZAKERO_PROFILER_INSTANT(category_, name_)                               \
+	{                                                                       \
+	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_data_) \
+	( category_                                                             \
+	, name_                                                                 \
+	, std::experimental::source_location::current()                         \
+	);                                                                      \
+	}                                                                       \
 
 #else
 
@@ -485,6 +489,14 @@
 #define ZAKERO_PROFILER_INSTANT(category_, name_)
 
 #endif
+
+// }}}
+// {{{ Declaration
+
+#define TIME_NOW \
+std::chrono::duration_cast<std::chrono::microseconds>(      \
+	std::chrono::steady_clock::now().time_since_epoch() \
+	).count()                                           \
 
 namespace zakero
 {
@@ -498,12 +510,27 @@ namespace zakero
 				std::string                        category;
 				std::string                        name;
 				std::experimental::source_location location;
+				std::chrono::microseconds::rep     time_stamp;
 				std::thread::id                    thread_id;
 				pid_t                              process_id;
 				char                               phase;
 
 				Data(const char, const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
-				~Data() noexcept;
+			};
+
+			struct Duration
+				: public zakero::Profiler::Data
+			{
+				bool was_active;
+
+				Duration(const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
+				~Duration() noexcept;
+			};
+
+			struct Instant
+				: public zakero::Profiler::Data
+			{
+				Instant(const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
 			};
 
 			Profiler() noexcept;
@@ -515,14 +542,17 @@ namespace zakero
 			static void activate() noexcept;
 			static void deactivate() noexcept;
 
-		private:
 			static void report(const zakero::Profiler::Data&) noexcept;
 
+		private:
 			std::ostream* stream;
 			std::ofstream file_output;
 			bool          is_active;
 	};
 }
+
+// }}}
+// {{{ Implementation
 
 #if defined (ZAKERO_PROFILER_IMPLEMENTATION)
 
@@ -721,16 +751,15 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 {
 	// std::format performance testing
 	//const auto t1  = std::chrono::steady_clock::now();
-	const auto now  = std::chrono::steady_clock::now().time_since_epoch();
-	const auto nano = std::chrono::duration_cast<std::chrono::microseconds>(now).count();
 
-	(*zakero_profiler.stream) << ",{\"ph\":\"" << data.phase << "\""
-		<< ",\"ts\":"     << nano
-		<< ",\"cat\":\""  << data.category << "\""
-		<< ",\"name\":\"" << data.name << "\""
-		<< ",\"pid\":"    << data.process_id
-		<< ",\"tid\":"    << data.thread_id
-		<< ",\"args\":"
+	(*zakero_profiler.stream)
+		<< ",{\"ph\":\""   << data.phase << "\""
+		<<  ",\"ts\":"     << data.time_stamp
+		<<  ",\"pid\":"    << data.process_id
+		<<  ",\"tid\":"    << data.thread_id
+		<<  ",\"cat\":\""  << data.category << "\""
+		<<  ",\"name\":\"" << data.name << "\""
+		<<  ",\"args\":"
 			<< "{\"file_name\":\""     << data.location.file_name() << "\""
 			<< ",\"function_name\":\"" << data.location.function_name() << "\""
 			<< "}"
@@ -767,9 +796,7 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 
 
 /**
- * \internal
- *
- * \class Profiler::Data
+ * \struct Profiler::Data
  *
  * \brief Profiling Data
  *
@@ -780,10 +807,6 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
  * \brief Initialize the Profiler Data.
  *
  * Initialize the data using the provided values as well as run-time values.  
- * After initialization, write the collected data.
- *
- * Since this object is a member of Profiler, it has access to Profiler's 
- * private methods.
  */
 Profiler::Data::Data(const char                     phase    ///< The phase
 	, const std::string&                        category ///< The category
@@ -793,36 +816,84 @@ Profiler::Data::Data(const char                     phase    ///< The phase
 	: category(category)
 	, name(name)
 	, location(location)
+	, time_stamp(TIME_NOW)
 	, thread_id(std::this_thread::get_id())
 	, process_id(ZAKERO_PROFILER_PID)
 	, phase(phase)
 {
-	if(zakero_profiler.is_active)
+}
+
+
+/**
+ * \struct Profiler::Duration
+ *
+ * \brief Profiling Duration
+ *
+ * Adds data a behavour to Profiler::Data
+ */
+
+/**
+ * \brief Initialize the Profiler Duration.
+ *
+ * Initialize the data using the provided values as well as run-time values.  
+ *
+ * Since this object is a member of Profiler, it has access to Profiler's 
+ * private methods.
+ *
+ * \todo Look into converting this use a "Complete" event (phase = 'X').
+ */
+Profiler::Duration::Duration(const std::string&     category ///< The category
+	, const std::string&                        name     ///< The name
+	, const std::experimental::source_location& location ///< The location
+	) noexcept
+	: zakero::Profiler::Data('B', category, name, location)
+	, was_active(zakero_profiler.is_active)
+{
+}
+
+
+/**
+ * \brief Destructor
+ *
+ * Write the collected data.
+ */
+Profiler::Duration::~Duration() noexcept
+{
+	if(was_active || zakero_profiler.is_active)
 	{
 		zakero::Profiler::report(*this);
-	}
-	else
-	{
-		// If the profiler has been deactivated,
-		// change the phase to something that
-		// will not have an "end" report.
-		this->phase = '\0';
+
+		phase = 'E';
+		time_stamp = TIME_NOW;
+		zakero::Profiler::report(*this);
 	}
 }
 
 
 /**
- * \internal
+ * \struct Profiler::Instant
  *
- * \brief Destructor
+ * \brief Profiling Instant
  *
- * Report an "ending" event if needed.
+ * Adds data a behavour to Profiler::Data
  */
-Profiler::Data::~Data() noexcept
+
+/**
+ * \brief Initialize the Profiler Instant.
+ *
+ * Initialize the data using the provided values as well as run-time values.  
+ *
+ * Since this object is a member of Profiler, it has access to Profiler's 
+ * private methods.
+ */
+Profiler::Instant::Instant(const std::string&       category ///< The category
+	, const std::string&                        name     ///< The name
+	, const std::experimental::source_location& location ///< The location
+	) noexcept
+	: zakero::Profiler::Data('I', category, name, location)
 {
-	if(phase == 'B')
+	if(zakero_profiler.is_active)
 	{
-		phase = 'E';
 		zakero::Profiler::report(*this);
 	}
 }
@@ -830,4 +901,7 @@ Profiler::Data::~Data() noexcept
 } // zakero
 
 #endif // ZAKERO_PROFILER_IMPLEMENTATION
-#endif // ZAKERO_PROFILER_H
+
+// }}}
+
+#endif // zakero_Profiler_h

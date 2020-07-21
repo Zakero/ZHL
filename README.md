@@ -10,10 +10,11 @@ The documentation is available locally, if cloned, at `html/index.html` as
 well as [online](https://zhl.zakero.com/doc/trunk/html/index.html).  The 
 official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 
-| Library             | Description                                                       |
-|---------------------|-------------------------------------------------------------------|
-| Zakero_Profiler.h   | Generate profiling data that can be visualized in Chrome/Chromium |
-| _More coming soon_  |                                                                   |
+| Library                                      | Version | Description                                                       |
+|----------------------------------------------|:-------:|-------------------------------------------------------------------|
+| [Zakero_Profiler](\ref Zakero_Profiler.h)    |  0.8.0  | Generate profiling data that can be visualized in Chrome/Chromium |
+| [Zakero_MemoryPool](\ref zakero::MemoryPool) |  0.8.0  | An expandable memory pool that is based on Unix File Descriptors  |
+| _More coming soon_                           |         |                                                                   |
 
 # License
 

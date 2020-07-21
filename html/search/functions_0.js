@@ -1,0 +1,5 @@
+var searchData=
+[
+  ['addressof_31',['addressOf',['../classzakero_1_1_memory_pool.html#abcdd1e2ac1a8bb8e4fb80eb9124d4c4d',1,'zakero::MemoryPool']]],
+  ['alloc_32',['alloc',['../classzakero_1_1_memory_pool.html#a32d7b50379901e82523b5f58aa776151',1,'zakero::MemoryPool::alloc(size_t) noexcept'],['../classzakero_1_1_memory_pool.html#a9155d4c94688dee0adb87e4d6cce237c',1,'zakero::MemoryPool::alloc(size_t, std::error_condition &amp;) noexcept'],['../classzakero_1_1_memory_pool.html#ad51813d4ababa76c842d0d7cb12a5509',1,'zakero::MemoryPool::alloc(size_t, uint8_t) noexcept'],['../classzakero_1_1_memory_pool.html#a6658567c32596ba4da7d68e6cdac6ad6',1,'zakero::MemoryPool::alloc(size_t, uint8_t, std::error_condition &amp;) noexcept'],['../classzakero_1_1_memory_pool.html#a848efcff70300b6475300ae884635150',1,'zakero::MemoryPool::alloc(size_t, uint32_t) noexcept'],['../classzakero_1_1_memory_pool.html#a0d0bfa5f24a536035c4f4b011b0e3df1',1,'zakero::MemoryPool::alloc(size_t, uint32_t, std::error_condition &amp;) noexcept']]]
+];

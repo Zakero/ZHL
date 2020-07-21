@@ -1,11 +1,7 @@
 var searchData=
 [
-  ['zakero_27s_20c_2b_2b_20header_20libraries_0',['Zakero&apos;s C++ Header Libraries',['../index.html',1,'']]],
-  ['zakero_5fprofiler_1',['ZAKERO_PROFILER',['../_zakero___profiler_8h.html#a447fe09fa3a0e1bcb138ef7bb7bddd4d',1,'Zakero_Profiler.h']]],
-  ['zakero_5fprofiler_2eh_2',['Zakero_Profiler.h',['../_zakero___profiler_8h.html',1,'']]],
-  ['zakero_5fprofiler_5factivate_3',['ZAKERO_PROFILER_ACTIVATE',['../_zakero___profiler_8h.html#a3ac092a8bdae7abde5d56533a2962b1f',1,'Zakero_Profiler.h']]],
-  ['zakero_5fprofiler_5fdeactivate_4',['ZAKERO_PROFILER_DEACTIVATE',['../_zakero___profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6',1,'Zakero_Profiler.h']]],
-  ['zakero_5fprofiler_5finit_5',['ZAKERO_PROFILER_INIT',['../_zakero___profiler_8h.html#aebd421bc3f379654c8c967b5d31de6d1',1,'Zakero_Profiler.h']]],
-  ['zakero_5fprofiler_5finit_5fmetadata_6',['ZAKERO_PROFILER_INIT_METADATA',['../_zakero___profiler_8h.html#a8ceea5bce20025d829bdf08fdc760a94',1,'Zakero_Profiler.h']]],
-  ['zakero_5fprofiler_5finstant_7',['ZAKERO_PROFILER_INSTANT',['../_zakero___profiler_8h.html#af0ee9f417543af61089189a8ba01bcbb',1,'Zakero_Profiler.h']]]
+  ['addressmap_0',['AddressMap',['../classzakero_1_1_memory_pool.html#a5e9291872c2c7b3063a32d0a05408944',1,'zakero::MemoryPool']]],
+  ['addressof_1',['addressOf',['../classzakero_1_1_memory_pool.html#abcdd1e2ac1a8bb8e4fb80eb9124d4c4d',1,'zakero::MemoryPool']]],
+  ['alignment_2',['Alignment',['../classzakero_1_1_memory_pool.html#a6d1fb194cf769f26b7773ded7c18f954',1,'zakero::MemoryPool']]],
+  ['alloc_3',['alloc',['../classzakero_1_1_memory_pool.html#a32d7b50379901e82523b5f58aa776151',1,'zakero::MemoryPool::alloc(size_t) noexcept'],['../classzakero_1_1_memory_pool.html#a9155d4c94688dee0adb87e4d6cce237c',1,'zakero::MemoryPool::alloc(size_t, std::error_condition &amp;) noexcept'],['../classzakero_1_1_memory_pool.html#ad51813d4ababa76c842d0d7cb12a5509',1,'zakero::MemoryPool::alloc(size_t, uint8_t) noexcept'],['../classzakero_1_1_memory_pool.html#a6658567c32596ba4da7d68e6cdac6ad6',1,'zakero::MemoryPool::alloc(size_t, uint8_t, std::error_condition &amp;) noexcept'],['../classzakero_1_1_memory_pool.html#a848efcff70300b6475300ae884635150',1,'zakero::MemoryPool::alloc(size_t, uint32_t) noexcept'],['../classzakero_1_1_memory_pool.html#a0d0bfa5f24a536035c4f4b011b0e3df1',1,'zakero::MemoryPool::alloc(size_t, uint32_t, std::error_condition &amp;) noexcept']]]
 ];

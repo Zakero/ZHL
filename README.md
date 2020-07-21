@@ -12,7 +12,7 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 
 | Library                                      | Version | Description                                                       |
 |----------------------------------------------|:-------:|-------------------------------------------------------------------|
-| [Zakero_Profiler](\ref Zakero_Profiler.h)    |  0.8.0  | Generate profiling data that can be visualized in Chrome/Chromium |
+| [Zakero_Profiler](\ref Zakero_Profiler.h)    |  0.8.1  | Generate profiling data that can be visualized in Chrome/Chromium |
 | [Zakero_MemoryPool](\ref zakero::MemoryPool) |  0.8.0  | An expandable memory pool that is based on Unix File Descriptors  |
 | _More coming soon_                           |         |                                                                   |
 

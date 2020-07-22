@@ -259,13 +259,13 @@ namespace zakero
 			MemoryPool(const std::string&) noexcept;
 			~MemoryPool() noexcept;
 
-			              std::error_condition init(size_t, const bool = false, const MemoryPool::Alignment = MemoryPool::Alignment::Bits_64) noexcept;
+			              std::error_condition init(const size_t, const bool = false, const MemoryPool::Alignment = MemoryPool::Alignment::Bits_64) noexcept;
 			[[nodiscard]] int                  fd() const noexcept;
 			[[nodiscard]] size_t               size() const noexcept;
 			              void                 sizeOnChange(MemoryPool::LambdaSize) noexcept;
 
-			[[nodiscard]] off_t                alloc(size_t) noexcept;
-			[[nodiscard]] off_t                alloc(size_t, std::error_condition&) noexcept;
+			[[nodiscard]] off_t                alloc(const size_t) noexcept;
+			[[nodiscard]] off_t                alloc(const size_t, std::error_condition&) noexcept;
 			[[nodiscard]] off_t                alloc(size_t, uint8_t) noexcept;
 			[[nodiscard]] off_t                alloc(size_t, uint8_t, std::error_condition&) noexcept;
 			[[nodiscard]] off_t                alloc(size_t, uint32_t) noexcept;
@@ -281,15 +281,18 @@ namespace zakero
 			[[nodiscard]] std::string          dump(size_t, size_t) const noexcept;
 
 		private:
-			[[nodiscard]] bool   expandBy(size_t) noexcept;
+			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
                                       
+			//[[nodiscard]] bool segmentFindBestFit(size_t, size_t&) noexcept;
+			                bool segmentFindBestFit(size_t, size_t&) noexcept;
+
+
 			              void   segmentDestroy(size_t) noexcept;
 			[[nodiscard]] bool   segmentExpand(size_t, size_t) noexcept;
 			[[nodiscard]] size_t segmentFind(uint8_t*) noexcept;
 			[[nodiscard]] size_t segmentFind(off_t) noexcept;
-			[[nodiscard]] size_t segmentFindAvail(size_t) noexcept;
 			[[nodiscard]] size_t segmentFindInUse(off_t) const noexcept;
-			              void   segmentMerge(size_t) noexcept;
+			              size_t segmentMerge(size_t) noexcept;
 			[[nodiscard]] size_t segmentMove(size_t, size_t, size_t) noexcept;
 			              void   segmentSplit(size_t, size_t) noexcept;
 
@@ -313,7 +316,7 @@ namespace zakero
 			size_t                       pool_size;
 			int                          file_descriptor;
 			MemoryPool::Alignment        alignment;
-			bool                         can_expand;
+			bool                         pool_can_expand;
 	};
 };
 
@@ -503,7 +506,7 @@ namespace zakero
 		, pool_size(0)
 		, file_descriptor(-1)
 		, alignment(zakero::MemoryPool::Alignment::Bits_64)
-		, can_expand(false)
+		, pool_can_expand(false)
 	{
 #if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
 		zakero::Profiler::MetaData meta_data =
@@ -640,7 +643,7 @@ namespace zakero
 		,	.in_use = false
 		});
 
-		this->can_expand      = expandable;
+		this->pool_can_expand = expandable;
 		this->alignment       = alignment;
 		this->pool_size       = pool_size;
 		this->memory          = memory;
@@ -753,7 +756,7 @@ namespace zakero
 	 *
 	 * \return The offset of the block of memory.
 	 */
-	off_t MemoryPool::alloc(size_t size ///< The size in bytes
+	off_t MemoryPool::alloc(const size_t size ///< The size in bytes
 		) noexcept
 	{
 		std::error_condition error;
@@ -786,11 +789,13 @@ namespace zakero
 	 *
 	 * \return The offset of the block of memory.
 	 */
-	off_t MemoryPool::alloc(size_t  size  ///< The size in bytes
-		, std::error_condition& error ///< The error
+	off_t MemoryPool::alloc(const size_t size  ///< The size in bytes
+		, std::error_condition&      error ///< The error
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "alloc");
+
+		// Validate Input
 
 		if(size <= 0)
 		{
@@ -804,33 +809,39 @@ namespace zakero
 			return -1;
 		}
 
+		size_t segment_size = calculateActualSize(size, alignment);
+
+		// Allocate from the pool
+
 		std::lock_guard<std::mutex> lock(mutex);
 
-		size = calculateActualSize(size, alignment);
+		size_t index = 0;
 
-		size_t index = segmentFindAvail(size);
-
-		if(index >= segment.size())
+		if(segmentFindBestFit(segment_size, index) == false)
 		{
-			if(expandBy(size) == false)
+			if(pool_can_expand == false)
 			{
 				error = ZAKERO_MEMORYPOOL__ERROR(Error_Out_Of_Memory);
 				return -1;
 			}
 
-			index = segmentFindAvail(size);
+			if(expandToFit(segment_size, index) == false)
+			{
+				error = ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Resize_File);
+				return -1;
+			}
 		}
 
 		error = ZAKERO_MEMORYPOOL__ERROR(Error_None);
 
 		segment[index].in_use = true;
 
-		if((size_t)segment[index].size == size)
+		if((size_t)segment[index].size == segment_size)
 		{
 			return segment[index].offset;
 		}
 
-		segmentSplit(index, size);
+		segmentSplit(index, segment_size);
 
 		return segment[index].offset;
 	}
@@ -1144,17 +1155,23 @@ namespace zakero
 		}
 
 		// Larger, find a new location
-		size_t index_dst = segmentFindAvail(size);
+		size_t index_dst = 0;
 
-		if(index_dst >= segment.size())
+		if(segmentFindBestFit(size, index_dst) == false)
 		{
-			if(expandBy(size) == false)
+			if(pool_can_expand == false)
 			{
 				error = ZAKERO_MEMORYPOOL__ERROR(Error_Out_Of_Memory);
 				return -1;
 			}
 
-			index_dst = segmentFindAvail(size);
+			if(expandToFit(size, index_dst) == false)
+			{
+				error = ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Resize_File);
+				return -1;
+			}
+
+			segmentFindBestFit(size, index_dst);
 		}
 
 		index_dst = segmentMove(index_src, index_dst, size);
@@ -1388,12 +1405,13 @@ namespace zakero
 	 * \retval true  The memory pool size was increased.
 	 * \retval false The memory pool size was __not__ increased.
 	 */
-	bool MemoryPool::expandBy(size_t size_increase ///< The amount of the increase
+	bool MemoryPool::expandToFit(size_t size_increase ///< The amount of the increase
+		, size_t&                   index         ///< The new index
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "expandBy");
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "expandToFit");
 
-		if(can_expand == false)
+		if(pool_can_expand == false)
 		{
 			return false;
 		}
@@ -1402,9 +1420,6 @@ namespace zakero
 		{
 			size_increase -= segment.back().size;
 		}
-
-		// calculateActualSize() should not be called here, belongs in the above layer
-		size_increase = calculateActualSize(size_increase, alignment);
 
 		if(pool_size + size_increase > MemoryPool::Size_Max)
 		{
@@ -1433,7 +1448,7 @@ namespace zakero
 
 		pool_size = new_size;
 
-		const size_t index = segment.size();
+		index = segment.size();
 
 		segment.push_back(
 		{	.offset = (off_t)old_size
@@ -1441,7 +1456,7 @@ namespace zakero
 		,	.in_use = false
 		});
 
-		segmentMerge(index);
+		index = segmentMerge(index);
 
 		size_on_change(pool_size);
 
@@ -1593,22 +1608,25 @@ namespace zakero
 	 *
 	 * \return The index of the segment.
 	 */
-	size_t MemoryPool::segmentFindAvail(size_t size ///< The minimum size
+	bool MemoryPool::segmentFindBestFit(size_t size ///< The minimum size
+		, size_t& index                         ///< The index if found
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAvailable");
 
-		for(size_t index = 0; index < segment.size(); index++)
+		for(size_t i = 0; i < segment.size(); i++)
 		{
-			if(segment[index].in_use == false
-				&& (size_t)segment[index].size >= size
+			if(segment[i].in_use == false
+				&& (size_t)segment[i].size >= size
 				)
 			{
-				return index;
+				index = i;
+
+				return true;
 			}
 		}
 
-		return ~0;
+		return false;
 	}
 
 
@@ -1647,7 +1665,7 @@ namespace zakero
 	 * \note No error checking is done,  It segment at \p index is expected 
 	 * to be not `in_use`.
 	 */
-	void MemoryPool::segmentMerge(size_t index ///< The segment to merge
+	size_t MemoryPool::segmentMerge(size_t index ///< The segment to merge
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Merge");
@@ -1679,8 +1697,12 @@ namespace zakero
 
 				auto segment_begin = std::begin(segment);
 				segment.erase(segment_begin + index);
+
+				index = index_prev;
 			}
 		}
+
+		return index;
 	}
 
 

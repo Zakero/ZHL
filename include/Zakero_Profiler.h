@@ -191,6 +191,9 @@
  * Next, drag the _Zakero Profiler_ output file into the tab to see your data.
  * \endparblock
  *
+ * \version 0.8.2
+ * - Bug fixes
+ *
  * \version 0.8.1
  * - Bug fixes
  * - Macro name changes

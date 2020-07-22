@@ -12,7 +12,7 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 
 | Library             | Version | Description                                                       |
 |---------------------|---------| ------------------------------------------------------------------|
-| Zakero_Profiler.h   |  0.8.1  | Generate profiling data that can be visualized in Chrome/Chromium |
+| Zakero_Profiler.h   |  0.8.2  | Generate profiling data that can be visualized in Chrome/Chromium |
 | _More coming soon_  |         |                                                                   |
 
 # License

@@ -10,26 +10,30 @@
  * \brief Zakero Profiler
  *
  * \par TL;DR:
- *
+ * \parblock
  * This library will generate profiling data while your application is running.  
- * To use:
- * 1. Add the implementation to a source code file:
- *    ~~~
- *    #define ZAKERO_PROFILER_IMPLEMENTATION
- *    #include "path/to/Zakero_Profiler.h"
- *    ~~~
- * 2. Add the library to where it is used:
- *    ~~~
- *    #include "path/to/Zakero_Profiler.h"
- *    ~~~
- * 3. Enable the profile at compile time by defining ZAKERO_PROFILER_ENABLE:
- *    ~~~
- *    #define ZAKERO_PROFILER_ENABLE
- *    ~~~
- *    or as a compiler flag
- *    ~~~
- *    -DZAKERO_PROFILER_ENABLE
- *    ~~~
+ * To use, add the implementation to a source code file:
+ * ~~~
+ * #define ZAKERO_PROFILER_IMPLEMENTATION
+ * #include "path/to/Zakero_Profiler.h"
+ * ~~~
+ *
+ * Next, add the library to the source code where it is "always enabled"
+ * ~~~
+ * #define ZAKERO_PROFILER_ENABLE
+ * #include "path/to/Zakero_Profiler.h"
+ * ~~~
+ *
+ * Or. enable the profiler at compile time.  Only include the library in the 
+ * source code:
+ * ~~~
+ * #include "path/to/Zakero_Profiler.h"
+ * ~~~
+ * Then use a compiler flag when building:
+ * ~~~
+ * -DZAKERO_PROFILER_ENABLE
+ * ~~~
+ * \endparblock
  *
  * \par What Is It?
  * \parblock
@@ -145,25 +149,26 @@
  *
  * All the prep work is done, now it is time to generate some profiling data.  
  * To do this use one of these macros:
- * - ZAKERO_PROFILER()
+ * - ZAKERO_PROFILER_DURATION()
  * - ZAKERO_PROFILER_INSTANT()
  *
- * The ZAKERO_PROFILER macro is best used at the start of a code block.  
- * Remember you do not have to put this macro after every '{', only add the 
- * macros where you need to capture data.
+ * The ZAKERO_PROFILER_DURATION macro is best used at the start of a code 
+ * block.  Remember you do not have to put this macro after every '{', only add 
+ * the macros where you need to capture data.
  *
  * For example:
  *
  * ~~~
  * void func()
  * {
- * 	ZAKERO_PROFILER("cache availability", "linear defrag")
+ * 	ZAKERO_PROFILER_DURATION("cache availability", "linear defrag")
  *
  * 	do_stuff();
  *
  * 	if(!done)
  * 	{
- * 		ZAKERO_PROFILER("cache availability", "extra defrag-ing")
+ * 		ZAKERO_PROFILER_DURATION("cache availability", "extra 
+ * 		defrag-ing")
  *
  * 		do_more_stuff();
  * 	}
@@ -200,7 +205,7 @@
  * \author Andrew "Zakero" Moore
  * 	- Original Author
  *
- * \todo Add meta data to ZAKERO_PROFILER
+ * \todo Add meta data to ZAKERO_PROFILER_DURATION
  * \todo Add meta data to ZAKERO_PROFILER_INSTANT
  * \todo Add support for std::filesystem
  * \todo Add error handling
@@ -428,13 +433,13 @@
  * \code
  * void func()
  * {
- *     ZAKERO_PROFILER("busy", "doing stuff")
+ *     ZAKERO_PROFILER_DURATION("busy", "doing stuff")
  *     
  *     // Doing stuff
  *     
  *     for(int i = 0; i < max_i; i++)
  *     {
- *         ZAKERO_PROFILER("busy", "gone loopy")
+ *         ZAKERO_PROFILER_DURATION("busy", "gone loopy")
  *         
  *         // Doing more stuff
  *         
@@ -465,7 +470,7 @@
  * mark something in the timeline.
  *
  * The \p category_ and \p name_ serve the same function as in 
- * ZAKERO_PROFILER().
+ * ZAKERO_PROFILER_DURATION().
  *
  * \param category_ The category of the data
  * \param name_     The name of the data
@@ -485,7 +490,7 @@
 #define ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
-#define ZAKERO_PROFILER(category_, name_)
+#define ZAKERO_PROFILER_DURATION(category_, name_)
 #define ZAKERO_PROFILER_INSTANT(category_, name_)
 
 #endif

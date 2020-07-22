@@ -11,8 +11,12 @@
  *
  * See zakero::MemoryPool for the API documentation.
  * 
- * \par TL;DR:
+ * \dependencies
+ * - dep_optional{Zakero_Profiler.h}
+ *   Defining __ZAKERO_MEMORYPOOL_PROFILER__ will cause the Zakero_Profiler to 
+ *   be included.
  *
+ * \tldr
  * This library will provide a memory pool for your application.
  * To use:
  * 1. Add the implementation to a source code file:
@@ -165,7 +169,7 @@
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
  *
  * \author Andrew "Zakero" Moore
- * 	- Original Author
+ * - Original Author
  *
  * \todo Add protections so that memory sizes above off_t are not allowed.
  * \todo Add support for huge file sizes (64-bit / huge table fs)
@@ -182,6 +186,7 @@
 #ifndef zakero_MemoryPool_h
 #define zakero_MemoryPool_h
 
+// POSIX
 #include <cstring>
 #include <functional>
 #include <map>
@@ -193,18 +198,33 @@
 // {{{ Error Codes
 
 /**
- * \brief Error Codes used internally.
+ * \internal
+ *
+ * \brief _Error_Table_
+ *
+ * An X-Macro table of error codes. The columns are:
+ * -# __ErrorIdentifier__<br>
+ *    The identifier will be accessible as 
+ *    zakero::MemoryPool::_ErrorIdentifier_
+ *    <br><br>
+ * -# __ErrorCode__<br>
+ *    The integer value of the error
+ *    <br><br>
+ * -# __ErrorMessage__<br>
+ *    The text that will be used by `std::error_condition.message()`
+ *
+ * Error Codes used internally.
  */
 #define ZAKERO_MEMORYPOOL__ERROR_CODES \
-	X(Error_None                 ,  0 , "No Error"                                                     ) \
-	X(Error_Already_Initialized  ,  1 , "The Memory Pool has already been initialized."                ) \
-	X(Error_Size_Too_Small       ,  2 , "Invalid Size: Must be greater than 0."                        ) \
-	X(Error_Size_Too_Large       ,  3 , "Invalid Size: Must be less than zakero::MemoryPool::Size_Max" ) \
-	X(Error_Failed_To_Create_File,  4 , "Unable to create file."                                       ) \
-	X(Error_Failed_To_Resize_File,  5 , "Unable to resize file."                                       ) \
-	X(Error_Failed_To_Map_File   ,  6 , "Unable to memory map the file."                               ) \
-	X(Error_Out_Of_Memory        ,  7 , "Not enough contiguous memory."                                ) \
-	X(Error_Invalid_Offset       ,  8 , "The offset is not valid."                                     ) \
+	X(Error_None                  , 0 , "No Error"                                                     ) \
+	X(Error_Already_Initialized   , 1 , "The Memory Pool has already been initialized."                ) \
+	X(Error_Size_Too_Small        , 2 , "Invalid Size: Must be greater than 0."                        ) \
+	X(Error_Size_Too_Large        , 3 , "Invalid Size: Must be less than zakero::MemoryPool::Size_Max" ) \
+	X(Error_Failed_To_Create_File , 4 , "Unable to create file."                                       ) \
+	X(Error_Failed_To_Resize_File , 5 , "Unable to resize file."                                       ) \
+	X(Error_Failed_To_Map_File    , 6 , "Unable to memory map the file."                               ) \
+	X(Error_Out_Of_Memory         , 7 , "Not enough contiguous memory."                                ) \
+	X(Error_Invalid_Offset        , 8 , "The offset is not valid."                                     ) \
 
 // }}}
 // {{{ Declaration
@@ -261,7 +281,6 @@ namespace zakero
 			[[nodiscard]] std::string          dump(size_t, size_t) const noexcept;
 
 		private:
-			[[nodiscard]] off_t  actualSize(off_t) noexcept;
 			[[nodiscard]] bool   expandBy(size_t) noexcept;
                                       
 			              void   segmentDestroy(size_t) noexcept;
@@ -294,7 +313,7 @@ namespace zakero
 			size_t                       pool_size;
 			int                          file_descriptor;
 			MemoryPool::Alignment        alignment;
-			bool                         is_dynamic;
+			bool                         can_expand;
 	};
 };
 
@@ -303,10 +322,59 @@ namespace zakero
 
 #if defined (ZAKERO_MEMORYPOOL_IMPLEMENTATION)
 
+// {{{ Dependencies
+
+#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+#	if !defined(ZAKERO_PROFILER_IMPLEMENTATION)
+#		define ZAKERO_PROFILER_IMPLEMENTATION
+#	endif
+#	define ZAKERO_PROFILER_ENABLE
+#	include "Zakero_Profiler.h"
+#endif
+
+// }}}
 // {{{ Defines
 
+#if defined(ZAKERO__DOXYGEN_DEFINES)
+
+/**
+ * \brief Include the implementation.
+ */
+#define ZAKERO_MEMORYPOOL_IMPLEMENTATION
+
+#endif
+
+/**
+ * \internal
+ *
+ * \brief Create an error condition.
+ *
+ * This is just a convenience macro.
+ *
+ * \param err_ The name of an error from the Error Table
+ */
 #define ZAKERO_MEMORYPOOL__ERROR(err_) std::error_condition(err_, MemoryPoolErrorCategory);
 
+#define ZAKERO_MACRO_HAS_VALUE(MACRO_DEFINE_) \
+	~(~MACRO_DEFINE_ + 0) == 0 && ~(~MACRO_DEFINE_ + 1) == 1
+
+// {{{ Defines : Profiler
+
+#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+#	if !defined(ZAKERO_MEMORYPOOL_PROFILER_FILE) || !ZAKERO_MACRO_HAS_VALUE(ZAKERO_MEMORYPOOL_PROFILER_FILE)
+#		define ZAKERO_MEMORYPOOL_PROFILER_FILE "./zakero_MemoryPool_profile.json"
+#	endif
+
+#	define ZAKERO_MEMORYPOOL__PROFILER_INIT_METADATA(output_, meta_data_)  ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)
+#	define ZAKERO_MEMORYPOOL__PROFILER_DURATION(category_, name_)          ZAKERO_PROFILER_DURATION(category_, name_)
+#	define ZAKERO_MEMORYPOOL__PROFILER_INSTANT(category_, name_)           ZAKERO_PROFILER_INSTANT(category_, name_)
+#else
+#	define ZAKERO_MEMORYPOOL__PROFILER_INIT_METADATA(output_, meta_data_)
+#	define ZAKERO_MEMORYPOOL__PROFILER_DURATION(category_, name_)
+#	define ZAKERO_MEMORYPOOL__PROFILER_INSTANT(category_, name_)
+#endif
+
+// }}}
 // }}}
 
 namespace
@@ -340,6 +408,24 @@ namespace
 
 	zakero::MemoryPool::LambdaSize       LambdaSize_DoNothing       = [](size_t){};
 	zakero::MemoryPool::LambdaAddressMap LambdaAddressMap_DoNothing = [](const zakero::MemoryPool::AddressMap&){};
+
+	/**
+	 * \brief Calculate the byte-aligned size.
+	 *
+	 * The byte-aligned size will be determined based on the provided \p 
+	 * size.
+	 *
+	 * \return The byte-aligned size.
+	 */
+	inline off_t calculateActualSize(const off_t  size      ///< The size
+		, const zakero::MemoryPool::Alignment alignment ///< The alignment
+		)
+	{
+		const off_t mod  = static_cast<off_t>(alignment);
+		const off_t step = static_cast<off_t>(alignment) + 1;
+
+		return ((size + mod) / step) * step;
+	}
 }
 
 namespace zakero
@@ -417,8 +503,17 @@ namespace zakero
 		, pool_size(0)
 		, file_descriptor(-1)
 		, alignment(zakero::MemoryPool::Alignment::Bits_64)
-		, is_dynamic(false)
+		, can_expand(false)
 	{
+#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+		zakero::Profiler::MetaData meta_data =
+		{	{ "ZHL"     , "Zakero_MemoryPool.h" }
+		,	{ "version" , "0.8.0"               }
+		};
+		ZAKERO_PROFILER_INIT_METADATA(ZAKERO_MEMORYPOOL_PROFILER_FILE
+			, meta_data
+			);
+#endif
 	}
 
 
@@ -484,12 +579,14 @@ namespace zakero
 	 * \return An error condition.  If there was no error, then the value 
 	 * of the error condition will be `0`.
 	 */
-	std::error_condition MemoryPool::init(size_t size       ///< The initial size in bytes
-		, const bool                         expandable ///< Allow the MemoryPool to expand
-		, const MemoryPool::Alignment        alignment  ///< The Byte Alignment
+	std::error_condition MemoryPool::init(const size_t size       ///< The initial size in bytes
+		, const bool                               expandable ///< Allow the MemoryPool to expand
+		, const MemoryPool::Alignment              alignment  ///< The Byte Alignment
 		) noexcept
 	{
-		if(file_descriptor != -1)
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "init");
+
+		if(this->file_descriptor != -1)
 		{
 			return ZAKERO_MEMORYPOOL__ERROR(Error_Already_Initialized);
 		}
@@ -504,47 +601,50 @@ namespace zakero
 			return ZAKERO_MEMORYPOOL__ERROR(Error_Size_Too_Large);
 		}
 
-		this->is_dynamic = expandable;
-		this->alignment  = alignment;
-
-		size = actualSize(size);
+		size_t pool_size = calculateActualSize(size, alignment);
 
 #if defined (__linux__)
-		file_descriptor = memfd_create(name.c_str(), 0);
+		int fd = memfd_create(name.c_str(), 0);
 #else
-#error Need morecode...
+#error Need more code...
 #endif
 
-		if(file_descriptor == -1)
+		if(fd == -1)
 		{
 			return ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Create_File);
 		}
 
-		if(ftruncate(file_descriptor, size) == -1)
+		if(ftruncate(fd, pool_size) == -1)
 		{
 			return ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Resize_File);
 		}
 
-		memory = (uint8_t*)mmap(nullptr
-			, size
+		uint8_t* memory = (uint8_t*)mmap(nullptr
+			, pool_size
 			, PROT_READ | PROT_WRITE
 			, MAP_SHARED | MAP_NORESERVE
-			, file_descriptor
+			, fd
 			, 0
 			);
 
 		if(memory == MAP_FAILED)
 		{
+			close(fd);
+
 			return ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Map_File);
 		}
 
-		pool_size = size;
-
-		segment.push_back(
+		this->segment.push_back(
 		{	.offset = 0
-		,	.size   = (off_t)size
+		,	.size   = (off_t)pool_size
 		,	.in_use = false
 		});
+
+		this->can_expand      = expandable;
+		this->alignment       = alignment;
+		this->pool_size       = pool_size;
+		this->memory          = memory;
+		this->file_descriptor = fd;
 
 		return ZAKERO_MEMORYPOOL__ERROR(Error_None);
 	}
@@ -690,6 +790,8 @@ namespace zakero
 		, std::error_condition& error ///< The error
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "alloc");
+
 		if(size <= 0)
 		{
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_Size_Too_Small);
@@ -704,7 +806,7 @@ namespace zakero
 
 		std::lock_guard<std::mutex> lock(mutex);
 
-		size = actualSize(size);
+		size = calculateActualSize(size, alignment);
 
 		size_t index = segmentFindAvail(size);
 
@@ -897,6 +999,8 @@ namespace zakero
 	void MemoryPool::free(off_t& offset ///< The memory to free
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "free");
+
 		std::lock_guard<std::mutex> lock(mutex);
 
 		size_t index = segmentFindInUse(offset);
@@ -990,6 +1094,8 @@ namespace zakero
 		, std::error_condition& error  ///< The error
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "resize");
+
 		if(size <= 0)
 		{
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_Size_Too_Small);
@@ -1012,7 +1118,7 @@ namespace zakero
 			return -1;
 		}
 
-		size = actualSize(size);
+		size = calculateActualSize(size, alignment);
 
 		// Same size, nothing to do
 		if(size == (size_t)segment[index_src].size)
@@ -1082,6 +1188,8 @@ namespace zakero
 	uint8_t* MemoryPool::addressOf(off_t offset ///< The offset
 		) const noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "addressOf");
+
 		if(segmentFindInUse(offset) >= segment.size())
 		{
 			return nullptr;
@@ -1275,23 +1383,6 @@ namespace zakero
 
 
 	/**
-	 * \brief Calculate the byte-aligned size.
-	 *
-	 * The byte-aligned size will be determined based on the provided \p 
-	 * size.
-	 *
-	 * \return The byte-aligned size.
-	 */
-	inline off_t MemoryPool::actualSize(off_t size ///< The initial size
-		) noexcept
-	{
-		const off_t mod  = static_cast<off_t>(alignment);
-		const off_t step = static_cast<off_t>(alignment) + 1;
-
-		return ((size + mod) / step) * step;
-	}
-
-	/**
 	 * \brief Increase the size of the memory pool.
 	 *
 	 * \retval true  The memory pool size was increased.
@@ -1300,7 +1391,9 @@ namespace zakero
 	bool MemoryPool::expandBy(size_t size_increase ///< The amount of the increase
 		) noexcept
 	{
-		if(is_dynamic == false)
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "expandBy");
+
+		if(can_expand == false)
 		{
 			return false;
 		}
@@ -1310,7 +1403,8 @@ namespace zakero
 			size_increase -= segment.back().size;
 		}
 
-		size_increase = actualSize(size_increase);
+		// calculateActualSize() should not be called here, belongs in the above layer
+		size_increase = calculateActualSize(size_increase, alignment);
 
 		if(pool_size + size_increase > MemoryPool::Size_Max)
 		{
@@ -1381,6 +1475,8 @@ namespace zakero
 	void MemoryPool::segmentDestroy(size_t index ///< The segment to destroy
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("Segment", "Destroy");
+
 		segment[index].in_use = false;
 
 		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
@@ -1408,6 +1504,8 @@ namespace zakero
 		, size_t                      size  ///< The new size
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Expand");
+
 		const size_t index_next = index + 1;
 		if(index_next >= segment.size())
 		{
@@ -1455,6 +1553,8 @@ namespace zakero
 	size_t MemoryPool::segmentFind(uint8_t* addr ///< The address to find
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAddress");
+
 		const size_t offset = addr - memory;
 
 		return segmentFind(offset);
@@ -1471,6 +1571,8 @@ namespace zakero
 	size_t MemoryPool::segmentFind(off_t offset ///< The offset to find
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindOffset");
+
 		for(size_t index = 0; index < segment.size(); index++)
 		{
 			if(segment[index].offset == offset)
@@ -1494,6 +1596,8 @@ namespace zakero
 	size_t MemoryPool::segmentFindAvail(size_t size ///< The minimum size
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAvailable");
+
 		for(size_t index = 0; index < segment.size(); index++)
 		{
 			if(segment[index].in_use == false
@@ -1518,6 +1622,8 @@ namespace zakero
 	size_t MemoryPool::segmentFindInUse(off_t offset ///< The offset to find
 		) const noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindInUse");
+
 		for(size_t index = 0; index < segment.size(); index++)
 		{
 			if(segment[index].offset == offset
@@ -1544,6 +1650,8 @@ namespace zakero
 	void MemoryPool::segmentMerge(size_t index ///< The segment to merge
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Merge");
+
 		if(size_t index_next = index + 1;
 			index_next < segment.size()
 			)
@@ -1598,6 +1706,8 @@ namespace zakero
 		, size_t                      size      ///< The destination size
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Move");
+
 		Segment& segment_src = segment[index_src];
 		uint8_t* addr_src    = memory + segment_src.offset;
 		size_t   size_src    = segment_src.size;
@@ -1649,6 +1759,8 @@ namespace zakero
 		, size_t                     size  ///< The "new" segment size
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Split");
+
 		const size_t index_next = index + 1;
 
 		if(index_next >= segment.size())

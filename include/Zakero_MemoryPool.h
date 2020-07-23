@@ -283,6 +283,7 @@ namespace zakero
 		private:
 			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
                                       
+			[[nodiscard]] bool   segmentExpand(const size_t, const size_t) noexcept;
 			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
 			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
 			              void   segmentMergeRight(const size_t) noexcept;
@@ -291,8 +292,6 @@ namespace zakero
 			              void   segmentSplit(size_t, size_t) noexcept;
 
 
-			              void   segmentDestroy(size_t) noexcept;
-			[[nodiscard]] bool   segmentExpand(size_t, size_t) noexcept;
 			[[nodiscard]] size_t segmentFind(uint8_t*) noexcept;
 			[[nodiscard]] size_t segmentFind(off_t) noexcept;
 			              size_t segmentMerge(size_t) noexcept;
@@ -1511,27 +1510,6 @@ namespace zakero
 
 
 	/**
-	 * \brief Destroy a segment.
-	 */
-	void MemoryPool::segmentDestroy(size_t index ///< The segment to destroy
-		) noexcept
-	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("Segment", "Destroy");
-
-		segment[index].in_use = false;
-
-		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
-		memset(memory + segment[index].offset
-			, '\0'
-			, segment[index].size
-			);
-		#endif
-
-		segmentMerge(index);
-	}
-
-
-	/**
 	 * \brief Increase the size of a segment.
 	 *
 	 * The size of the specified segment at \p index will be increased by 
@@ -1541,8 +1519,8 @@ namespace zakero
 	 * \retval true  The segment was expanded.
 	 * \retval false The segment was __not__ expanded.
 	 */
-	bool MemoryPool::segmentExpand(size_t index ///< The segment index
-		, size_t                      size  ///< The new size
+	bool MemoryPool::segmentExpand(const size_t index ///< The segment index
+		, const size_t                      size  ///< The new size
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Expand");

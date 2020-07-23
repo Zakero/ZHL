@@ -9,11 +9,14 @@
  *
  * \brief Zakero MemoryPool
  *
- * See zakero::MemoryPool for the API documentation.
+ * Here, you will find information about and how to add the _Zakero MemoryPool_ 
+ * to your project.
+ *
+ * See zakero::MemoryPool for the class API documentation.
  * 
  * \dependencies
- * - dep_optional{Zakero_Profiler.h}
- *   Defining __ZAKERO_MEMORYPOOL_PROFILER__ will cause the Zakero_Profiler to 
+ * - Zakero_Profiler.h<br>
+ *   Defining \ref ZAKERO_MEMORYPOOL_PROFILER will cause the Zakero_Profiler to 
  *   be included.
  *
  * \tldr
@@ -97,7 +100,7 @@
  * If the benefits out-weigh the draw backs for your application, then the 
  * MemoryPool is what you need.
  * 
- * \note This implementation is limited to 32-bit file sizes.
+ * \note This implementation is limited to signed 32-bit file sizes.
  * \endparblock
  *
  * \par How To Use It?
@@ -117,7 +120,7 @@
  * #include "path/to/Zakero_MemoryPool.h"
  * ~~~
  *
- * The macro __ZAKERO_MEMORYPOOL_IMPLEMENTATION__ tells the header file to 
+ * The macro \ref ZAKERO_MEMORYPOOL_IMPLEMENTATION tells the header file to 
  * include the implementation of the MemoryPool.
  *
  * In all other files that will use the MemoryPool, they need to include the 
@@ -160,6 +163,10 @@
  * ~~~
  * \endparblock
  *
+ * \version 0.8.1
+ * - Bug fixes
+ * - API changes
+ *
  * \version 0.8.0
  * - Allocate and manage memory pool
  * - Automatically expand the memory pool as needed
@@ -171,7 +178,6 @@
  * \author Andrew "Zakero" Moore
  * - Original Author
  *
- * \todo Add protections so that memory sizes above off_t are not allowed.
  * \todo Add support for huge file sizes (64-bit / huge table fs)
  *       - Maybe toggled via a macro flag
  * \todo Be able to defrag the memory pool
@@ -286,8 +292,8 @@ namespace zakero
 			[[nodiscard]] bool   segmentExpand(const size_t, const size_t) noexcept;
 			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
 			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
-			              void   segmentMergeLeft(const size_t) noexcept;
-			              void   segmentMergeRight(const size_t) noexcept;
+			              void   segmentMergeNext(const size_t) noexcept;
+			              void   segmentMergePrev(const size_t) noexcept;
 			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
 			              void   segmentSplit(size_t, size_t) noexcept;
 
@@ -322,7 +328,7 @@ namespace zakero
 
 // {{{ Dependencies
 
-#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+#if defined(ZAKERO_MEMORYPOOL_PROFILER)
 #	if !defined(ZAKERO_PROFILER_IMPLEMENTATION)
 #		define ZAKERO_PROFILER_IMPLEMENTATION
 #	endif
@@ -332,15 +338,6 @@ namespace zakero
 
 // }}}
 // {{{ Defines
-
-#if defined(ZAKERO__DOXYGEN_DEFINES)
-
-/**
- * \brief Include the implementation.
- */
-#define ZAKERO_MEMORYPOOL_IMPLEMENTATION
-
-#endif
 
 /**
  * \internal
@@ -353,16 +350,77 @@ namespace zakero
  */
 #define ZAKERO_MEMORYPOOL__ERROR(err_) std::error_condition(err_, MemoryPoolErrorCategory);
 
-#define ZAKERO_MACRO_HAS_VALUE(MACRO_DEFINE_) \
-	~(~MACRO_DEFINE_ + 0) == 0 && ~(~MACRO_DEFINE_ + 1) == 1
+/**
+ * \internal
+ *
+ * \brief Check if a macro has a value.
+ *
+ * \param macro_define_ The defined macro to check.
+ */
+#define ZAKERO_MACRO_HAS_VALUE(macro_define_) \
+	~(~macro_define_ + 0) == 0 && ~(~macro_define_ + 1) == 1
 
+// {{{ Defines : Doxygen
+
+#if defined(ZAKERO__DOXYGEN_DEFINE_DOCS)
+
+// Only used for generating Doxygen documentation
+
+/**
+ * \brief Activate the implementation code.
+ *
+ * Defining this macro will cause the zakero::MemoryPool implementation to be 
+ * included.  This should only be done once, since compiler and/or linker 
+ * errors will typically be generated if more than a single implementation is 
+ * found.
+ *
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ */
+#define ZAKERO_MEMORYPOOL_IMPLEMENTATION
+
+
+/**
+ * \brief Activate the profiling code.
+ *
+ * Defining this macro will cause the zakero::MemoryPool implementation to also 
+ * include profiling data.
+ * 
+ * Be careful using this feature.  The _Zakero MemoryPool_ will create a new 
+ * instance of the _Zakero Profiler_.  If a zakero::MemoryPool is created 
+ * __before__ the intended _Zakero Profiler_, the profiler in 
+ * zakero::MemoryPool will take precedence.
+ * 
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ *
+ * \see ZAKERO_MEMORYPOOL_PROFILER_FILE
+ */
+#define ZAKERO_MEMORYPOOL_PROFILER
+
+/**
+ * \brief Profile data file.
+ *
+ * Define this macro and set it to the file name than will contain the 
+ * profiling data.  If the _Zakero MemoryPool_ has already setup else where, 
+ * then this macro will be ignored.
+ *
+ * The default value is "./zakero_MemoryPool_profile.json".
+ *
+ * \note \ref ZAKERO_MEMORYPOOL_PROFILER must be defined for this macro to have 
+ * any effect.
+ */
+#define ZAKERO_MEMORYPOOL_PROFILER_FILE
+
+#endif
+
+// }}}
 // {{{ Defines : Profiler
 
-#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+#if defined(ZAKERO_MEMORYPOOL_PROFILER)
 #	if !defined(ZAKERO_MEMORYPOOL_PROFILER_FILE) || !ZAKERO_MACRO_HAS_VALUE(ZAKERO_MEMORYPOOL_PROFILER_FILE)
 #		define ZAKERO_MEMORYPOOL_PROFILER_FILE "./zakero_MemoryPool_profile.json"
 #	endif
-
 #	define ZAKERO_MEMORYPOOL__PROFILER_INIT_METADATA(output_, meta_data_)  ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)
 #	define ZAKERO_MEMORYPOOL__PROFILER_DURATION(category_, name_)          ZAKERO_PROFILER_DURATION(category_, name_)
 #	define ZAKERO_MEMORYPOOL__PROFILER_INSTANT(category_, name_)           ZAKERO_PROFILER_INSTANT(category_, name_)
@@ -489,6 +547,9 @@ namespace zakero
 	 * \example
 	 * zakero::MemoryPool memory_pool("The name of the MemoryPool");
 	 * \endexample
+	 *
+	 * \note If \ref ZAKERO_MEMORYPOOL_PROFILER is defined, then \ref 
+	 * ZAKERO_PROFILER_INIT_METADATA will be called to setup the profiler.
 	 */
 	MemoryPool::MemoryPool(const std::string& name ///< The file name
 		) noexcept
@@ -503,7 +564,7 @@ namespace zakero
 		, alignment(zakero::MemoryPool::Alignment::Bits_64)
 		, pool_can_expand(false)
 	{
-#if defined(ZAKERO_MEMORYPOOL_PROFILER_ENABLE)
+#if defined(ZAKERO_MEMORYPOOL_PROFILER)
 		zakero::Profiler::MetaData meta_data =
 		{	{ "ZHL"     , "Zakero_MemoryPool.h" }
 		,	{ "version" , "0.8.0"               }
@@ -849,6 +910,8 @@ namespace zakero
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned.
 	 *
+	 * The every byte of the allocated memory will be set to \p value.
+	 *
 	 * \example
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
@@ -874,6 +937,8 @@ namespace zakero
 	 * The requested \p size (in bytes) will be allocated from the memory 
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned and the reason will be stored in \p error.
+	 *
+	 * The every byte of the allocated memory will be set to \p value.
 	 *
 	 * \example
 	 * zakero::MemoryPool memory_pool("foo");
@@ -917,11 +982,16 @@ namespace zakero
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned.
 	 *
+	 * Every 32-bit in the allocated memory will be set to \p value.  Any 
+	 * bytes that leftover will be undefined.  For example, 10 byte 
+	 * allocation with a \p value of 0xaaaa5555.  The last 2 bytes will be 
+	 * undefined.  Memory Contents: `aaaa5555aaaa5555??`
+	 *
 	 * \example
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
-	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xa5));
+	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xaaaa5555));
 	 * \endexample
 	 *
 	 * \return The offset of the block of memory.
@@ -943,12 +1013,18 @@ namespace zakero
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned and the reason will be stored in \p error.
 	 *
+	 * Every 32-bit in the allocated memory will be set to \p value.  Any 
+	 * bytes that leftover will be undefined.  For example, 10 byte 
+	 * allocation with a \p value of 0xaaaa5555.  The last 2 bytes will be 
+	 * undefined.  Memory Contents: `aaaa5555aaaa5555??`
+	 *
 	 * \example
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
 	 * std::error_condition error;
-	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xa5), error);
+	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xaaaa5555), 
+	 * error);
 	 *
 	 * if(error.value() != 0)
 	 * {
@@ -997,7 +1073,7 @@ namespace zakero
 	 *
 	 * off_t offset = memory_pool.alloc(64);
 	 *
-	 * // Do stuff with offset
+	 * // Do stuff
 	 *
 	 * memory_pool.free(offset);
 	 * \endexample
@@ -1025,8 +1101,8 @@ namespace zakero
 
 		segment[index].in_use = false;
 
-		segmentMergeRight(index);
-		segmentMergeLeft(index);
+		segmentMergeNext(index);
+		segmentMergePrev(index);
 
 		offset = -1;
 	}
@@ -1035,7 +1111,7 @@ namespace zakero
 	/**
 	 * \brief Change the size of allocated memory.
 	 *
-	 * This method is similar to realloc(), in that it will resize the 
+	 * This method is similar to std::realloc(), in that it will resize the 
 	 * allocated memory at the given \p offset.  If the resize was 
 	 * successful, the new offset will be returned.
 	 *
@@ -1051,7 +1127,7 @@ namespace zakero
 	 *
 	 * off_t offset = memory_pool.alloc(64);
 	 *
-	 * // Do stuff with offset
+	 * // Do stuff
 	 * // Oops, need more space
 	 *
 	 * offset = memory_pool.resize(offset, 96);
@@ -1072,7 +1148,7 @@ namespace zakero
 	/**
 	 * \brief Change the size of allocated memory.
 	 *
-	 * This method is similar to realloc(), in that it will resize the 
+	 * This method is similar to std::realloc(), in that it will resize the 
 	 * allocated memory at the given \p offset.  If the resize was 
 	 * successful, the new offset will be returned.
 	 *
@@ -1088,10 +1164,10 @@ namespace zakero
 	 *
 	 * off_t offset = memory_pool.alloc(64);
 	 *
-	 * // Do stuff with offset
+	 * // Do stuff
 	 * // Oops, need more space
 	 *
-	 * std::error_codition error;
+	 * std::error_condition error;
 	 * auto new_offset = memory_pool.resize(offset, 96, error);
 	 * if(error(bool) == true)
 	 * {
@@ -1180,10 +1256,6 @@ namespace zakero
 				return -1;
 			}
 		}
-
-		// TODO - Continue Here
-		// - Rename MergeRight() to MergeNext()
-		// - Rename MergeLeft() to MergePrev()
 
 		index_dst = segmentMove(index_src, segment_size, index_dst);
 
@@ -1624,72 +1696,74 @@ namespace zakero
 	/**
 	 * \brief Combine 2 segments into 1.
 	 *
-	 * The segment at the specified index will be merged with the one to 
-	 * the left (index - 1), but only if the following conditions are true:
-	 * - (index - 1) is a valid segment index
-	 * - The left segment is __not__ in use
+	 * The segment at the specified index will be merged with the next 
+	 * segment (index + 1), but only if the following conditions are true:
+	 * - (index + 1) is a valid segment index
+	 * - The next segment is __not__ in use
 	 *
-	 * The segment at the provided index will be erased.  And the \p index 
-	 * will be set to the index of the segment to the left.
+	 * The "next" segment that is after the provided index will be erased.
 	 */
-	void MemoryPool::segmentMergeLeft(const size_t index ///< The segment to merge
+	void MemoryPool::segmentMergeNext(const size_t index ///< The segment to merge
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeLeft");
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeNext");
 
-		if(index == 0)
+		size_t index_next = index + 1;
+
+		if(index_next >= segment.size())
 		{
 			return;
 		}
 
-		const size_t left = index - 1;
+		Segment& segment_next = segment[index_next];
 
-		Segment& segment_left = segment[left];
-
-		if(segment_left.in_use == true)
+		if(segment_next.in_use == true)
 		{
 			return;
 		}
 
-		segment_left.size += segment[index].size;
+		segment[index].size += segment[index_next].size;
 
-		segment.erase(std::begin(segment) + index);
+		segment.erase(std::begin(segment) + index_next);
 	}
 
 
 	/**
 	 * \brief Combine 2 segments into 1.
 	 *
-	 * The segment at the specified index will be merged with the one to 
-	 * the right (index + 1), but only if the following conditions are 
-	 * true:
-	 * - (index + 1) is a valid segment index
-	 * - The right segment is __not__ in use
+	 * The segment at the specified index will be merged with the previous 
+	 * segment (index - 1), but only if the following conditions are true:
+	 * - (index - 1) is a valid segment index
+	 * - The previous segment is __not__ in use
 	 *
-	 * The segment to the right of the provided index will be erased.
+	 * The "previous" segment that is before the provided index will be 
+	 * erased.
+	 *
+	 * \note The provided \p index will no longer be valid if the merge is 
+	 * successful.
 	 */
-	void MemoryPool::segmentMergeRight(const size_t index ///< The segment to merge
+	void MemoryPool::segmentMergePrev(const size_t index ///< The segment to merge
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeRight");
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergePrev");
 
-		size_t right = index + 1;
-
-		if(right >= segment.size())
+		if(index == 0)
 		{
 			return;
 		}
 
-		Segment& segment_right = segment[right];
+		const size_t index_prev = index - 1;
 
-		if(segment_right.in_use == true)
+		Segment& segment_prev = segment[index_prev];
+
+		if(segment_prev.in_use == true)
 		{
 			return;
 		}
 
-		segment[index].size += segment[right].size;
+		segment_prev.size += segment[index].size;
 
-		segment.erase(std::begin(segment) + right);
+		segment.erase(std::begin(segment) + index);
 	}
 
 
@@ -1736,8 +1810,8 @@ namespace zakero
 
 		if(src_index > dst_index)
 		{
-			segmentMergeRight(src_index);
-			segmentMergeLeft(src_index);
+			segmentMergeNext(src_index);
+			segmentMergePrev(src_index);
 
 			segmentSplit(dst_index, dst_size);
 		}
@@ -1745,8 +1819,8 @@ namespace zakero
 		{
 			segmentSplit(dst_index, dst_size);
 
-			segmentMergeRight(src_index);
-			segmentMergeLeft(src_index);
+			segmentMergeNext(src_index);
+			segmentMergePrev(src_index);
 
 			segmentFindInUse(dst_offset, dst_index);
 		}
@@ -1781,43 +1855,43 @@ namespace zakero
 
 		Segment& this_segment = segment[index];
 
-		const size_t right_index  = index + 1;
-		const off_t  right_offset = this_segment.offset + size;
-		const off_t  right_size   = this_segment.size - size;
+		const size_t index_next  = index + 1;
+		const off_t  offset_next = this_segment.offset + size;
+		const off_t  size_next   = this_segment.size - size;
 
 		this_segment.size = size;
 
 		if(this_segment.in_use)
 		{
-			uint8_t* addr = memory + right_offset;
+			uint8_t* addr = memory + offset_next;
 
-			memset(addr, '\0', right_size);
+			memset(addr, '\0', size_next);
 		}
 
-		if(right_index >= segment.size())
+		if(index_next >= segment.size())
 		{
 			segment.push_back(
-			{	.offset = right_offset
-			,	.size   = right_size
+			{	.offset = offset_next
+			,	.size   = size_next
 			,	.in_use = false
 			});
 		}
 		else
 		{
-			Segment& right_segment = segment[right_index];
+			Segment& segment_next = segment[index_next];
 
-			if(right_segment.in_use)
+			if(segment_next.in_use)
 			{
-				segment.insert(std::begin(segment) + right_index,
-				{	.offset = right_offset
-				,	.size   = right_size
+				segment.insert(std::begin(segment) + index_next,
+				{	.offset = offset_next
+				,	.size   = size_next
 				,	.in_use = false
 				});
 			}
 			else // Not in use
 			{
-				right_segment.offset  = right_offset;
-				right_segment.size   += right_size;
+				segment_next.offset  = offset_next;
+				segment_next.size   += size_next;
 			}
 		}
 	}

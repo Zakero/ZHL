@@ -283,15 +283,16 @@ namespace zakero
 		private:
 			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
                                       
-			//[[nodiscard]] bool segmentFindBestFit(size_t, size_t&) noexcept;
-			                bool segmentFindBestFit(size_t, size_t&) noexcept;
+			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
+			[[nodiscard]] bool   segmentFindInUse(const off_t, size_t&) const noexcept;
+			              void   segmentMergeRight(const size_t) noexcept;
+			              void   segmentMergeLeft(size_t&) noexcept;
 
 
 			              void   segmentDestroy(size_t) noexcept;
 			[[nodiscard]] bool   segmentExpand(size_t, size_t) noexcept;
 			[[nodiscard]] size_t segmentFind(uint8_t*) noexcept;
 			[[nodiscard]] size_t segmentFind(off_t) noexcept;
-			[[nodiscard]] size_t segmentFindInUse(off_t) const noexcept;
 			              size_t segmentMerge(size_t) noexcept;
 			[[nodiscard]] size_t segmentMove(size_t, size_t, size_t) noexcept;
 			              void   segmentSplit(size_t, size_t) noexcept;
@@ -809,7 +810,7 @@ namespace zakero
 			return -1;
 		}
 
-		size_t segment_size = calculateActualSize(size, alignment);
+		const size_t segment_size = calculateActualSize(size, alignment);
 
 		// Allocate from the pool
 
@@ -1014,14 +1015,24 @@ namespace zakero
 
 		std::lock_guard<std::mutex> lock(mutex);
 
-		size_t index = segmentFindInUse(offset);
+		size_t index = 0;
 
-		if(index >= segment.size())
+		if(segmentFindInUse(offset, index) == false)
 		{
 			return;
 		}
 
-		segmentDestroy(index);
+		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
+		memset(memory + segment[index].offset
+			, '\0'
+			, segment[index].size
+			);
+		#endif
+
+		segment[index].in_use = false;
+
+		segmentMergeRight(index);
+		segmentMergeLeft(index);
 
 		offset = -1;
 	}
@@ -1055,7 +1066,7 @@ namespace zakero
 	 * \return The offset of the resized memory location.
 	 */
 	off_t MemoryPool::resize(off_t offset ///< The memory to resize
-		, size_t               size   ///< The size in bytes
+		, size_t                size   ///< The size in bytes
 		) noexcept
 	{
 		std::error_condition error;
@@ -1100,7 +1111,7 @@ namespace zakero
 	 *
 	 * \return The offset of the resized memory location.
 	 */
-	off_t MemoryPool::resize(off_t  offset ///< The memory to resize
+	off_t MemoryPool::resize(off_t offset ///< The memory to resize
 		, size_t                size   ///< The size in bytes
 		, std::error_condition& error  ///< The error
 		) noexcept
@@ -1121,9 +1132,9 @@ namespace zakero
 
 		std::lock_guard<std::mutex> lock(mutex);
 
-		const size_t index_src = segmentFindInUse(offset);
+		size_t index_src = 0;
 
-		if(index_src >= segment.size())
+		if(segmentFindInUse(offset, index_src) == false)
 		{
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_Invalid_Offset);
 			return -1;
@@ -1171,7 +1182,7 @@ namespace zakero
 				return -1;
 			}
 
-			segmentFindBestFit(size, index_dst);
+			//segmentFindBestFit(size, index_dst);
 		}
 
 		index_dst = segmentMove(index_src, index_dst, size);
@@ -1207,7 +1218,9 @@ namespace zakero
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "addressOf");
 
-		if(segmentFindInUse(offset) >= segment.size())
+		size_t index = 0;
+
+		if(segmentFindInUse(offset, index) == false)
 		{
 			return nullptr;
 		}
@@ -1608,8 +1621,8 @@ namespace zakero
 	 *
 	 * \return The index of the segment.
 	 */
-	bool MemoryPool::segmentFindBestFit(size_t size ///< The minimum size
-		, size_t& index                         ///< The index if found
+	bool MemoryPool::segmentFindBestFit(const size_t size ///< The minimum size
+		, size_t& index                               ///< The index if found
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAvailable");
@@ -1637,22 +1650,24 @@ namespace zakero
 	 *
 	 * \return The index of the segment.
 	 */
-	size_t MemoryPool::segmentFindInUse(off_t offset ///< The offset to find
+	bool MemoryPool::segmentFindInUse(const off_t offset ///< The offset to find
+		, size_t&                             index  ///< The index if found
 		) const noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindInUse");
 
-		for(size_t index = 0; index < segment.size(); index++)
+		for(size_t i = 0; i < segment.size(); i++)
 		{
-			if(segment[index].offset == offset
-				&& segment[index].in_use == true
+			if(segment[i].offset == offset
+				&& segment[i].in_use == true
 				)
 			{
-				return index;
+				index = i;
+				return true;
 			}
 		}
 
-		return ~0;
+		return false;
 	}
 
 
@@ -1703,6 +1718,76 @@ namespace zakero
 		}
 
 		return index;
+	}
+
+
+	/**
+	 * \brief Combine 2 segments into 1.
+	 *
+	 * The segment at the specified index will be merged with the one to 
+	 * the left (index - 1), but only if the following conditions are true:
+	 * - (index - 1) is a valid segment index
+	 * - The left segment is __not__ in use
+	 *
+	 * The segment at the provided index will be erased.  And the \p index 
+	 * will be set to the index of the segment to the left.
+	 */
+	void MemoryPool::segmentMergeLeft(size_t& index ///< The segment to merge
+		) noexcept
+	{
+		if(index == 0)
+		{
+			return;
+		}
+
+		size_t left = index - 1;
+
+		Segment& segment_left = segment[left];
+
+		if(segment_left.in_use == true)
+		{
+			return;
+		}
+
+		segment_left.size += segment[index].size;
+
+		segment.erase(std::begin(segment) + index);
+
+		index = left;
+	}
+
+
+	/**
+	 * \brief Combine 2 segments into 1.
+	 *
+	 * The segment at the specified index will be merged with the one to 
+	 * the right (index + 1), but only if the following conditions are 
+	 * true:
+	 * - (index + 1) is a valid segment index
+	 * - The right segment is __not__ in use
+	 *
+	 * The segment to the right of the provided index will be erased.
+	 */
+	void MemoryPool::segmentMergeRight(const size_t index ///< The segment to merge
+		) noexcept
+	{
+		size_t right = index + 1;
+
+		if(right >= segment.size())
+		{
+			return;
+		}
+
+		Segment& segment_right = segment[right];
+
+		if(segment_right.in_use == true)
+		{
+			return;
+		}
+
+		segment[index].size += segment[right].size;
+
+		segment.erase(std::begin(segment) + right);
 	}
 
 

@@ -1,7 +1,7 @@
 # Zakero's C++ Header Libraries
 
 This is a collection of libraries in C++ header file form.  All the header 
-libraries can be found in the include/ directory.  Due to their nature, the 
+libraries can be found in the `include/` directory.  Due to their nature, the 
 libraries are not stand-alone _Single Header Libraries_.  The reason for this 
 is that there maybe dependencies between the headers.  Refer to each library 
 to learn what they depend on.  Or just add all of them to your project and 

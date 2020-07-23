@@ -286,15 +286,10 @@ namespace zakero
 			[[nodiscard]] bool   segmentExpand(const size_t, const size_t) noexcept;
 			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
 			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
-			              void   segmentMergeRight(const size_t) noexcept;
 			              void   segmentMergeLeft(const size_t) noexcept;
+			              void   segmentMergeRight(const size_t) noexcept;
 			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
 			              void   segmentSplit(size_t, size_t) noexcept;
-
-
-			[[nodiscard]] size_t segmentFind(uint8_t*) noexcept;
-			[[nodiscard]] size_t segmentFind(off_t) noexcept;
-			              size_t segmentMerge(size_t) noexcept;
 
 			// ------------------------------------------------- //
 
@@ -1566,48 +1561,6 @@ namespace zakero
 	/**
 	 * \brief Find a segment.
 	 *
-	 * Find the segment that starts with the specified \p address.
-	 *
-	 * \return The index of the segment.
-	 */
-	size_t MemoryPool::segmentFind(uint8_t* addr ///< The address to find
-		) noexcept
-	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAddress");
-
-		const size_t offset = addr - memory;
-
-		return segmentFind(offset);
-	}
-
-
-	/**
-	 * \brief Find a segment.
-	 *
-	 * Find the segment that starts with the specified \p offset.
-	 *
-	 * \return The index of the segment.
-	 */
-	size_t MemoryPool::segmentFind(off_t offset ///< The offset to find
-		) noexcept
-	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindOffset");
-
-		for(size_t index = 0; index < segment.size(); index++)
-		{
-			if(segment[index].offset == offset)
-			{
-				return index;
-			}
-		}
-
-		return ~0;
-	}
-
-
-	/**
-	 * \brief Find a segment.
-	 *
 	 * Look for a segment that has a size greater than (or equal to) \p 
 	 * size and is not in use.
 	 *
@@ -1665,56 +1618,6 @@ namespace zakero
 		}
 
 		return false;
-	}
-
-
-	/**
-	 * \brief Merge unused segments.
-	 *
-	 * The unused segments surrounding the segment at the provided \p index 
-	 * will be merged into a single segment.
-	 *
-	 * \note No error checking is done,  It segment at \p index is expected 
-	 * to be not `in_use`.
-	 */
-	size_t MemoryPool::segmentMerge(size_t index ///< The segment to merge
-		) noexcept
-	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Merge");
-
-		if(size_t index_next = index + 1;
-			index_next < segment.size()
-			)
-		{
-			Segment& segment_next = segment[index_next];
-
-			if(segment_next.in_use == false)
-			{
-				segment[index].size += segment_next.size;
-
-				auto segment_begin = std::begin(segment);
-				segment.erase(segment_begin + index_next);
-			}
-		}
-
-		if(index > 0)
-		{
-			const size_t index_prev = index - 1;
-
-			Segment& segment_prev = segment[index_prev];
-
-			if(segment_prev.in_use == false)
-			{
-				segment_prev.size += segment[index].size;
-
-				auto segment_begin = std::begin(segment);
-				segment.erase(segment_begin + index);
-
-				index = index_prev;
-			}
-		}
-
-		return index;
 	}
 
 

@@ -386,7 +386,7 @@ TEST_CASE("Resize")
 		off_t retval = -1;
 		(void)retval;
 
-		retval = memory_pool.resize(-1, 1, error);
+		retval = memory_pool.realloc(-1, 1, error);
 		REQUIRE(error.value() == MemoryPool::Error_Invalid_Offset);
 
 		memory_pool.init(128
@@ -395,19 +395,19 @@ TEST_CASE("Resize")
 			);
 
 		off_t offset =  0;
-		retval = memory_pool.resize(offset, 1, error);
+		retval = memory_pool.realloc(offset, 1, error);
 		REQUIRE(error.value() == MemoryPool::Error_Invalid_Offset);
 
 		offset = memory_pool.alloc(128);
 		REQUIRE(offset >= 0);
 
-		retval = memory_pool.resize(offset, 0, error);
+		retval = memory_pool.realloc(offset, 0, error);
 		REQUIRE(error.value() == MemoryPool::Error_Size_Too_Small);
 
-		retval = memory_pool.resize(offset, MemoryPool::Size_Max + 1, error);
+		retval = memory_pool.realloc(offset, MemoryPool::Size_Max + 1, error);
 		REQUIRE(error.value() == MemoryPool::Error_Size_Too_Large);
 
-		retval = memory_pool.resize(offset, 256, error);
+		retval = memory_pool.realloc(offset, 256, error);
 		REQUIRE(error.value() == MemoryPool::Error_Out_Of_Memory);
 	}
 
@@ -428,7 +428,7 @@ TEST_CASE("Resize")
 		offset_2 = memory_pool.alloc(32);
 		REQUIRE(offset_2 >= 0);
 
-		offset_1 = memory_pool.resize(offset_1, 64, error);
+		offset_1 = memory_pool.realloc(offset_1, 64, error);
 		REQUIRE(offset_1 >= 0);
 		REQUIRE(error.value() == 0);
 	}
@@ -450,17 +450,17 @@ TEST_CASE("Resize")
 		offset_2 = memory_pool.alloc(32);
 		REQUIRE(offset_2 >= 0);
 
-		offset_1 = memory_pool.resize(offset_1, 128, error);
+		offset_1 = memory_pool.realloc(offset_1, 128, error);
 		REQUIRE(offset_1 >= 0);
 		REQUIRE(error.value() == 0);
 
-		offset_2 = memory_pool.resize(offset_2, 256, error);
+		offset_2 = memory_pool.realloc(offset_2, 256, error);
 		REQUIRE(offset_2 >= 0);
 		REQUIRE(error.value() == 0);
 
 		memory_pool.free(offset_2);
 
-		offset_1 = memory_pool.resize(offset_1, 64, error);
+		offset_1 = memory_pool.realloc(offset_1, 64, error);
 		REQUIRE(offset_1 >= 0);
 		REQUIRE(error.value() == 0);
 
@@ -468,7 +468,7 @@ TEST_CASE("Resize")
 		REQUIRE(offset_2 >= 0);
 		REQUIRE(error.value() == 0);
 
-		offset_2 = memory_pool.resize(offset_2, 128, error);
+		offset_2 = memory_pool.realloc(offset_2, 128, error);
 		REQUIRE(offset_2 >= 0);
 		REQUIRE(error.value() == 0);
 	}

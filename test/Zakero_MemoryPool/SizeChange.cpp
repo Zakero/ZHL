@@ -166,7 +166,7 @@ TEST_CASE("Size Change")
 		offset_2 = memory_pool.alloc(2); // 2nd alloc(), 0 bytes avail
 		memory_pool.free(offset);        //              1 byte  avail
 		// Over allocate
-		offset = memory_pool.alloc(2);   // 3rd alloc(), 0 bytes avail
+		offset = memory_pool.alloc(4);   // 3rd alloc(), 0 bytes avail
 		memory_pool.free(offset);
 		memory_pool.free(offset_2);
 		REQUIRE(count == 1);

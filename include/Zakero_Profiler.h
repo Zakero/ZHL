@@ -91,12 +91,12 @@
  * #include "path/to/Zakero_Profiler.h"
  * ~~~
  *
- * The macro __ZAKERO_PROFILER_IMPLEMENTATION__ tells the header file to 
+ * The macro \ref ZAKERO_PROFILER_IMPLEMENTATION tells the header file to 
  * include the implementation of the profiler.
  *
  * In all other files that will use the _Zakero Profiler_, they need to include 
  * the header.  In addition to including the header, the profiler must be 
- * enabled by defining the ZAKERO_PROFILER_ENABLE macro.
+ * enabled by defining the \ref ZAKERO_PROFILER_ENABLE macro.
  *
  * The easiest way to do this is to always have the _Zakero_Profiler_ enabled:
  *
@@ -106,8 +106,8 @@
  * ~~~
  *
  * This, however, is not very realistic.  A better solution is to configure 
- * your build system to define ZAKERO_PROFILER_ENABLE when needed and add the 
- * _Zakero Profiler_ header and macros where desired.
+ * your build system to define \ref ZAKERO_PROFILER_ENABLE when needed and add 
+ * the _Zakero Profiler_ header and macros where desired.
  *
  * ~~~
  * #include "path/to/Zakero_Profiler.h"
@@ -120,9 +120,9 @@
  * > g++ ... -DZAKERO_PROFILER_ENABLE ...
  * ~~~
  *
- * If the ZAKERO_PROFILER_ENABLE macro is __not__ defined, all the other marcos 
- * in this library will be disabled.  With compiler optimizations turned on, 
- * -O2, the unused profiler code should be removed from the resulting 
+ * If the \ref ZAKERO_PROFILER_ENABLE macro is __not__ defined, all the other 
+ * marcos in this library will be disabled.  With compiler optimizations turned 
+ * on, -O2, the unused profiler code should be removed from the resulting 
  * executable.
  *
  * __Step 2__
@@ -152,7 +152,7 @@
  * - ZAKERO_PROFILER_DURATION()
  * - ZAKERO_PROFILER_INSTANT()
  *
- * The ZAKERO_PROFILER_DURATION macro is best used at the start of a code 
+ * The ZAKERO_PROFILER_DURATION() macro is best used at the start of a code 
  * block.  Remember you do not have to put this macro after every '{', only add 
  * the macros where you need to capture data.
  *
@@ -212,6 +212,7 @@
  * \todo Add meta data to ZAKERO_PROFILER_INSTANT
  * \todo Add support for std::filesystem
  * \todo Add error handling
+ * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
 #ifndef zakero_Profiler_h
@@ -478,14 +479,14 @@
  * \param category_ The category of the data
  * \param name_     The name of the data
  */
-#define ZAKERO_PROFILER_INSTANT(category_, name_)                               \
-	{                                                                       \
-	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_data_) \
-	( category_                                                             \
-	, name_                                                                 \
-	, std::experimental::source_location::current()                         \
-	);                                                                      \
-	}                                                                       \
+#define ZAKERO_PROFILER_INSTANT(category_, name_)                                  \
+	{                                                                          \
+	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_instant_) \
+	( category_                                                                \
+	, name_                                                                    \
+	, std::experimental::source_location::current()                            \
+	);                                                                         \
+	}                                                                          \
 
 #else
 
@@ -498,13 +499,47 @@
 
 #endif
 
-// }}}
-// {{{ Declaration
-
 #define TIME_NOW \
 std::chrono::duration_cast<std::chrono::microseconds>(      \
 	std::chrono::steady_clock::now().time_since_epoch() \
 	).count()                                           \
+
+// {{{ Defines : Doxygen
+
+#if defined(ZAKERO__DOXYGEN_DEFINE_DOCS)
+
+// Only used for generating Doxygen documentation
+
+/**
+ * \brief Enable the profiler
+ *
+ * The _Zakero Profiler_ is a macro based system.  When this macro is defined, 
+ * the macros will be replaced with code.  If this macro is __not__ defined, 
+ * the macros will be removed at compile time.
+ *
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ */
+#define ZAKERO_PROFILER_ENABLE
+
+/**
+ * \brief Activate the implementation code.
+ *
+ * Defining this macro will cause the _Zakero Profiler_ implementation to be 
+ * included.  This should only be done once, since compiler and/or linker 
+ * errors will typically be generated if more than a single implementation is 
+ * found.
+ *
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ */
+#define ZAKERO_PROFILER_IMPLEMENTATION
+
+#endif
+
+// }}}
+// }}}
+// {{{ Declaration
 
 namespace zakero
 {
@@ -804,6 +839,8 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 
 
 /**
+ * \internal
+ *
  * \struct Profiler::Data
  *
  * \brief Profiling Data
@@ -833,6 +870,8 @@ Profiler::Data::Data(const char                     phase    ///< The phase
 
 
 /**
+ * \internal
+ *
  * \struct Profiler::Duration
  *
  * \brief Profiling Duration
@@ -847,8 +886,6 @@ Profiler::Data::Data(const char                     phase    ///< The phase
  *
  * Since this object is a member of Profiler, it has access to Profiler's 
  * private methods.
- *
- * \todo Look into converting this use a "Complete" event (phase = 'X').
  */
 Profiler::Duration::Duration(const std::string&     category ///< The category
 	, const std::string&                        name     ///< The name
@@ -879,6 +916,8 @@ Profiler::Duration::~Duration() noexcept
 
 
 /**
+ * \internal
+ *
  * \struct Profiler::Instant
  *
  * \brief Profiling Instant

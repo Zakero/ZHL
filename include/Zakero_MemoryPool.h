@@ -271,8 +271,8 @@ namespace zakero
 			[[nodiscard]] off_t                alloc(size_t, uint32_t) noexcept;
 			[[nodiscard]] off_t                alloc(size_t, uint32_t, std::error_condition&) noexcept;
 			              void                 free(off_t&) noexcept;
-			[[nodiscard]] off_t                resize(off_t, size_t) noexcept;
-			[[nodiscard]] off_t                resize(off_t, size_t, std::error_condition&) noexcept;
+			[[nodiscard]] off_t                realloc(off_t, size_t) noexcept;
+			[[nodiscard]] off_t                realloc(off_t, size_t, std::error_condition&) noexcept;
 
 			[[nodiscard]] uint8_t*             addressOf(off_t) const noexcept;
 			              void                 onRemap(MemoryPool::LambdaAddressMap) noexcept;
@@ -284,9 +284,11 @@ namespace zakero
 			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
                                       
 			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
-			[[nodiscard]] bool   segmentFindInUse(const off_t, size_t&) const noexcept;
+			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
 			              void   segmentMergeRight(const size_t) noexcept;
-			              void   segmentMergeLeft(size_t&) noexcept;
+			              void   segmentMergeLeft(const size_t) noexcept;
+			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
+			              void   segmentSplit(size_t, size_t) noexcept;
 
 
 			              void   segmentDestroy(size_t) noexcept;
@@ -294,8 +296,6 @@ namespace zakero
 			[[nodiscard]] size_t segmentFind(uint8_t*) noexcept;
 			[[nodiscard]] size_t segmentFind(off_t) noexcept;
 			              size_t segmentMerge(size_t) noexcept;
-			[[nodiscard]] size_t segmentMove(size_t, size_t, size_t) noexcept;
-			              void   segmentSplit(size_t, size_t) noexcept;
 
 			// ------------------------------------------------- //
 
@@ -1065,13 +1065,13 @@ namespace zakero
 	 *
 	 * \return The offset of the resized memory location.
 	 */
-	off_t MemoryPool::resize(off_t offset ///< The memory to resize
+	off_t MemoryPool::realloc(off_t offset ///< The memory to resize
 		, size_t                size   ///< The size in bytes
 		) noexcept
 	{
 		std::error_condition error;
 
-		return resize(offset, size, error);
+		return realloc(offset, size, error);
 	}
 
 
@@ -1111,12 +1111,14 @@ namespace zakero
 	 *
 	 * \return The offset of the resized memory location.
 	 */
-	off_t MemoryPool::resize(off_t offset ///< The memory to resize
+	off_t MemoryPool::realloc(off_t offset ///< The memory to resize
 		, size_t                size   ///< The size in bytes
 		, std::error_condition& error  ///< The error
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "resize");
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "realloc");
+
+		// Validate Input
 
 		if(size <= 0)
 		{
@@ -1130,6 +1132,8 @@ namespace zakero
 			return -1;
 		}
 
+		const size_t segment_size = calculateActualSize(size, alignment);
+
 		std::lock_guard<std::mutex> lock(mutex);
 
 		size_t index_src = 0;
@@ -1140,26 +1144,26 @@ namespace zakero
 			return -1;
 		}
 
-		size = calculateActualSize(size, alignment);
+		Segment& segment_src = segment[index_src];
 
 		// Same size, nothing to do
-		if(size == (size_t)segment[index_src].size)
+		if(segment_size == (size_t)segment_src.size)
 		{
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_None);
 			return offset;
 		}
 
 		// New size is smaller, shrink segment
-		if(size < (size_t)segment[index_src].size)
+		if(segment_size < (size_t)segment_src.size)
 		{
-			segmentSplit(index_src, size);
+			segmentSplit(index_src, segment_size);
 
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_None);
 			return offset;
 		}
 
 		// Larger, try to expand into the next segment
-		if(segmentExpand(index_src, size) == true)
+		if(segmentExpand(index_src, segment_size) == true)
 		{
 			error = ZAKERO_MEMORYPOOL__ERROR(Error_None);
 			return offset;
@@ -1168,7 +1172,7 @@ namespace zakero
 		// Larger, find a new location
 		size_t index_dst = 0;
 
-		if(segmentFindBestFit(size, index_dst) == false)
+		if(segmentFindBestFit(segment_size, index_dst) == false)
 		{
 			if(pool_can_expand == false)
 			{
@@ -1176,16 +1180,18 @@ namespace zakero
 				return -1;
 			}
 
-			if(expandToFit(size, index_dst) == false)
+			if(expandToFit(segment_size, index_dst) == false)
 			{
 				error = ZAKERO_MEMORYPOOL__ERROR(Error_Failed_To_Resize_File);
 				return -1;
 			}
-
-			//segmentFindBestFit(size, index_dst);
 		}
 
-		index_dst = segmentMove(index_src, index_dst, size);
+		// TODO - Continue Here
+		// - Rename MergeRight() to MergeNext()
+		// - Rename MergeLeft() to MergePrev()
+
+		index_dst = segmentMove(index_src, segment_size, index_dst);
 
 		offset = segment[index_dst].offset;
 
@@ -1462,14 +1468,21 @@ namespace zakero
 		pool_size = new_size;
 
 		index = segment.size();
-
-		segment.push_back(
-		{	.offset = (off_t)old_size
-		,	.size   = (off_t)size_increase
-		,	.in_use = false
-		});
-
-		index = segmentMerge(index);
+		if(index > 0
+			&& segment[index - 1].in_use == false
+			)
+		{
+			index--;
+			segment[index].size += (off_t)size_increase;
+		}
+		else
+		{
+			segment.push_back(
+			{	.offset = (off_t)old_size
+			,	.size   = (off_t)size_increase
+			,	.in_use = false
+			});
+		}
 
 		size_on_change(pool_size);
 
@@ -1541,31 +1554,32 @@ namespace zakero
 		}
 
 		Segment& segment_next = segment[index_next];
+
 		if(segment_next.in_use == true)
 		{
 			return false;
 		}
 
-		if(size > size_t(segment[index].size + segment_next.size))
+		Segment& segment_this = segment[index];
+
+		if(size > size_t(segment_this.size + segment_next.size))
 		{
 			return false;
 		}
 
-		const size_t size_delta = size - segment[index].size;
+		const size_t size_next = size - segment_this.size;
 
-		if(size_delta == 0)
+		segment_this.size = size;
+
+		if(size_next == 0)
 		{
-			const auto iter = std::begin(segment);
-
-			segment.erase(iter + index_next);
+			segment.erase(std::begin(segment) + index_next);
 		}
 		else
 		{
-			segment_next.offset += size_delta;
-			segment_next.size   -= size_delta;
+			segment_next.offset += size_next;
+			segment_next.size   -= size_next;
 		}
-
-		segment[index].size = size;
 
 		return true;
 	}
@@ -1625,7 +1639,7 @@ namespace zakero
 		, size_t& index                               ///< The index if found
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindAvailable");
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindBestFit");
 
 		for(size_t i = 0; i < segment.size(); i++)
 		{
@@ -1664,6 +1678,11 @@ namespace zakero
 			{
 				index = i;
 				return true;
+			}
+
+			if(segment[i].offset > offset)
+			{
+				break;
 			}
 		}
 
@@ -1732,15 +1751,17 @@ namespace zakero
 	 * The segment at the provided index will be erased.  And the \p index 
 	 * will be set to the index of the segment to the left.
 	 */
-	void MemoryPool::segmentMergeLeft(size_t& index ///< The segment to merge
+	void MemoryPool::segmentMergeLeft(const size_t index ///< The segment to merge
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeLeft");
+
 		if(index == 0)
 		{
 			return;
 		}
 
-		size_t left = index - 1;
+		const size_t left = index - 1;
 
 		Segment& segment_left = segment[left];
 
@@ -1752,8 +1773,6 @@ namespace zakero
 		segment_left.size += segment[index].size;
 
 		segment.erase(std::begin(segment) + index);
-
-		index = left;
 	}
 
 
@@ -1771,6 +1790,8 @@ namespace zakero
 	void MemoryPool::segmentMergeRight(const size_t index ///< The segment to merge
 		) noexcept
 	{
+		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeRight");
+
 		size_t right = index + 1;
 
 		if(right >= segment.size())
@@ -1794,53 +1815,62 @@ namespace zakero
 	/**
 	 * \brief Move the contents of a segment.
 	 *
-	 * The contents of the segment at \p index_src will be moved to the \p 
-	 * index_dst segment.  The \p size parameter is used to determine the 
-	 * resulting size of the \p index_dst segment.
+	 * The contents of the segment at \p src_index will be moved to the \p 
+	 * dst_index segment.  The \p dst_size parameter is used to determine 
+	 * the resulting size of the \p dst_index segment.
 	 *
 	 * \note No error checking is done, all provided values are expected to 
 	 * be correct and valid.
 	 *
-	 * It is expected that \p size will be in the range of:
-	 *     segment[index_src].size <= size <= segment[index_dst].size
+	 * It is expected that \p dst_size will be in the range of:
+	 *     segment[src_index].size <= dst_size <= segment[dst_index].size
 	 *
-	 * The segment at \p index_src will be destroyed.
+	 * The segment at \p src_index will be destroyed.
 	 *
 	 * \return The index of the destination segment.
 	 */
-	size_t MemoryPool::segmentMove(size_t index_src ///< The source segment
-		, size_t                      index_dst ///< The destination segment
-		, size_t                      size      ///< The destination size
+	size_t MemoryPool::segmentMove(const size_t src_index ///< The source segment
+		, const size_t                      dst_size  ///< The destination size
+		, size_t&                           dst_index ///< The destination segment
 		) noexcept
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Move");
 
-		Segment& segment_src = segment[index_src];
-		uint8_t* addr_src    = memory + segment_src.offset;
-		size_t   size_src    = segment_src.size;
+		Segment&       src_segment = segment[src_index];
+		const uint8_t* src_addr    = memory + src_segment.offset;
+		const size_t   src_size    = src_segment.size;
 
-		Segment& segment_dst = segment[index_dst];
-		uint8_t* addr_dst    = memory + segment_dst.offset;
-		size_t   offset_dst  = segment_dst.offset;
+		Segment&     dst_segment = segment[dst_index];
+		uint8_t*     dst_addr    = memory + dst_segment.offset;
+		const size_t dst_offset  = dst_segment.offset;
 
-		segment_dst.in_use = true;
+		dst_segment.in_use = true;
 
-		memcpy(addr_dst, addr_src, size_src);
+		memcpy(dst_addr, src_addr, src_size);
 
-		if(index_src > index_dst)
+		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
+		memset(src_addr, '\0', src_size);
+		#endif
+		src_segment.in_use = false;
+
+		if(src_index > dst_index)
 		{
-			segmentDestroy(index_src);
-			segmentSplit(index_dst, size);
+			segmentMergeRight(src_index);
+			segmentMergeLeft(src_index);
+
+			segmentSplit(dst_index, dst_size);
 		}
 		else
 		{
-			segmentSplit(index_dst, size);
-			segmentDestroy(index_src);
+			segmentSplit(dst_index, dst_size);
 
-			index_dst = segmentFind(offset_dst);
+			segmentMergeRight(src_index);
+			segmentMergeLeft(src_index);
+
+			segmentFindInUse(dst_offset, dst_index);
 		}
 
-		return index_dst;
+		return dst_index;
 	}
 
 
@@ -1868,37 +1898,47 @@ namespace zakero
 	{
 		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Split");
 
-		const size_t index_next = index + 1;
+		Segment& this_segment = segment[index];
 
-		if(index_next >= segment.size())
+		const size_t right_index  = index + 1;
+		const off_t  right_offset = this_segment.offset + size;
+		const off_t  right_size   = this_segment.size - size;
+
+		this_segment.size = size;
+
+		if(this_segment.in_use)
+		{
+			uint8_t* addr = memory + right_offset;
+
+			memset(addr, '\0', right_size);
+		}
+
+		if(right_index >= segment.size())
 		{
 			segment.push_back(
-			{	.offset = off_t(segment[index].offset + size)
-			,	.size   = off_t(segment[index].size - size)
+			{	.offset = right_offset
+			,	.size   = right_size
 			,	.in_use = false
 			});
 		}
 		else
 		{
-			segment.insert(std::begin(segment) + index_next,
-			{	.offset = off_t(segment[index].offset + size)
-			,	.size   = off_t(segment[index].size - size)
-			,	.in_use = false
-			});
+			Segment& right_segment = segment[right_index];
+
+			if(right_segment.in_use)
+			{
+				segment.insert(std::begin(segment) + right_index,
+				{	.offset = right_offset
+				,	.size   = right_size
+				,	.in_use = false
+				});
+			}
+			else // Not in use
+			{
+				right_segment.offset  = right_offset;
+				right_segment.size   += right_size;
+			}
 		}
-
-		segment[index].size = size;
-
-		if(segment[index].in_use)
-		{
-			Segment& segment_next = segment[index_next];
-
-			uint8_t* addr = memory + segment_next.offset;
-
-			memset(addr, '\0', segment_next.size);
-		}
-
-		segmentMerge(index_next);
 	}
 }
 

@@ -29,9 +29,9 @@ TEST_CASE("Init")
 		REQUIRE(memory_pool.alloc(1)                        == -1     );
 		REQUIRE(memory_pool.alloc(1, uint8_t(0xff))         == -1     );
 		REQUIRE(memory_pool.alloc(1, uint32_t(0xffff'ffff)) == -1     );
-		REQUIRE(memory_pool.resize( 1, 1)                   == -1     );
-		REQUIRE(memory_pool.resize( 1, 0)                   == -1     );
-		REQUIRE(memory_pool.resize(-1, 1)                   == -1     );
+		REQUIRE(memory_pool.realloc( 1, 1)                  == -1     );
+		REQUIRE(memory_pool.realloc( 1, 0)                  == -1     );
+		REQUIRE(memory_pool.realloc(-1, 1)                  == -1     );
 		REQUIRE(memory_pool.addressOf( 0)                   == nullptr);
 		REQUIRE(memory_pool.addressOf( 1)                   == nullptr);
 		REQUIRE(memory_pool.addressOf(-1)                   == nullptr);

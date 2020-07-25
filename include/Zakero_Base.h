@@ -27,6 +27,10 @@
 #ifndef zakero_Base_h
 #define zakero_Base_h
 
+// POSIX
+#include <vector>
+
+
 /**
  * \internal
  *
@@ -80,6 +84,7 @@
  */
 #define ZAKERO_MACRO_HAS_VALUE(macro_define_) \
 	~(~macro_define_ + 0) == 0 && ~(~macro_define_ + 1) == 1
+
 
 namespace zakero
 {

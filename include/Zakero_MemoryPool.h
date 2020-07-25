@@ -329,6 +329,7 @@ namespace zakero
 // {{{ Dependencies
 
 #if defined(ZAKERO_MEMORYPOOL_PROFILER)
+#	include "Zakero_Base.h"
 #	if !defined(ZAKERO_PROFILER_IMPLEMENTATION)
 #		define ZAKERO_PROFILER_IMPLEMENTATION
 #	endif
@@ -349,16 +350,6 @@ namespace zakero
  * \param err_ The name of an error from the Error Table
  */
 #define ZAKERO_MEMORYPOOL__ERROR(err_) std::error_condition(err_, MemoryPoolErrorCategory);
-
-/**
- * \internal
- *
- * \brief Check if a macro has a value.
- *
- * \param macro_define_ The defined macro to check.
- */
-#define ZAKERO_MACRO_HAS_VALUE(macro_define_) \
-	~(~macro_define_ + 0) == 0 && ~(~macro_define_ + 1) == 1
 
 // {{{ Defines : Doxygen
 

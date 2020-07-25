@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['_7ememorypool_47',['~MemoryPool',['../classzakero_1_1_memory_pool.html#a3004431c0df6528596f4de48d60963a1',1,'zakero::MemoryPool']]]
+  ['size_53',['size',['../classzakero_1_1_memory_pool.html#a794a2098e0cb093647fe01e3bd241583',1,'zakero::MemoryPool']]],
+  ['sizeonchange_54',['sizeOnChange',['../classzakero_1_1_memory_pool.html#ac0e6f78193fd77dbfea0d8115403b830',1,'zakero::MemoryPool']]]
 ];

@@ -102,14 +102,21 @@ Macros</h2></td></tr>
 <tr class="separator:aae3a1c9d9e314ee27b744c227291b08d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><dl class="section user"><dt>TL;DR:</dt><dd><p class="startdd">This library will generate profiling data while your application is running. <br  />
+<div class="textblock"><p>An invasive profiler to provide timing data output.</p>
+<dl class="section note"><dt>Note</dt><dd>"Invasive" means that you must add profiler code to your source code.</dd></dl>
+<dl class="section user"><dt>Dependencies</dt><dd><ul>
+<li><a class="el" href="_zakero___base_8h.html" title="Zakero Base.">Zakero_Base.h</a><br  />
+</li>
+</ul>
+</dd></dl>
+<dl class="section user"><dt>TL;DR:</dt><dd><p class="startdd">This library will generate profiling data while your application is running. <br  />
  To use, add the implementation to a source code file: </p><div class="fragment"><div class="line"><span class="preprocessor">#define ZAKERO_PROFILER_IMPLEMENTATION</span></div>
 <div class="line"><span class="preprocessor">#include &quot;path/to/Zakero_Profiler.h&quot;</span></div>
 </div><!-- fragment --><p class="interdd">Next, add the library to the source code where it is "always enabled" </p><div class="fragment"><div class="line"><span class="preprocessor">#define ZAKERO_PROFILER_ENABLE</span></div>
 <div class="line"><span class="preprocessor">#include &quot;path/to/Zakero_Profiler.h&quot;</span></div>
 </div><!-- fragment --><p class="interdd">Or. enable the profiler at compile time. Only include the library in the source code: </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;path/to/Zakero_Profiler.h&quot;</span></div>
 </div><!-- fragment --><p class="interdd">Then use a compiler flag when building: </p><div class="fragment"><div class="line">-DZAKERO_PROFILER_ENABLE</div>
-</div><!-- fragment --><p class="enddd"></p>
+</div><!-- fragment --><p class="enddd">Finally, add the profiler macros to your code. </p>
 </dd></dl>
 <dl class="section user"><dt>What Is It?</dt><dd><p class="startdd">Profiling a program helps you determine how much time is being used by different sections of code. This information can be used to determine where code optimizations will have the most pay-off or help locate an area that does not perform consistently.</p>
 <p class="interdd"><b>If your program is crashing or has some other catastrophic bug, profiling will not help you.</b></p>
@@ -167,8 +174,7 @@ Header Library". Just include the header file where ever you need or want to add
 <div class="line"> </div>
 <div class="line">        if(!done)</div>
 <div class="line">        {</div>
-<div class="line">                <a class="code" href="_zakero___profiler_8h.html#a7fb46343893d03f6703c076e08ba9222">ZAKERO_PROFILER_DURATION</a>(<span class="stringliteral">&quot;cache availability&quot;</span>, <span class="stringliteral">&quot;extra </span></div>
-<div class="line"><span class="stringliteral">                defrag-ing&quot;</span>)</div>
+<div class="line">                <a class="code" href="_zakero___profiler_8h.html#a7fb46343893d03f6703c076e08ba9222">ZAKERO_PROFILER_DURATION</a>(<span class="stringliteral">&quot;cache availability&quot;</span>, <span class="stringliteral">&quot;mo-defrag-in&quot;</span>)</div>
 <div class="line"> </div>
 <div class="line">                do_more_stuff();</div>
 <div class="line">        }</div>
@@ -185,7 +191,12 @@ Header Library". Just include the header file where ever you need or want to add
 </blockquote>
 <p class="enddd">Next, drag the <em>Zakero Profiler</em> output file into the tab to see your data. </p>
 </dd></dl>
-<dl class="section version"><dt>Version</dt><dd>0.8.2<ul>
+<dl class="section version"><dt>Version</dt><dd>0.9.0<ul>
+<li>Updated to use <a class="el" href="_zakero___base_8h.html" title="Zakero Base.">Zakero_Base.h</a></li>
+</ul>
+</dd>
+<dd>
+0.8.2<ul>
 <li>Bug fixes</li>
 </ul>
 </dd>
@@ -484,12 +495,12 @@ Header Library". Just include the header file where ever you need or want to add
 </div>
 </div>
 </div><!-- contents -->
-<div class="ttc" id="a_zakero___profiler_8h_html_a3ac092a8bdae7abde5d56533a2962b1f"><div class="ttname"><a href="_zakero___profiler_8h.html#a3ac092a8bdae7abde5d56533a2962b1f">ZAKERO_PROFILER_ACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_ACTIVATE</div><div class="ttdoc">Activate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:359</div></div>
-<div class="ttc" id="a_zakero___profiler_8h_html_ac845a1a392f5844e9a3b48d51e000ad6"><div class="ttname"><a href="_zakero___profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6">ZAKERO_PROFILER_DEACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DEACTIVATE</div><div class="ttdoc">Deactivate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:369</div></div>
-<div class="ttc" id="a_zakero___profiler_8h_html_aebd421bc3f379654c8c967b5d31de6d1"><div class="ttname"><a href="_zakero___profiler_8h.html#aebd421bc3f379654c8c967b5d31de6d1">ZAKERO_PROFILER_INIT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT(output_)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:265</div></div>
-<div class="ttc" id="a_zakero___profiler_8h_html_af0ee9f417543af61089189a8ba01bcbb"><div class="ttname"><a href="_zakero___profiler_8h.html#af0ee9f417543af61089189a8ba01bcbb">ZAKERO_PROFILER_INSTANT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INSTANT(category_, name_)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:482</div></div>
-<div class="ttc" id="a_zakero___profiler_8h_html_a7fb46343893d03f6703c076e08ba9222"><div class="ttname"><a href="_zakero___profiler_8h.html#a7fb46343893d03f6703c076e08ba9222">ZAKERO_PROFILER_DURATION</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DURATION(category_, name_)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:463</div></div>
-<div class="ttc" id="a_zakero___profiler_8h_html_a8ceea5bce20025d829bdf08fdc760a94"><div class="ttname"><a href="_zakero___profiler_8h.html#a8ceea5bce20025d829bdf08fdc760a94">ZAKERO_PROFILER_INIT_METADATA</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:310</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_a3ac092a8bdae7abde5d56533a2962b1f"><div class="ttname"><a href="_zakero___profiler_8h.html#a3ac092a8bdae7abde5d56533a2962b1f">ZAKERO_PROFILER_ACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_ACTIVATE</div><div class="ttdoc">Activate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:379</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_ac845a1a392f5844e9a3b48d51e000ad6"><div class="ttname"><a href="_zakero___profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6">ZAKERO_PROFILER_DEACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DEACTIVATE</div><div class="ttdoc">Deactivate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:389</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_aebd421bc3f379654c8c967b5d31de6d1"><div class="ttname"><a href="_zakero___profiler_8h.html#aebd421bc3f379654c8c967b5d31de6d1">ZAKERO_PROFILER_INIT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT(output_)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:285</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_af0ee9f417543af61089189a8ba01bcbb"><div class="ttname"><a href="_zakero___profiler_8h.html#af0ee9f417543af61089189a8ba01bcbb">ZAKERO_PROFILER_INSTANT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INSTANT(category_, name_)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:467</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_a7fb46343893d03f6703c076e08ba9222"><div class="ttname"><a href="_zakero___profiler_8h.html#a7fb46343893d03f6703c076e08ba9222">ZAKERO_PROFILER_DURATION</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DURATION(category_, name_)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:448</div></div>
+<div class="ttc" id="a_zakero___profiler_8h_html_a8ceea5bce20025d829bdf08fdc760a94"><div class="ttname"><a href="_zakero___profiler_8h.html#a8ceea5bce20025d829bdf08fdc760a94">ZAKERO_PROFILER_INIT_METADATA</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:330</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

@@ -1,4 +1,6 @@
-// g++ -std=gnu++20 -o Manual_-_Check_Output Manual_-_Check_Output.cpp
+/*
+g++ -std=gnu++20 -o Manual_-_Check_Output Manual_-_Check_Output.cpp
+ */
 
 #define ZAKERO_PROFILER_ENABLE
 #define ZAKERO_PROFILER_IMPLEMENTATION

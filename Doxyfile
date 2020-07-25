@@ -261,8 +261,8 @@ TAB_SIZE               = 8
 # commands \{ and \} for these it is advised to use the version @{ and @} or use
 # a double escape (\\{ and \\})
 
-ALIASES                = "example=\par \"Example\"\parblock\code" \
-                         "endexample=\endcode\endparblock" \
+ALIASES                = "parcode=\par \"Example\"\parblock\code" \
+                         "endparcode=\endcode\endparblock" \
                          "dependencies=\par \"Dependencies\"" \
                          "tldr=\par \"TL;DR:\""
 
@@ -1520,7 +1520,7 @@ GENERATE_TREEVIEW      = NO
 # Minimum value: 0, maximum value: 20, default value: 4.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-ENUM_VALUES_PER_LINE   = 4
+ENUM_VALUES_PER_LINE   = 1
 
 # If the treeview is enabled (see GENERATE_TREEVIEW) then this tag can be used
 # to set the initial width (in pixels) of the frame in which the tree is shown.

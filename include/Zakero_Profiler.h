@@ -226,6 +226,12 @@
 #include <map>
 #include <thread>
 
+// {{{ Dependencies
+
+#include "Zakero_Base.h"
+
+// }}}
+
 // {{{ Macros
 
 #if defined(ZAKERO_PROFILER_ENABLE)
@@ -368,41 +374,6 @@
  */
 #define ZAKERO_PROFILER_DEACTIVATE \
 	zakero::Profiler::deactivate();
-
-/**
- * \internal
- *
- * \brief Concatenate the two things.
- *
- * An extra layer of C/C++ Preprocessor indirection to enforce proper order of 
- * macro expansion and concatenation.
- *
- * \param thing_1_ Symbol left side
- * \param thing_2_ Symbol right side
- */
-#define ZAKERO_CONCAT_(thing_1_, thing_2_) thing_1_ ## thing_2_
-
-/**
- * \internal
- *
- * \brief Concatenate the two things.
- *
- * Use the C/C++ Preprocessor to create a new symbol name.  For example the 
- * symbol _abcxyz_ could be created using _ZAKERO_CONCAT(abc, xyz)_.
- *
- * \par Example
- * \code
- * int foobar = 1;
- * ZAKERO_CONCAT(foo, bar)++; // foobar == 2
- *
- * int ZAKERO_CONCAT(magic_, 42) = 123;
- * // int magic_42 = 123;
- * \endcode
- *
- * \param thing_1_ Symbol left side
- * \param thing_2_ Symbol right side
- */
-#define ZAKERO_CONCAT(thing_1_, thing_2_) ZAKERO_CONCAT_(thing_1_, thing_2_)
 
 /**
  * \internal

@@ -1,20 +1,21 @@
 # Zakero's C++ Header Libraries
 
-This is a collection of libraries in C++ header file form.  Due to their 
-nature, the libraries are not stand-alone _Single Header Libraries_.  The 
-reason for this is that there maybe dependencies between the headers.  Refer 
-to each library to learn what they depend on.  Or just add all of them to 
-your project and not worry about it.  :-)
+This is a collection of libraries in C++ header file form.  All the header 
+libraries can be found in the `include/` directory.  Due to their nature, the 
+libraries are not stand-alone _Single Header Libraries_.  The reason for this 
+is that there maybe dependencies between the headers.  Refer to each library 
+to learn what they depend on.  Or just add all of them to your project and 
+not worry about it.  :-)
 
 The documentation is available locally, if cloned, at `html/index.html` as 
 well as [online](https://zhl.zakero.com/doc/trunk/html/index.html).  The 
 official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 
-| Library                                      | Version | Description                                                       |
-|----------------------------------------------|:-------:|-------------------------------------------------------------------|
-| [Zakero_Profiler](\ref Zakero_Profiler.h)    |  0.8.2  | Generate profiling data that can be visualized in Chrome/Chromium |
-| [Zakero_MemoryPool](\ref zakero::MemoryPool) |  0.8.1  | An expandable memory pool that is based on Unix File Descriptors  |
-| _More coming soon_                           |         |                                                                   |
+| Library             | Version | Description                                                       |
+|---------------------|:-------:|-------------------------------------------------------------------|
+| Zakero_Profiler.h   |  0.8.2  | Generate profiling data that can be visualized in Chrome/Chromium |
+| Zakero_MemoryPool.h |  0.8.1  | An expandable memory pool that is based on Unix File Descriptors  |
+| _More coming soon_  |         |                                                                   |
 
 # License
 

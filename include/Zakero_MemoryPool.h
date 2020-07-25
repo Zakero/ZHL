@@ -491,6 +491,18 @@ namespace zakero
 	 *
 	 * This object will create a region of memory and provide an interface 
 	 * to allocate from that memory.
+	 *
+	 * \internal
+	 *
+	 * The structure of the zakero::MemoryPool class is that the public API 
+	 * validates the input then uses the private methods to do the work.  
+	 * The advantages of this approach are:
+	 * - Invalid data _should_ never be a concern for the code that does 
+	 * the work.
+	 * - The public API handles the thread locking, freeing the worker code 
+	 * from that burden.
+	 * - Each private method focuses on only 1 type of work.  The public 
+	 * API calls the appropriate workers as needed.
 	 */
 
 	/**

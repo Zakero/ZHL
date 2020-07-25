@@ -4,6 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#ifndef zakero_MemoryPool_h
+#define zakero_MemoryPool_h
+
 /**
  * \file
  *
@@ -15,9 +18,11 @@
  * See zakero::MemoryPool for the class API documentation.
  * 
  * \dependencies
+ * - Zakero_Base.h<br>
  * - Zakero_Profiler.h<br>
  *   Defining \ref ZAKERO_MEMORYPOOL_PROFILER will cause the Zakero_Profiler to 
- *   be included.
+ *   be included.  If \ref ZAKERO_MEMORYPOOL_PROFILER is __not__ defined, then 
+ *   the Zakero_Profiler.h is no longer a dependency.
  *
  * \tldr
  * This library will provide a memory pool for your application.
@@ -163,6 +168,9 @@
  * ~~~
  * \endparblock
  *
+ * \version 0.9.0
+ * - Updated to use Zakero_Base.h
+ *
  * \version 0.8.1
  * - Bug fixes
  * - API changes
@@ -188,9 +196,6 @@
  * \todo Be able to initialize a MemoryPool with a Unix File Descriptor and the 
  * file size.
  */
-
-#ifndef zakero_MemoryPool_h
-#define zakero_MemoryPool_h
 
 // POSIX
 #include <cstring>
@@ -535,9 +540,9 @@ namespace zakero
 	 * only exist in RAM with an optional backing store in swap in 
 	 * available.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("The name of the MemoryPool");
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note If \ref ZAKERO_MEMORYPOOL_PROFILER is defined, then \ref 
 	 * ZAKERO_PROFILER_INIT_METADATA will be called to setup the profiler.
@@ -615,7 +620,7 @@ namespace zakero
 	 *
 	 * \note The size of the MemoryPool will never shrink.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool rgba_textures("Active Texture Cache");
 	 *
 	 * #define KILOBYETS(size_) ((size_) * 1024)
@@ -624,7 +629,7 @@ namespace zakero
 	 * 	, false // Restricted environment, no expanding
 	 * 	, zakero::MemoryPool::Alignment::Bits_32 // RGBA == 32 bits
 	 * 	);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return An error condition.  If there was no error, then the value 
 	 * of the error condition will be `0`.
@@ -709,7 +714,7 @@ namespace zakero
 	 *
 	 * The entire MemoryPool will be accessible from the file descriptor.
 	 *
-	 * \example
+	 * \parcode
 	 * // Get read access to the shared memory
 	 * uint8_t* mem_reader = (uint8_t*)mmap(nullptr
 	 * 	, memory_pool.size()
@@ -717,7 +722,7 @@ namespace zakero
 	 * 	, MAP_SHARED | MAP_NORESERVE
 	 * 	, memory_pool.fd()
 	 * 	);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \see MemoryPool::size()
 	 *
@@ -754,7 +759,7 @@ namespace zakero
 	 * The \p lambda will receive the new size, in bytes, of the memory 
 	 * pool.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("Size Matters");
 	 *
 	 * memory_pool.init(1, true);
@@ -766,7 +771,7 @@ namespace zakero
 	 *
 	 * off_t uno = memory_pool.alloc(256);
 	 * off_t dos = memory_pool.alloc(512);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note The MemoryPool will be in a "locked state" so any call from 
 	 * the lambda to a non-const MemoryPool method will block indefinitely.
@@ -792,12 +797,12 @@ namespace zakero
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
 	 * off_t data_offset = memory_pool.alloc(128);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note The contents of the memory is undefined.
 	 *
@@ -819,7 +824,7 @@ namespace zakero
 	 * pool.  If the memory could not be allocated, then `-1` will be 
 	 * returned and the reason will be stored in \p error.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
@@ -830,7 +835,7 @@ namespace zakero
 	 * {
 	 * 	std::cerr << "Error: " << error.message() << "\n";
 	 * }
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note The contents of the memory is undefined.
 	 *
@@ -903,12 +908,12 @@ namespace zakero
 	 *
 	 * The every byte of the allocated memory will be set to \p value.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
 	 * off_t data_offset = memory_pool.alloc(512, uint8_t(0xa5));
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the block of memory.
 	 */
@@ -931,7 +936,7 @@ namespace zakero
 	 *
 	 * The every byte of the allocated memory will be set to \p value.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
@@ -942,7 +947,7 @@ namespace zakero
 	 * {
 	 * 	std::cerr << "Error: " << error.message() << "\n";
 	 * }
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the block of memory.
 	 */
@@ -978,12 +983,12 @@ namespace zakero
 	 * allocation with a \p value of 0xaaaa5555.  The last 2 bytes will be 
 	 * undefined.  Memory Contents: `aaaa5555aaaa5555??`
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
 	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xaaaa5555));
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the block of memory.
 	 */
@@ -1009,7 +1014,7 @@ namespace zakero
 	 * allocation with a \p value of 0xaaaa5555.  The last 2 bytes will be 
 	 * undefined.  Memory Contents: `aaaa5555aaaa5555??`
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
@@ -1021,7 +1026,7 @@ namespace zakero
 	 * {
 	 * 	std::cerr << "Error: " << error.message() << "\n";
 	 * }
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the block of memory.
 	 */
@@ -1057,7 +1062,7 @@ namespace zakero
 	 *
 	 * If the \p offset is not valid, its value will not be changed.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("A Memory Pool");
 	 *
 	 * memory_pool.init(128);
@@ -1067,7 +1072,7 @@ namespace zakero
 	 * // Do stuff
 	 *
 	 * memory_pool.free(offset);
-	 * \endexample
+	 * \endparcode
 	 */
 	void MemoryPool::free(off_t& offset ///< The memory to free
 		) noexcept
@@ -1111,7 +1116,7 @@ namespace zakero
 	 * The return value will be `-1` if the allocated memory could not be 
 	 * resized.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("Resizing in the Pool");
 	 *
 	 * memory_pool.init(128);
@@ -1122,7 +1127,7 @@ namespace zakero
 	 * // Oops, need more space
 	 *
 	 * offset = memory_pool.resize(offset, 96);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the resized memory location.
 	 */
@@ -1148,7 +1153,7 @@ namespace zakero
 	 * The return value will be `-1` if the allocated memory could not be 
 	 * resized and the reason will be stored in \p error.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("Resizing in the Pool");
 	 *
 	 * memory_pool.init(128);
@@ -1168,7 +1173,7 @@ namespace zakero
 	 * {
 	 * 	offset = new_offset;
 	 * }
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The offset of the resized memory location.
 	 */
@@ -1264,10 +1269,10 @@ namespace zakero
 	 * de-referenced as a normal C-Style pointer.  If the \p offset is not 
 	 * valid, then `nullptr` will be returned.
 	 *
-	 * \example
+	 * \parcode
 	 * off_t offset = memory_pool.alloc(256);
 	 * uint8_t* ptr = memory_pool.addressOf(offset);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note If the MemoryPool expands and is relocated, the returned 
 	 * pointers will no longer be valid.
@@ -1307,7 +1312,7 @@ namespace zakero
 	 * region of memory.  Therefore, the \p lambda will never be called and 
 	 * the pointers will never become invalid (unless the memory is freed).
 	 *
-	 * \example
+	 * \parcode
 	 * uint8_t* secret = nullptr;
 	 *
 	 * memory_pool.onRemap([&](const zakero::MemoryPool::AddressMap& map)
@@ -1317,7 +1322,7 @@ namespace zakero
 	 *
 	 * off_t secret_offset = memory_pool.alloc(512);
 	 * secret = memory_pool.addressOf(secret_offset);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \note The MemoryPool will be in a "locked state" so any call from 
 	 * the lambda to a non-const MemoryPool method will block indefinitely.
@@ -1378,7 +1383,7 @@ namespace zakero
 	 * The content of the layout is controlled by the \p 
 	 * bytes_per_character and \p characters_per_line parameters.
 	 *
-	 * \example
+	 * \parcode
 	 * zakero::MemoryPool memory_pool("Dump It");
 	 *
 	 * memory_pool(512);
@@ -1390,7 +1395,7 @@ namespace zakero
 	 * memory_pool.free(o2);
 	 *
 	 * memory_pool.dump(1, 128);
-	 * \endexample
+	 * \endparcode
 	 *
 	 * \return The JSON formatted string.
 	 */

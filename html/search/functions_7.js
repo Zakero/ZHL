@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['size_45',['size',['../classzakero_1_1_memory_pool.html#a794a2098e0cb093647fe01e3bd241583',1,'zakero::MemoryPool']]],
-  ['sizeonchange_46',['sizeOnChange',['../classzakero_1_1_memory_pool.html#ac0e6f78193fd77dbfea0d8115403b830',1,'zakero::MemoryPool']]]
+  ['realloc_51',['realloc',['../classzakero_1_1_memory_pool.html#a761e378bb59f75414cd422787db41710',1,'zakero::MemoryPool::realloc(off_t, size_t) noexcept'],['../classzakero_1_1_memory_pool.html#a2f9c1e8913296522a2a284ae1a4b5b17',1,'zakero::MemoryPool::realloc(off_t, size_t, std::error_condition &amp;) noexcept']]],
+  ['remap_52',['remap',['../classzakero_1_1_memory_pool.html#ac79e330bb9ba2d1d21218f7b463cbfae',1,'zakero::MemoryPool']]]
 ];

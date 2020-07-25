@@ -1646,9 +1646,9 @@ namespace zakero
 
 		for(size_t i = 0; i < segment.size(); i++)
 		{
-			if(segment[i].in_use == false
-				&& (size_t)segment[i].size >= size
-				)
+			const Segment& seg = segment[i];
+
+			if(seg.in_use == false && (size_t)seg.size >= size)
 			{
 				index = i;
 
@@ -1675,17 +1675,18 @@ namespace zakero
 
 		for(size_t i = 0; i < segment.size(); i++)
 		{
-			if(segment[i].offset == offset
-				&& segment[i].in_use == true
-				)
+			const Segment& seg = segment[i];
+
+			if(seg.offset > offset)
 			{
-				index = i;
-				return true;
+				return false;
 			}
 
-			if(segment[i].offset > offset)
+			if(seg.offset == offset && seg.in_use == true)
 			{
-				break;
+				index = i;
+
+				return true;
 			}
 		}
 

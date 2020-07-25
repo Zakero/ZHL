@@ -4,6 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#ifndef zakero_Base_h
+#define zakero_Base_h
+
 /**
  * \file
  *
@@ -14,7 +17,7 @@
  *
  * Include this header in your source code to use these features.
  *
- * \version 0.8.0
+ * \version 0.9.0
  * - The initial collection
  *
  * \copyright [Mozilla Public License 
@@ -23,9 +26,6 @@
  * \author Andrew "Zakero" Moore
  * - Original Author
  */
-
-#ifndef zakero_Base_h
-#define zakero_Base_h
 
 // POSIX
 #include <vector>
@@ -50,14 +50,13 @@
  * Use the C/C++ Preprocessor to create a new symbol name.  For example the 
  * symbol _abcxyz_ could be created using _ZAKERO_CONCAT(abc, xyz)_.
  *
- * \par Example
- * \code
+ * \parcode
  * int foobar = 1;
  * ZAKERO_CONCAT(foo, bar)++; // foobar == 2
  *
  * int ZAKERO_CONCAT(magic_, 42) = 123;
  * // int magic_42 = 123;
- * \endcode
+ * \endparcode
  *
  * \param thing_1_ Symbol left side
  * \param thing_2_ Symbol right side
@@ -70,7 +69,7 @@
  * Use this macro function to determine if a macro has a value and is not just 
  * defined.
  *
- * \example
+ * \parcode
  * #define BEER
  *
  * #if ZAKERO_MACRO_HAS_VALUE(BEER)
@@ -78,29 +77,29 @@
  * #else
  * #error No beer! // <-- This happens
  * #endif
- * \endexample
+ * \endparcode
  *
- * \param macro_define_ The defined macro to check.
+ * \param define_ The defined macro to check.
  */
-#define ZAKERO_MACRO_HAS_VALUE(macro_define_) \
-	~(~macro_define_ + 0) == 0 && ~(~macro_define_ + 1) == 1
-
+#define ZAKERO_MACRO_HAS_VALUE(define_) \
+	~(~define_ + 0) == 0 && ~(~define_ + 1) == 1
 
 namespace zakero
 {
 	/**
 	 * \brief Conversion Type.
+	 *
+	 * Sizes in powers of 2.
 	 */
 	enum class Storage : uint64_t
-	{	Byte     = 0x0000'0000'0000'0001
-	,	Kilobyte = 0x0000'0000'0000'0400
-	,	Megabyte = 0x0000'0000'0010'0000
-	,	Gigabyte = 0x0000'0000'4000'0000
-	,	Terabyte = 0x0000'0100'0000'0000
-	,	Petabyte = 0x0004'0000'0000'0000
-	,	Exabyte  = 0x1000'0000'0000'0000
+	{	Byte     = 0x0000'0000'0000'0001 ///< 1 byte
+	,	Kilobyte = 0x0000'0000'0000'0400 ///< 1024 bytes
+	,	Megabyte = 0x0000'0000'0010'0000 ///< 1024 kilobytes
+	,	Gigabyte = 0x0000'0000'4000'0000 ///< 1024 megabytes
+	,	Terabyte = 0x0000'0100'0000'0000 ///< 1024 gigabytes
+	,	Petabyte = 0x0004'0000'0000'0000 ///< 1024 terabytes
+	,	Exabyte  = 0x1000'0000'0000'0000 ///< 1024 petabytes
 	};
-
 
 	/**
 	 * \brief Convert storage sizes.
@@ -111,7 +110,9 @@ namespace zakero
 	 * Converting to a larger size is rounded down and may result in `0` if 
 	 * the from \p size is not large enough.
 	 *
-	 * \example
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * uint64_t bytes = zakero::convert(uint64_t(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -122,7 +123,8 @@ namespace zakero
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
 	 * // megs == 0
-	 * \endexample
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \return The converted value.
 	 */
@@ -132,7 +134,7 @@ namespace zakero
 		) noexcept
 	{
 		return size * static_cast<uint64_t>(from) / static_cast<uint64_t>(to);
-	};
+	}
 
 
 	/**
@@ -145,7 +147,9 @@ namespace zakero
 	 * uint64_t, const zakero::Storage, const zakero::Storage) is that 
 	 * conversions to a larger unit will be a fraction.
 	 *
-	 * \example
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * double bytes = zakero::convert(double(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -154,7 +158,8 @@ namespace zakero
 	 * 	, zakero::Storage::Kilobyte
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
-	 * \endexample
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \return The converted value.
 	 */
@@ -164,8 +169,7 @@ namespace zakero
 		) noexcept
 	{
 		return size * static_cast<uint64_t>(from) / static_cast<uint64_t>(to);
-	};
-
+	}
 
 	/**
 	 * \brief Check the contents of a std::vector.
@@ -173,14 +177,17 @@ namespace zakero
 	 * A convience method to make searching a vector easier, like 
 	 * std::map::contains().
 	 *
-	 * \example
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(v, 1))
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endexample
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.
@@ -194,7 +201,6 @@ namespace zakero
 		return (std::find(std::begin(vector), std::end(vector), value) != std::end(vector));
 	}
 
-
 	/**
 	 * \brief Check the contents of a std::vector.
 	 *
@@ -202,7 +208,9 @@ namespace zakero
 	 * method does not save that many keystrokes, it does lead to more 
 	 * readable code.
 	 *
-	 * \example
+	 * \code
+	 * \par "Example"
+	 * \parblock
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(std::begin(v), std::end(v), 1)
@@ -217,7 +225,8 @@ namespace zakero
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endexample
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.

@@ -4,10 +4,20 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#ifndef zakero_Profiler_h
+#define zakero_Profiler_h
+
 /**
  * \file
  *
  * \brief Zakero Profiler
+ *
+ * An invasive profiler to provide timing data output.
+ * 
+ * \note "Invasive" means that you must add profiler code to your source code.
+ *  
+ * \dependencies
+ * - Zakero_Base.h<br>
  *
  * \par TL;DR:
  * \parblock
@@ -33,6 +43,8 @@
  * ~~~
  * -DZAKERO_PROFILER_ENABLE
  * ~~~
+ *
+ * Finally, add the profiler macros to your code.
  * \endparblock
  *
  * \par What Is It?
@@ -167,8 +179,7 @@
  *
  * 	if(!done)
  * 	{
- * 		ZAKERO_PROFILER_DURATION("cache availability", "extra 
- * 		defrag-ing")
+ * 		ZAKERO_PROFILER_DURATION("cache availability", "mo-defrag-in")
  *
  * 		do_more_stuff();
  * 	}
@@ -190,6 +201,9 @@
  *
  * Next, drag the _Zakero Profiler_ output file into the tab to see your data.
  * \endparblock
+ *
+ * \version 0.9.0
+ * - Updated to use Zakero_Base.h
  *
  * \version 0.8.2
  * - Bug fixes
@@ -215,16 +229,16 @@
  * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
-#ifndef zakero_Profiler_h
-#define zakero_Profiler_h
-
+// POSIX
 #include <chrono>
 #include <ctime>
-#include <experimental/source_location>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <thread>
+
+// C++20
+#include <experimental/source_location>
 
 // {{{ Dependencies
 
@@ -470,11 +484,6 @@
 
 #endif
 
-#define TIME_NOW \
-std::chrono::duration_cast<std::chrono::microseconds>(      \
-	std::chrono::steady_clock::now().time_since_epoch() \
-	).count()                                           \
-
 // {{{ Defines : Doxygen
 
 #if defined(ZAKERO__DOXYGEN_DEFINE_DOCS)
@@ -577,6 +586,11 @@ namespace zakero
 #else
 #define ZAKERO_PROFILER_PID -1
 #endif
+
+#define ZAKERO__TIME_NOW \
+std::chrono::duration_cast<std::chrono::microseconds>(      \
+	std::chrono::steady_clock::now().time_since_epoch() \
+	).count()                                           \
 
 namespace
 {
@@ -832,7 +846,7 @@ Profiler::Data::Data(const char                     phase    ///< The phase
 	: category(category)
 	, name(name)
 	, location(location)
-	, time_stamp(TIME_NOW)
+	, time_stamp(ZAKERO__TIME_NOW)
 	, thread_id(std::this_thread::get_id())
 	, process_id(ZAKERO_PROFILER_PID)
 	, phase(phase)
@@ -880,7 +894,7 @@ Profiler::Duration::~Duration() noexcept
 		zakero::Profiler::report(*this);
 
 		phase = 'E';
-		time_stamp = TIME_NOW;
+		time_stamp = ZAKERO__TIME_NOW;
 		zakero::Profiler::report(*this);
 	}
 }

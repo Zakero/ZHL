@@ -1,4 +1,6 @@
-/* *******************************************************************
+/******************************************************************************
+ * Copyright 2010-2019 Andrew Moore
+ * 
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -17,8 +19,15 @@
  *
  * Include this header in your source code to use these features.
  *
- * \version 0.9.0
+ * \parversion{zakero_base}
+ * __0.9.1__
+ * - Added macro ZAKERO_STEADY_TIME_NOW()
+ * - Added macro ZAKERO_SYSTEM_TIME_NOW()
+ * - Added vectorErase()
+ *
+ * __0.9.0__
  * - The initial collection
+ * \endparversion
  *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
@@ -27,9 +36,20 @@
  * - Original Author
  */
 
-// POSIX
+
+/******************************************************************************
+ * Includes
+ */
+
+#include <chrono>
 #include <vector>
 
+
+/******************************************************************************
+ * Macros
+ */
+
+// {{{ Macros
 
 /**
  * \internal
@@ -84,6 +104,46 @@
 #define ZAKERO_MACRO_HAS_VALUE(define_) \
 	~(~define_ + 0) == 0 && ~(~define_ + 1) == 1
 
+/**
+ * \brief Get the current time.
+ *
+ * This macro will get the current time count of the 
+ * `std::chrono::steady_clock`.
+ *
+ * \note The `std::chrono` is automatically applied to the \p unit_.
+ *
+ * \parcode
+ * auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+ * \endparcode
+ *
+ * \param unit_ The time unit to get.
+ */
+#define ZAKERO_STEADY_TIME_NOW(unit_) \
+	std::chrono::duration_cast<std::chrono::unit_>(             \
+		std::chrono::steady_clock::now().time_since_epoch() \
+		).count()                                           \
+
+/**
+ * \brief Get the current time.
+ *
+ * This macro will get the current time count of the 
+ * `std::chrono::system_clock`.
+ *
+ * \note The `std::chrono` is automatically applied to the \p unit_.
+ *
+ * \parcode
+ * auto time_now = ZAKERO_SYSTEM_TIME_NOW(milliseconds);
+ * \endparcode
+ *
+ * \param unit_ The time unit to get.
+ */
+#define ZAKERO_SYSTEM_TIME_NOW(unit_) \
+std::chrono::duration_cast<std::chrono::unit_>(             \
+        std::chrono::steady_clock::now().time_since_epoch() \
+        ).count()                                           \
+
+// }}}
+
 namespace zakero
 {
 	/**
@@ -101,6 +161,7 @@ namespace zakero
 	,	Exabyte  = 0x1000'0000'0000'0000 ///< 1024 petabytes
 	};
 
+
 	/**
 	 * \brief Convert storage sizes.
 	 *
@@ -110,9 +171,7 @@ namespace zakero
 	 * Converting to a larger size is rounded down and may result in `0` if 
 	 * the from \p size is not large enough.
 	 *
-	 * \par "Example"
-	 * \parblock
-	 * \code
+	 * \parcode
 	 * uint64_t bytes = zakero::convert(uint64_t(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -123,11 +182,11 @@ namespace zakero
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
 	 * // megs == 0
-	 * \endcode
-	 * \endparblock
+	 * \endparcode
 	 *
 	 * \return The converted value.
 	 */
+	[[nodiscard]]
 	inline uint64_t convert(const uint64_t size ///< The size to convert
 		, const zakero::Storage        from ///< The source unit
 		, const zakero::Storage        to   ///< The destination unit
@@ -147,9 +206,7 @@ namespace zakero
 	 * uint64_t, const zakero::Storage, const zakero::Storage) is that 
 	 * conversions to a larger unit will be a fraction.
 	 *
-	 * \par "Example"
-	 * \parblock
-	 * \code
+	 * \parcode
 	 * double bytes = zakero::convert(double(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -158,11 +215,11 @@ namespace zakero
 	 * 	, zakero::Storage::Kilobyte
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
-	 * \endcode
-	 * \endparblock
+	 * \endparcode
 	 *
 	 * \return The converted value.
 	 */
+	[[nodiscard]]
 	inline double convert(const double size ///< The size to convert
 		, const zakero::Storage    from ///< The source unit
 		, const zakero::Storage    to   ///< The destination unit
@@ -171,35 +228,35 @@ namespace zakero
 		return size * static_cast<uint64_t>(from) / static_cast<uint64_t>(to);
 	}
 
+
 	/**
 	 * \brief Check the contents of a std::vector.
 	 *
 	 * A convience method to make searching a vector easier, like 
 	 * std::map::contains().
 	 *
-	 * \par "Example"
-	 * \parblock
-	 * \code
+	 * \parcode
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(v, 1))
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endcode
-	 * \endparblock
+	 * \endparcode
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.
 	 */
 	template <class Type ///< The vector type
 		>
+	[[nodiscard]]
 	inline bool vectorContains(const std::vector<Type>& vector ///< The vector to search
 		, const Type&                               value  ///< The value to look for
 		) noexcept
 	{
 		return (std::find(std::begin(vector), std::end(vector), value) != std::end(vector));
 	}
+
 
 	/**
 	 * \brief Check the contents of a std::vector.
@@ -208,9 +265,7 @@ namespace zakero
 	 * method does not save that many keystrokes, it does lead to more 
 	 * readable code.
 	 *
-	 * \par "Example"
-	 * \parblock
-	 * \code
+	 * \parcode
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(std::begin(v), std::end(v), 1)
@@ -225,8 +280,7 @@ namespace zakero
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endcode
-	 * \endparblock
+	 * \endparcode
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.
@@ -234,6 +288,7 @@ namespace zakero
 	template <class InputIter ///< The iterator type
 		, class Type      ///< The vector type
 		>
+	[[nodiscard]]
 	inline bool vectorContains(InputIter first ///< Start searching here
 		, InputIter                  last  ///< Stop seaching here
 		, const Type&                value ///< The value to look for
@@ -241,6 +296,63 @@ namespace zakero
 	{
 		return (std::find(first, last, value) != last);
 	}
+
+
+	/**
+	 * \brief Erase the contents of a std::vector.
+	 *
+	 * A convience method to make removing content from a vector easier.
+	 *
+	 * \parcode
+	 * std::vector<int> v = { 0, 1, 2, 3 };
+	 *
+	 * vectorErase(v, 2);
+	 * // v = { 0, 1, 3 };
+	 * \endparcode
+	 *
+	 * \retval true  The \p value was found.
+	 * \retval false The \p value was __not__ found.
+	 */
+	template <class Type ///< The vector type
+		>
+	inline auto vectorErase(std::vector<Type>& vector ///< The vector to search
+		, const Type&                      value  ///< The value to look for
+		) noexcept
+	{
+		return vector.erase(std::remove(std::begin(vector), std::end(vector), value), std::end(vector));
+	}
+
+
+#if 0 // Future?
+	using VectorString = std::vector<std::string>;
+
+	[[nodiscard]]
+	std::string to_string(const Yetani::VectorString&) noexcept;
+
+	[[nodiscard]]
+	std::string to_string(const Yetani::VectorString& vector ///< The value
+		) noexcept
+	{
+		if(vector.empty())
+		{
+			return "[]";
+		}
+
+		std::string string = "";
+		std::string delim  = "[ \"";
+
+		for(const auto& str : vector)
+		{
+			string += delim + str;
+
+			delim = "\", \"";
+		}
+
+		string += "\" ]";
+
+		return string;
+	}
+#endif
 }
 
 #endif // zakero_Base_h

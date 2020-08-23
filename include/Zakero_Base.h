@@ -151,7 +151,7 @@ namespace zakero
 	 *
 	 * Sizes in powers of 2.
 	 */
-	enum class Storage : uint64_t
+	enum struct Storage : uint64_t
 	{	Byte     = 0x0000'0000'0000'0001 ///< 1 byte
 	,	Kilobyte = 0x0000'0000'0000'0400 ///< 1024 bytes
 	,	Megabyte = 0x0000'0000'0010'0000 ///< 1024 kilobytes
@@ -162,6 +162,11 @@ namespace zakero
 	};
 
 
+	/*
+	 * Doxygen Bug: For some reason doxygen can not parse aliases 
+	 * only/specifically in this file and in this namespace.
+	 */
+
 	/**
 	 * \brief Convert storage sizes.
 	 *
@@ -171,7 +176,9 @@ namespace zakero
 	 * Converting to a larger size is rounded down and may result in `0` if 
 	 * the from \p size is not large enough.
 	 *
-	 * \parcode
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * uint64_t bytes = zakero::convert(uint64_t(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -182,7 +189,8 @@ namespace zakero
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
 	 * // megs == 0
-	 * \endparcode
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \return The converted value.
 	 */
@@ -206,7 +214,9 @@ namespace zakero
 	 * uint64_t, const zakero::Storage, const zakero::Storage) is that 
 	 * conversions to a larger unit will be a fraction.
 	 *
-	 * \parcode
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * double bytes = zakero::convert(double(16)
 	 * 	, zakero::Storage::Gigabyte
 	 * 	, zakero::Storage::Byte
@@ -215,7 +225,8 @@ namespace zakero
 	 * 	, zakero::Storage::Kilobyte
 	 * 	, zakero::Storage::Megabyte
 	 * 	);
-	 * \endparcode
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \return The converted value.
 	 */
@@ -235,14 +246,17 @@ namespace zakero
 	 * A convience method to make searching a vector easier, like 
 	 * std::map::contains().
 	 *
-	 * \parcode
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(v, 1))
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endparcode
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.
@@ -265,7 +279,9 @@ namespace zakero
 	 * method does not save that many keystrokes, it does lead to more 
 	 * readable code.
 	 *
-	 * \parcode
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(std::begin(v), std::end(v), 1)
@@ -280,7 +296,8 @@ namespace zakero
 	 * {
 	 * 	// Found it
 	 * }
-	 * \endparcode
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.
@@ -303,12 +320,15 @@ namespace zakero
 	 *
 	 * A convience method to make removing content from a vector easier.
 	 *
-	 * \parcode
+	 * \par "Example"
+	 * \parblock
+	 * \code
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * vectorErase(v, 2);
 	 * // v = { 0, 1, 3 };
-	 * \endparcode
+	 * \endcode
+	 * \endparblock
 	 *
 	 * \retval true  The \p value was found.
 	 * \retval false The \p value was __not__ found.

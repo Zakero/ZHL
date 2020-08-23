@@ -1,12 +1,13 @@
 <map id="Zakero_Profiler.h" name="Zakero_Profiler.h">
-<area shape="rect" id="node1" title="Zakero Profiler." alt="" coords="217,5,337,32"/>
-<area shape="rect" id="node2" title=" " alt="" coords="257,169,318,196"/>
-<area shape="rect" id="node3" title=" " alt="" coords="30,87,84,114"/>
-<area shape="rect" id="node4" title=" " alt="" coords="109,87,176,114"/>
-<area shape="rect" id="node5" title=" " alt="" coords="200,87,272,114"/>
-<area shape="rect" id="node6" title=" " alt="" coords="296,87,343,114"/>
-<area shape="rect" id="node7" title=" " alt="" coords="368,87,426,114"/>
-<area shape="rect" id="node8" title=" " alt="" coords="450,80,589,121"/>
-<area shape="rect" id="node9" href="$Zakero__Base_8h.html" title="Zakero Base." alt="" coords="613,87,722,114"/>
-<area shape="rect" id="node10" title=" " alt="" coords="639,169,696,196"/>
+<area shape="rect" id="node1" title="Zakero Profiler." alt="" coords="274,5,394,32"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,87,60,114"/>
+<area shape="rect" id="node3" title=" " alt="" coords="85,87,151,114"/>
+<area shape="rect" id="node4" title=" " alt="" coords="175,87,247,114"/>
+<area shape="rect" id="node5" title=" " alt="" coords="272,87,319,114"/>
+<area shape="rect" id="node6" title=" " alt="" coords="343,87,402,114"/>
+<area shape="rect" id="node7" title=" " alt="" coords="426,87,485,114"/>
+<area shape="rect" id="node8" title=" " alt="" coords="509,80,647,121"/>
+<area shape="rect" id="node9" href="$Zakero__Base_8h.html" title="Zakero Base." alt="" coords="671,87,781,114"/>
+<area shape="rect" id="node10" title=" " alt="" coords="653,169,714,196"/>
+<area shape="rect" id="node11" title=" " alt="" coords="739,169,796,196"/>
 </map>

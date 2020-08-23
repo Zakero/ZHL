@@ -358,7 +358,15 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Conversion from one storage unit to another is handled by this method. These storage units are in powers of 2.</p>
 <p>The difference between this method and zakero::convert(const uint64_t, const zakero::Storage, const zakero::Storage) is that conversions to a larger unit will be a fraction.</p>
-<p>\parcode double bytes = zakero::convert(double(16) , zakero::Storage::Gigabyte , zakero::Storage::Byte ); double megs = zakero::convert(double(16) , zakero::Storage::Kilobyte , zakero::Storage::Megabyte ); \endparcode</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><span class="keywordtype">double</span> bytes = <a class="code" href="Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b">zakero::convert</a>(<span class="keywordtype">double</span>(16)</div>
+<div class="line">        , zakero::Storage::Gigabyte</div>
+<div class="line">        , zakero::Storage::Byte</div>
+<div class="line">        );</div>
+<div class="line"><span class="keywordtype">double</span> megs = <a class="code" href="Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b">zakero::convert</a>(<span class="keywordtype">double</span>(16)</div>
+<div class="line">        , zakero::Storage::Kilobyte</div>
+<div class="line">        , zakero::Storage::Megabyte</div>
+<div class="line">        );</div>
+</div><!-- fragment --> </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The converted value. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -412,8 +420,17 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Conversion from one storage unit to another is handled by this method. These storage units are in powers of 2.</p>
 <p>Converting to a larger size is rounded down and may result in <code>0</code> if the from <code>size</code> is not large enough.</p>
-<p>\parcode uint64_t bytes = zakero::convert(uint64_t(16) , zakero::Storage::Gigabyte , zakero::Storage::Byte );</p>
-<p>uint64_t megs = zakero::convert(uint64_t(16) , zakero::Storage::Kilobyte , zakero::Storage::Megabyte ); // megs == 0 \endparcode</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">uint64_t bytes = <a class="code" href="Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b">zakero::convert</a>(uint64_t(16)</div>
+<div class="line">        , zakero::Storage::Gigabyte</div>
+<div class="line">        , zakero::Storage::Byte</div>
+<div class="line">        );</div>
+<div class="line"> </div>
+<div class="line">uint64_t megs = <a class="code" href="Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b">zakero::convert</a>(uint64_t(16)</div>
+<div class="line">        , zakero::Storage::Kilobyte</div>
+<div class="line">        , zakero::Storage::Megabyte</div>
+<div class="line">        );</div>
+<div class="line"><span class="comment">// megs == 0</span></div>
+</div><!-- fragment --> </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The converted value. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -462,8 +479,13 @@ template&lt;class Type &gt; </div>
 </table>
 </div><div class="memdoc">
 <p>A convience method to make searching a vector easier, like std::map::contains().</p>
-<p>\parcode std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</p>
-<p>if(vectorContains(v, 1)) { // Found it } \endparcode</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">if</span>(<a class="code" href="Zakero__Base_8h.html#aa939a096886f8989f7abb8b11c49ea81">vectorContains</a>(v, 1))</div>
+<div class="line">{</div>
+<div class="line">        <span class="comment">// Found it</span></div>
+<div class="line">}</div>
+</div><!-- fragment --> </dd></dl>
 <dl class="retval"><dt>Return values</dt><dd>
   <table class="retval">
     <tr><td class="paramname">true</td><td>The <code>value</code> was found. </td></tr>
@@ -523,9 +545,21 @@ template&lt;class InputIter , class Type &gt; </div>
 </table>
 </div><div class="memdoc">
 <p>A convience method to make searching a vector easier. While this method does not save that many keystrokes, it does lead to more readable code.</p>
-<p>\parcode std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</p>
-<p>if(vectorContains(std::begin(v), std::end(v), 1) { // Found it }</p>
-<p>// Compare with the "long" form, the // value that is searhed for gets lost // very easily. if(std::find(std::begin(v), std::end(v), 1) != std::end(v)) { // Found it } \endparcode</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">if</span>(<a class="code" href="Zakero__Base_8h.html#aa939a096886f8989f7abb8b11c49ea81">vectorContains</a>(std::begin(v), std::end(v), 1)</div>
+<div class="line">{</div>
+<div class="line">        <span class="comment">// Found it</span></div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Compare with the &quot;long&quot; form, the</span></div>
+<div class="line"><span class="comment">// value that is searhed for gets lost</span></div>
+<div class="line"><span class="comment">// very easily.</span></div>
+<div class="line"><span class="keywordflow">if</span>(std::find(std::begin(v), std::end(v), 1) != std::end(v))</div>
+<div class="line">{</div>
+<div class="line">        <span class="comment">// Found it</span></div>
+<div class="line">}</div>
+</div><!-- fragment --> </dd></dl>
 <dl class="retval"><dt>Return values</dt><dd>
   <table class="retval">
     <tr><td class="paramname">true</td><td>The <code>value</code> was found. </td></tr>
@@ -580,8 +614,11 @@ template&lt;class Type &gt; </div>
 </table>
 </div><div class="memdoc">
 <p>A convience method to make removing content from a vector easier.</p>
-<p>\parcode std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</p>
-<p>vectorErase(v, 2); // v = { 0, 1, 3 }; \endparcode</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;int&gt; v = { 0, 1, 2, 3 };</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="Zakero__Base_8h.html#a64e48d2dfbdcb280dfb6324fad096f6d">vectorErase</a>(v, 2);</div>
+<div class="line"><span class="comment">// v = { 0, 1, 3 };</span></div>
+</div><!-- fragment --> </dd></dl>
 <dl class="retval"><dt>Return values</dt><dd>
   <table class="retval">
     <tr><td class="paramname">true</td><td>The <code>value</code> was found. </td></tr>
@@ -601,8 +638,11 @@ template&lt;class Type &gt; </div>
 </div>
 </div><!-- contents -->
 <div class="ttc" id="aZakero__Base_8h_html_a0cc833658760df994f6a931fc43f45cf"><div class="ttname"><a href="Zakero__Base_8h.html#a0cc833658760df994f6a931fc43f45cf">ZAKERO_SYSTEM_TIME_NOW</a></div><div class="ttdeci">#define ZAKERO_SYSTEM_TIME_NOW(unit_)</div><div class="ttdoc">Get the current time.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:140</div></div>
+<div class="ttc" id="aZakero__Base_8h_html_acd4811517bd583f0162299b959698e3b"><div class="ttname"><a href="Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b">zakero::convert</a></div><div class="ttdeci">double convert(const double size, const zakero::Storage from, const zakero::Storage to) noexcept</div><div class="ttdoc">Convert storage sizes.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:234</div></div>
 <div class="ttc" id="aZakero__Base_8h_html_a08c1e2f02eaa23a6e921ba4ec7b76e20"><div class="ttname"><a href="Zakero__Base_8h.html#a08c1e2f02eaa23a6e921ba4ec7b76e20">ZAKERO_STEADY_TIME_NOW</a></div><div class="ttdeci">#define ZAKERO_STEADY_TIME_NOW(unit_)</div><div class="ttdoc">Get the current time.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:121</div></div>
+<div class="ttc" id="aZakero__Base_8h_html_aa939a096886f8989f7abb8b11c49ea81"><div class="ttname"><a href="Zakero__Base_8h.html#aa939a096886f8989f7abb8b11c49ea81">zakero::vectorContains</a></div><div class="ttdeci">bool vectorContains(const std::vector&lt; Type &gt; &amp;vector, const Type &amp;value) noexcept</div><div class="ttdoc">Check the contents of a std::vector.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:267</div></div>
 <div class="ttc" id="aZakero__Base_8h_html_ac4101606c3023aeea0ce4be3000111c4"><div class="ttname"><a href="Zakero__Base_8h.html#ac4101606c3023aeea0ce4be3000111c4">ZAKERO_CONCAT</a></div><div class="ttdeci">#define ZAKERO_CONCAT(thing_1_, thing_2_)</div><div class="ttdoc">Concatenate the two things.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:84</div></div>
+<div class="ttc" id="aZakero__Base_8h_html_a64e48d2dfbdcb280dfb6324fad096f6d"><div class="ttname"><a href="Zakero__Base_8h.html#a64e48d2dfbdcb280dfb6324fad096f6d">zakero::vectorErase</a></div><div class="ttdeci">auto vectorErase(std::vector&lt; Type &gt; &amp;vector, const Type &amp;value) noexcept</div><div class="ttdoc">Erase the contents of a std::vector.</div><div class="ttdef"><b>Definition:</b> Zakero_Base.h:338</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

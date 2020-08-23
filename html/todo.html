@@ -80,7 +80,28 @@ $(function() {
 <p class="interdd">Add meta data to ZAKERO_PROFILER_INSTANT </p>
 <p class="interdd">Add support for std::filesystem </p>
 <p class="interdd">Add error handling </p>
-<p class="enddd">Look into converting Duration to use a "Complete" event (phase = 'X').</p>
+<p class="enddd">Look into converting Duration to use a "Complete" event (phase = 'X'). </p>
+</dd>
+<dt>Class <a class="el" href="classzakero_1_1Yetani.html">zakero::Yetani</a>  </dt>
+<dd><p class="startdd"><a class="anchor" id="_todo000003"></a>XDGOutput Support </p>
+<p class="interdd">Client-Side Border </p>
+<p class="interdd">Mouse-Look Support </p>
+<p class="interdd">Touch Input Support </p>
+<p class="interdd">Clipboard Support </p>
+<p class="interdd">cursorAliasAdd() (maybe) </p>
+<p class="interdd">cursorAliasRemove() (maybe) </p>
+<p class="interdd">cursorAvailableNames() (maybe) </p>
+<p class="enddd">cursorXDGLoad() (maybe) </p>
+</dd>
+<dt>" </dt>
+<dd><p class="startdd"><a class="anchor" id="_todo000004"></a>When a window mode is maximize/fullscreen, there are strange delays in this event loop. The problem sees to be the Surface frame callback is not being send-by-Wayland or not getting received in a timely manner. Note that animated cursors do not have animation skips even when the window surface is. Look into manually swapping buffers in the while loop instead of waiting for the frame callback.</p>
+<p class="interdd"><a class="anchor" id="_todo000005"></a>Test if the <a class="el" href="classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1Output" title="Information about a output device.">Output</a>'s width and height values need to be swapped when the screen is rotated. </p>
+<p class="interdd"><a class="anchor" id="_todo000006"></a>Add "bool Yetani::keyboardAvailable() const" </p>
+<p class="interdd">Add "bool Yetani::pointerAvailable() const" </p>
+<p class="interdd">Add "bool Yetani::touchAvailable() const" </p>
+<p class="interdd"><a class="anchor" id="_todo000007"></a>Due to the size of the <a class="el" href="classzakero_1_1Yetani.html#ad5431d29ccb5f6c8b248ca74e209b5cc" title="Determine bytes-per-pixel.">Yetani::shmFormatBytesPerPixel()</a> method, this will probably never be inlined. Instead of calling this method, try to cache the bytes-per-pixel value. </p>
+<p class="interdd"><a class="anchor" id="_todo000008"></a>The check if <code>min</code> is &gt; 0 may be unneeded. </p>
+<p class="enddd">Constraints would be nice, but not required. </p>
 </dd>
 </dl>
 </div></div><!-- contents -->

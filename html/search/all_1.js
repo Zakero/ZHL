@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['convert_4',['convert',['../Zakero__Base_8h.html#ab6eb17866baa07bf3529c1229deee575',1,'zakero::convert(const uint64_t size, const zakero::Storage from, const zakero::Storage to) noexcept'],['../Zakero__Base_8h.html#acd4811517bd583f0162299b959698e3b',1,'zakero::convert(const double size, const zakero::Storage from, const zakero::Storage to) noexcept']]]
+  ['bytesperpixel_4',['bytesPerPixel',['../classzakero_1_1Yetani_1_1Window.html#a86a3cd8c2641e70bff2f8d57d83a29bd',1,'zakero::Yetani::Window']]]
 ];

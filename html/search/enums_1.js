@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['storage_63',['Storage',['../Zakero__Base_8h.html#a91527d290403cbcf2e34f76e34ae09b9',1,'zakero']]]
+  ['keystate_342',['KeyState',['../classzakero_1_1Yetani.html#a904a1d471bf7a7d3bd7c2b3c067d4eec',1,'zakero::Yetani']]]
 ];

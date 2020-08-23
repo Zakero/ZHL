@@ -19,6 +19,24 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 | Zakero_Yetani.h     |  0.6.0  | A class that makes working with Wayland much easier               |
 | _More coming soon_  |         |                                                                   |
 
+# Source Code
+
+## Vim
+In the library header files, you will find many `// {{{` and `// }}}`.  These 
+are markers used by [VIM](https://www.vim.org) for folding.  To enable vim's 
+marker folding, use the following vim command:
+
+> `:set fdm=marker`
+
+While in "command mode", the following can be used to interact with the 
+folds.
+
+| Command | Description          |
+|:-------:|----------------------|
+| za      | Toggle current fold  |
+| zR      | Expand _all_ folds   |
+| zM      | Collapse _all_ folds |
+
 # License
 
 All libraries are licensed using the [Mozilla Public License v2](https://www.mozilla.org/en-US/MPL/2.0/) 

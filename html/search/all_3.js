@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['fd_6',['fd',['../classzakero_1_1MemoryPool.html#a99fa5532f650637172a31b58684cc329',1,'zakero::MemoryPool']]],
-  ['free_7',['free',['../classzakero_1_1MemoryPool.html#a2d20c34a90c6dc856fa3bbe0c53c0930',1,'zakero::MemoryPool']]]
+  ['distance_19',['distance',['../classzakero_1_1Yetani.html#a1c4044eb951f9ca3ade85a9bcbae7660',1,'zakero::Yetani::PointerAxis']]],
+  ['dump_20',['dump',['../classzakero_1_1MemoryPool.html#a0b1c70a04bdfdb706989757e5d72c1cf',1,'zakero::MemoryPool']]]
 ];

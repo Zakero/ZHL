@@ -1,4 +1,6 @@
-/* *******************************************************************
+/******************************************************************************
+ * Copyright 2010-2019 Andrew Moore
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -12,33 +14,33 @@
  *
  * \brief Zakero MemoryPool
  *
- * Here, you will find information about and how to add the _Zakero MemoryPool_ 
+|                          |                             |                             |                             |                            |                            |                                |
+|--------------------------|-----------------------------|-----------------------------|-----------------------------|----------------------------|----------------------------|--------------------------------|
+| \api{zakero::MemoryPool} | \refdeps{zakero_memorypool} | \reftldr{zakero_memorypool} | \refwhat{zakero_memorypool} | \refwhy{zakero_memorypool} | \refhow{zakero_memorypool} | \refversion{zakero_memorypool} |
+ *
+ * Here, you will find information about and how to add the _Zakero_MemoryPool_ 
  * to your project.
  *
- * See zakero::MemoryPool for the class API documentation.
- * 
- * \dependencies
- * - Zakero_Base.h<br>
- * - Zakero_Profiler.h<br>
- *   Defining \ref ZAKERO_MEMORYPOOL_PROFILER will cause the Zakero_Profiler to 
- *   be included.  If \ref ZAKERO_MEMORYPOOL_PROFILER is __not__ defined, then 
- *   the Zakero_Profiler.h is no longer a dependency.
+ * \pardeps{zakero_memorypool}
+ * - None
+ * \endpardeps
  *
- * \tldr
+ * \partldr{zakero_memorypool}
  * This library will provide a memory pool for your application.
+ *
  * To use:
  * 1. Add the implementation to a source code file:
- *    ~~~
+ *    \code
  *    #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
- *    #include "path/to/Zakero_MemoryPool.h"
- *    ~~~
+ *    #include "Zakero_MemoryPool.h"
+ *    \endcode
  * 2. Add the library to where it is used:
- *    ~~~
- *    #include "path/to/Zakero_MemoryPool.h"
- *    ~~~
+ *    \code
+ *    #include "Zakero_MemoryPool.h"
+ *    \endcode
+ * \endpartldr
  *
- * \par What Is It?
- * \parblock
+ * \parwhat{zakero_memorypool}
  * The _Zakero MemoryPool_ library will create and manage a region of memory.
  * From this pool of memory, sections of memory can be allocated and freed.
  * When allocated, the memory is identified by an offset into the region of 
@@ -49,10 +51,9 @@
  * benefit of using the file description is that the Operating System can remap 
  * the file to a larger area as needed.  And since all allocated memory uses an 
  * offset, no pointers end up pointing to a bad location.
- * \endparblock
+ * \endparwhat
  *
- * \par Why Use It?
- * \parblock
+ * \parwhy{zakero_memorypool}
  * As with many things, there are benefits and draw backs to using a memory 
  * pool.  For the MemoryPool object they are:
  * 
@@ -105,14 +106,14 @@
  * If the benefits out-weigh the draw backs for your application, then the 
  * MemoryPool is what you need.
  * 
- * \note This implementation is limited to signed 32-bit file sizes.
- * \endparblock
+ * _This implementation is limited to signed 32-bit file sizes._
+ * \endparwhy
  *
- * \par How To Use It?
- * \parblock
+ * \parhow{zakero_memorypool}
  * __Step 0__
  *
- * Your compiler must support at least the C++20 standard.
+ * Your compiler must support at least the C++20 standard.  The location of the 
+ * `Zakero_*.h` header files _must_ be in your compiler's include path.
  *
  * __Step 1__
  *
@@ -122,7 +123,7 @@
  *
  * ~~~
  * #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
- * #include "path/to/Zakero_MemoryPool.h"
+ * #include "Zakero_MemoryPool.h"
  * ~~~
  *
  * The macro \ref ZAKERO_MEMORYPOOL_IMPLEMENTATION tells the header file to 
@@ -132,7 +133,7 @@
  * header.
  *
  * ~~~
- * #include "path/to/Zakero_MemoryPool.h"
+ * #include "Zakero_MemoryPool.h"
  * ~~~
  *
  * __Step 2__
@@ -166,19 +167,25 @@
  *
  * // Do stuff with array_1 and array_2
  * ~~~
- * \endparblock
+ * \endparhow
  *
- * \version 0.9.0
+ * \parversion{zakero_memorypool}
+ * __0.9.0__
+ * - Updated to use `std::error_code` instead of `std::error_condition`
+ * - Removed the Zakero_Base.h dependency
+ *
+ * __0.8.0__
  * - Updated to use Zakero_Base.h
  *
- * \version 0.8.1
+ * __0.7.0__
  * - Bug fixes
  * - API changes
  *
- * \version 0.8.0
+ * __0.6.0__
  * - Allocate and manage memory pool
  * - Automatically expand the memory pool as needed
  * - Share the region of memory using the file descriptor
+ * \endparversion
  *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
@@ -197,16 +204,27 @@
  * file size.
  */
 
-// POSIX
+
+/******************************************************************************
+ * Includes
+ */
+
 #include <cstring>
 #include <functional>
 #include <map>
 #include <mutex>
-#include <sys/mman.h>
 #include <system_error>
+
+// POSIX
+#include <sys/mman.h>
 #include <unistd.h>
 
-// {{{ Error Codes
+
+/******************************************************************************
+ * Macros
+ */
+
+// {{{ Macros
 
 /**
  * \internal
@@ -214,19 +232,18 @@
  * \brief _Error_Table_
  *
  * An X-Macro table of error codes. The columns are:
- * -# __ErrorIdentifier__<br>
- *    The identifier will be accessible as 
- *    zakero::MemoryPool::_ErrorIdentifier_
+ * -# __ErrorName__<br>
+ *    The error name will be accessible as zakero::MemoryPool::_ErrorName_
  *    <br><br>
- * -# __ErrorCode__<br>
+ * -# __ErrorValue__<br>
  *    The integer value of the error
  *    <br><br>
  * -# __ErrorMessage__<br>
- *    The text that will be used by `std::error_condition.message()`
+ *    The text that will be used by `std::error_code.message()`
  *
  * Error Codes used internally.
  */
-#define ZAKERO_MEMORYPOOL__ERROR_CODES \
+#define ZAKERO_MEMORYPOOL__ERROR_DATA \
 	X(Error_None                  , 0 , "No Error"                                                     ) \
 	X(Error_Already_Initialized   , 1 , "The Memory Pool has already been initialized."                ) \
 	X(Error_Size_Too_Small        , 2 , "Invalid Size: Must be greater than 0."                        ) \
@@ -238,16 +255,17 @@
 	X(Error_Invalid_Offset        , 8 , "The offset is not valid."                                     ) \
 
 // }}}
-// {{{ Declaration
 
 namespace zakero
 {
+	// {{{ Declaration
+
 	class MemoryPool
 	{
 		public:
 #define X(name_, val_, mesg_) \
 			static constexpr int name_ = val_;
-			ZAKERO_MEMORYPOOL__ERROR_CODES
+			ZAKERO_MEMORYPOOL__ERROR_DATA
 #undef X
 			static constexpr size_t Size_Max = (size_t)std::numeric_limits<off_t>::max();
 
@@ -270,40 +288,28 @@ namespace zakero
 			MemoryPool(const std::string&) noexcept;
 			~MemoryPool() noexcept;
 
-			              std::error_condition init(const size_t, const bool = false, const MemoryPool::Alignment = MemoryPool::Alignment::Bits_64) noexcept;
-			[[nodiscard]] int                  fd() const noexcept;
-			[[nodiscard]] size_t               size() const noexcept;
-			              void                 sizeOnChange(MemoryPool::LambdaSize) noexcept;
+			              std::error_code init(const size_t, const bool = false, const MemoryPool::Alignment = MemoryPool::Alignment::Bits_64) noexcept;
+			[[nodiscard]] int             fd() const noexcept;
+			[[nodiscard]] size_t          size() const noexcept;
+			              void            sizeOnChange(MemoryPool::LambdaSize) noexcept;
 
-			[[nodiscard]] off_t                alloc(const size_t) noexcept;
-			[[nodiscard]] off_t                alloc(const size_t, std::error_condition&) noexcept;
-			[[nodiscard]] off_t                alloc(size_t, uint8_t) noexcept;
-			[[nodiscard]] off_t                alloc(size_t, uint8_t, std::error_condition&) noexcept;
-			[[nodiscard]] off_t                alloc(size_t, uint32_t) noexcept;
-			[[nodiscard]] off_t                alloc(size_t, uint32_t, std::error_condition&) noexcept;
-			              void                 free(off_t&) noexcept;
-			[[nodiscard]] off_t                realloc(off_t, size_t) noexcept;
-			[[nodiscard]] off_t                realloc(off_t, size_t, std::error_condition&) noexcept;
+			[[nodiscard]] off_t           alloc(const size_t) noexcept;
+			[[nodiscard]] off_t           alloc(const size_t, std::error_code&) noexcept;
+			[[nodiscard]] off_t           alloc(size_t, uint8_t) noexcept;
+			[[nodiscard]] off_t           alloc(size_t, uint8_t, std::error_code&) noexcept;
+			[[nodiscard]] off_t           alloc(size_t, uint32_t) noexcept;
+			[[nodiscard]] off_t           alloc(size_t, uint32_t, std::error_code&) noexcept;
+			              void            free(off_t&) noexcept;
+			[[nodiscard]] off_t           realloc(off_t, size_t) noexcept;
+			[[nodiscard]] off_t           realloc(off_t, size_t, std::error_code&) noexcept;
 
-			[[nodiscard]] uint8_t*             addressOf(off_t) const noexcept;
-			              void                 onRemap(MemoryPool::LambdaAddressMap) noexcept;
-			[[nodiscard]] static uint8_t*      remap(const MemoryPool::AddressMap&, uint8_t*) noexcept;
+			[[nodiscard]] uint8_t*        addressOf(off_t) const noexcept;
+			              void            onRemap(MemoryPool::LambdaAddressMap) noexcept;
+			[[nodiscard]] static uint8_t* remap(const MemoryPool::AddressMap&, uint8_t*) noexcept;
 
-			[[nodiscard]] std::string          dump(size_t, size_t) const noexcept;
+			[[nodiscard]] std::string     dump(size_t, size_t) const noexcept;
 
 		private:
-			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
-                                      
-			[[nodiscard]] bool   segmentExpand(const size_t, const size_t) noexcept;
-			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
-			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
-			              void   segmentMergeNext(const size_t) noexcept;
-			              void   segmentMergePrev(const size_t) noexcept;
-			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
-			              void   segmentSplit(size_t, size_t) noexcept;
-
-			// ------------------------------------------------- //
-
 			struct Segment
 			{
 				off_t offset;
@@ -312,6 +318,8 @@ namespace zakero
 			};
 
 			using VectorSegment = std::vector<Segment>;
+
+			// -------------------------------------------------- //
 
 			uint8_t*                     memory;
 			std::string                  name;
@@ -323,42 +331,31 @@ namespace zakero
 			int                          file_descriptor;
 			MemoryPool::Alignment        alignment;
 			bool                         pool_can_expand;
-	};
-};
 
-// }}}
+			// -------------------------------------------------- //
+
+			[[nodiscard]] bool   expandToFit(size_t, size_t&) noexcept;
+                                      
+			[[nodiscard]] bool   segmentExpand(const size_t, const size_t) noexcept;
+			[[nodiscard]] bool   segmentFindBestFit(const size_t, size_t&) noexcept;
+			              bool   segmentFindInUse(const off_t, size_t&) const noexcept;
+			              void   segmentMergeNext(const size_t) noexcept;
+			              void   segmentMergePrev(const size_t) noexcept;
+			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
+			              void   segmentSplit(size_t, size_t) noexcept;
+	};
+
+	// }}}
+}
+
 // {{{ Implementation
 
-#if defined (ZAKERO_MEMORYPOOL_IMPLEMENTATION)
+#ifdef ZAKERO_MEMORYPOOL_IMPLEMENTATION
 
-// {{{ Dependencies
+// {{{ Macros
+// {{{ Macros : Doxygen
 
-#if defined(ZAKERO_MEMORYPOOL_PROFILER)
-#	include "Zakero_Base.h"
-#	if !defined(ZAKERO_PROFILER_IMPLEMENTATION)
-#		define ZAKERO_PROFILER_IMPLEMENTATION
-#	endif
-#	define ZAKERO_PROFILER_ENABLE
-#	include "Zakero_Profiler.h"
-#endif
-
-// }}}
-// {{{ Defines
-
-/**
- * \internal
- *
- * \brief Create an error condition.
- *
- * This is just a convenience macro.
- *
- * \param err_ The name of an error from the Error Table
- */
-#define ZAKERO_MEMORYPOOL__ERROR(err_) std::error_condition(err_, MemoryPoolErrorCategory);
-
-// {{{ Defines : Doxygen
-
-#if defined(ZAKERO__DOXYGEN_DEFINE_DOCS)
+#ifdef ZAKERO__DOXYGEN_DEFINE_DOCS
 
 // Only used for generating Doxygen documentation
 
@@ -375,62 +372,38 @@ namespace zakero
  */
 #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
 
-
-/**
- * \brief Activate the profiling code.
- *
- * Defining this macro will cause the zakero::MemoryPool implementation to also 
- * include profiling data.
- * 
- * Be careful using this feature.  The _Zakero MemoryPool_ will create a new 
- * instance of the _Zakero Profiler_.  If a zakero::MemoryPool is created 
- * __before__ the intended _Zakero Profiler_, the profiler in 
- * zakero::MemoryPool will take precedence.
- * 
- * \note It does not matter if the macro is given a value or not, only its 
- * existence is checked.
- *
- * \see ZAKERO_MEMORYPOOL_PROFILER_FILE
- */
-#define ZAKERO_MEMORYPOOL_PROFILER
-
-/**
- * \brief Profile data file.
- *
- * Define this macro and set it to the file name than will contain the 
- * profiling data.  If the _Zakero MemoryPool_ has already setup else where, 
- * then this macro will be ignored.
- *
- * The default value is "./zakero_MemoryPool_profile.json".
- *
- * \note \ref ZAKERO_MEMORYPOOL_PROFILER must be defined for this macro to have 
- * any effect.
- */
-#define ZAKERO_MEMORYPOOL_PROFILER_FILE
-
 #endif
 
 // }}}
-// {{{ Defines : Profiler
 
-#if defined(ZAKERO_MEMORYPOOL_PROFILER)
-#	if !defined(ZAKERO_MEMORYPOOL_PROFILER_FILE) || !ZAKERO_MACRO_HAS_VALUE(ZAKERO_MEMORYPOOL_PROFILER_FILE)
-#		define ZAKERO_MEMORYPOOL_PROFILER_FILE "./zakero_MemoryPool_profile.json"
-#	endif
-#	define ZAKERO_MEMORYPOOL__PROFILER_INIT_METADATA(output_, meta_data_)  ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)
-#	define ZAKERO_MEMORYPOOL__PROFILER_DURATION(category_, name_)          ZAKERO_PROFILER_DURATION(category_, name_)
-#	define ZAKERO_MEMORYPOOL__PROFILER_INSTANT(category_, name_)           ZAKERO_PROFILER_INSTANT(category_, name_)
-#else
-#	define ZAKERO_MEMORYPOOL__PROFILER_INIT_METADATA(output_, meta_data_)
-#	define ZAKERO_MEMORYPOOL__PROFILER_DURATION(category_, name_)
-#	define ZAKERO_MEMORYPOOL__PROFILER_INSTANT(category_, name_)
-#endif
+/**
+ * \internal
+ *
+ * \brief Create an error condition.
+ *
+ * This is just a convenience macro.
+ *
+ * \param err_ The name of an error from the Error Table
+ */
+#define ZAKERO_MEMORYPOOL__ERROR(err_) std::error_code(err_, MemoryPoolErrorCategory);
 
 // }}}
-// }}}
+
+namespace zakero
+{
+// {{{ Anonymous Namespace
 
 namespace
 {
+	/**
+	 * \brief Error Categories.
+	 *
+	 * This class implements the std::error_category interface to provide 
+	 * consistent access to error code values and messages.
+	 *
+	 * See https://en.cppreference.com/w/cpp/error/error_category for 
+	 * details.
+	 */
 	class MemoryPoolErrorCategory_
 		: public std::error_category
 	{
@@ -450,7 +423,7 @@ namespace
 				{
 #define X(name_, val_, mesg_) \
 					case val_: return mesg_;
-					ZAKERO_MEMORYPOOL__ERROR_CODES
+					ZAKERO_MEMORYPOOL__ERROR_DATA
 #undef X
 				}
 
@@ -458,8 +431,15 @@ namespace
 			}
 	} MemoryPoolErrorCategory;
 
+	/**
+	 * \name Lambda's that do nothing.
+	 * \{
+	 */
 	zakero::MemoryPool::LambdaSize       LambdaSize_DoNothing       = [](size_t){};
 	zakero::MemoryPool::LambdaAddressMap LambdaAddressMap_DoNothing = [](const zakero::MemoryPool::AddressMap&){};
+	/**
+	 * \}
+	 */
 
 	/**
 	 * \brief Calculate the byte-aligned size.
@@ -480,69 +460,80 @@ namespace
 	}
 }
 
-namespace zakero
-{
-	/**
-	 * \class zakero::MemoryPool
-	 *
-	 * \brief A pool of memory.
-	 *
-	 * Refer to Zakero_MemoryPool.h to learn how to include this library.
-	 *
-	 * This object will create a region of memory and provide an interface 
-	 * to allocate from that memory.
-	 *
-	 * \internal
-	 *
-	 * The structure of the zakero::MemoryPool class is that the public API 
-	 * validates the input then uses the private methods to do the work.  
-	 * The advantages of this approach are:
-	 * - Invalid data _should_ never be a concern for the code that does 
-	 * the work.
-	 * - The public API handles the thread locking, freeing the worker code 
-	 * from that burden.
-	 * - Each private method focuses on only 1 type of work.  The public 
-	 * API calls the appropriate workers as needed.
-	 */
+// }}}
+// {{{ Documentation
 
-	/**
-	 * \enum MemoryPool::Alignment
-	 *
-	 * \brief The Byte-Alignment of the MemoryPool.
-	 *
-	 * When allocating memory from the MemoryPool, this enum determines 
-	 * which byte-boundary will be used.
-	 */
+/**
+ * \class zakero::MemoryPool
+ *
+ * \brief A pool of memory.
+ *
+ * Refer to Zakero_MemoryPool.h to learn how to include this library.
+ *
+ * This object will create a region of memory and provide an interface to 
+ * allocate from that memory.
+ *
+ * \internal
+ *
+ * The structure of the zakero::MemoryPool class is that the public API 
+ * validates the input then uses the private methods to do the work.  The 
+ * advantages of this approach are:
+ * - Invalid data _should_ never be a concern for the code that does the work.
+ * - The public API handles the thread locking, freeing the worker code from 
+ * that burden.
+ * - Each private method focuses on only 1 type of work.  The public API calls 
+ * the appropriate workers as needed.
+ */
 
-	/**
-	 * \typedef MemoryPool::AddressMap
-	 *
-	 * \brief A mapping of old addresses to new addresses.
-	 */
+/**
+ * \enum MemoryPool::Alignment
+ *
+ * \brief The Byte-Alignment of the MemoryPool.
+ *
+ * When allocating memory from the MemoryPool, this enum determines which 
+ * byte-boundary will be used.
+ */
 
-	/**
-	 * \typedef MemoryPool::LambdaSize
-	 *
-	 * \brief A lambda that receives a `size_t` argument.
-	 */
+/**
+ * \typedef MemoryPool::AddressMap
+ *
+ * \brief A mapping of old addresses to new addresses.
+ */
 
-	/**
-	 * \typedef MemoryPool::LambdaAddressMap
-	 *
-	 * \brief A lambda that receives a MemoryPool::AddressMap.
-	 */
+/**
+ * \typedef MemoryPool::LambdaSize
+ *
+ * \brief A lambda that receives a `size_t` argument.
+ */
 
-	/**
-	 * \struct MemoryPool::Segment
-	 *
-	 * \brief Data that defines a segment.
-	 */
+/**
+ * \typedef MemoryPool::LambdaAddressMap
+ *
+ * \brief A lambda that receives a MemoryPool::AddressMap.
+ */
 
-	/**
-	 * \typedef MemoryPool::VectorSegment
-	 *
-	 * \brief A convenience data type.
-	 */
+/**
+ * \struct MemoryPool::Segment
+ *
+ * \brief Data that defines a segment.
+ *
+ * \var MemoryPool::Segment::offset
+ * \brief The offset into the allocated memory pool.
+ *
+ * \var MemoryPool::Segment::size
+ * \brief The size of the allocated memory chunk.
+ *
+ * \var MemoryPool::Segment::in_use
+ * \brief A flag used to determine if the memory chunk is in use.
+ */
+
+/**
+ * \typedef MemoryPool::VectorSegment
+ *
+ * \brief A convenience data type.
+ */
+
+// }}}
 
 	/**
 	 * \brief Constructor.
@@ -555,9 +546,6 @@ namespace zakero
 	 * \parcode
 	 * zakero::MemoryPool memory_pool("The name of the MemoryPool");
 	 * \endparcode
-	 *
-	 * \note If \ref ZAKERO_MEMORYPOOL_PROFILER is defined, then \ref 
-	 * ZAKERO_PROFILER_INIT_METADATA will be called to setup the profiler.
 	 */
 	MemoryPool::MemoryPool(const std::string& name ///< The file name
 		) noexcept
@@ -572,15 +560,6 @@ namespace zakero
 		, alignment(zakero::MemoryPool::Alignment::Bits_64)
 		, pool_can_expand(false)
 	{
-#if defined(ZAKERO_MEMORYPOOL_PROFILER)
-		zakero::Profiler::MetaData meta_data =
-		{	{ "ZHL"     , "Zakero_MemoryPool.h" }
-		,	{ "version" , "0.8.0"               }
-		};
-		ZAKERO_PROFILER_INIT_METADATA(ZAKERO_MEMORYPOOL_PROFILER_FILE
-			, meta_data
-			);
-#endif
 	}
 
 
@@ -597,7 +576,7 @@ namespace zakero
 
 		if(memory != nullptr)
 		{
-			#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
+			#ifdef ZAKERO_MEMORYPOOL_ZERO_ON_FREE
 			memset(memory, '\0', pool_size);
 			#endif
 
@@ -646,12 +625,12 @@ namespace zakero
 	 * \return An error condition.  If there was no error, then the value 
 	 * of the error condition will be `0`.
 	 */
-	std::error_condition MemoryPool::init(const size_t size       ///< The initial size in bytes
-		, const bool                               expandable ///< Allow the MemoryPool to expand
-		, const MemoryPool::Alignment              alignment  ///< The Byte Alignment
+	std::error_code MemoryPool::init(const size_t size       ///< The initial size in bytes
+		, const bool                          expandable ///< Allow the MemoryPool to expand
+		, const MemoryPool::Alignment         alignment  ///< The Byte Alignment
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "init");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "init");
 
 		if(this->file_descriptor != -1)
 		{
@@ -670,11 +649,11 @@ namespace zakero
 
 		size_t pool_size = calculateActualSize(size, alignment);
 
-#if defined (__linux__)
+		#ifdef __linux__
 		int fd = memfd_create(name.c_str(), 0);
-#else
-#error Need more code...
-#endif
+		#else
+		#error Need more code...
+		#endif
 
 		if(fd == -1)
 		{
@@ -823,7 +802,7 @@ namespace zakero
 	off_t MemoryPool::alloc(const size_t size ///< The size in bytes
 		) noexcept
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		return alloc(size, error);
 	}
@@ -840,7 +819,7 @@ namespace zakero
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
-	 * std::error_condition error;
+	 * std::error_code error;
 	 * off_t data_offset = memory_pool.alloc(512, error);
 	 *
 	 * if(error.value() != 0)
@@ -854,10 +833,10 @@ namespace zakero
 	 * \return The offset of the block of memory.
 	 */
 	off_t MemoryPool::alloc(const size_t size  ///< The size in bytes
-		, std::error_condition&      error ///< The error
+		, std::error_code&           error ///< The error
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "alloc");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "alloc");
 
 		// Validate Input
 
@@ -933,7 +912,7 @@ namespace zakero
 		, uint8_t              value ///< The fill value
 		) noexcept
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		return alloc(size, value, error);
 	}
@@ -952,7 +931,7 @@ namespace zakero
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
-	 * std::error_condition error;
+	 * std::error_code error;
 	 * off_t data_offset = memory_pool.alloc(512, uint8_t(0xa5), error);
 	 *
 	 * if(error.value() != 0)
@@ -963,9 +942,9 @@ namespace zakero
 	 *
 	 * \return The offset of the block of memory.
 	 */
-	off_t MemoryPool::alloc(size_t  size  ///< The size in bytes
-		, uint8_t               value ///< The fill value
-		, std::error_condition& error ///< The error
+	off_t MemoryPool::alloc(size_t size  ///< The size in bytes
+		, uint8_t              value ///< The fill value
+		, std::error_code&     error ///< The error
 		) noexcept
 	{
 		off_t offset = alloc(size, error);
@@ -1008,7 +987,7 @@ namespace zakero
 		, uint32_t             value ///< The fill value
 		) noexcept
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		return alloc(size, value, error);
 	}
@@ -1030,7 +1009,7 @@ namespace zakero
 	 * zakero::MemoryPool memory_pool("foo");
 	 * memory_pool.init(1024);
 	 *
-	 * std::error_condition error;
+	 * std::error_code error;
 	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xaaaa5555), 
 	 * error);
 	 *
@@ -1042,9 +1021,9 @@ namespace zakero
 	 *
 	 * \return The offset of the block of memory.
 	 */
-	off_t MemoryPool::alloc(size_t  size  ///< The size in bytes
-		, uint32_t              value ///< The fill value
-		, std::error_condition& error ///< The error
+	off_t MemoryPool::alloc(size_t size  ///< The size in bytes
+		, uint32_t             value ///< The fill value
+		, std::error_code&     error ///< The error
 		) noexcept
 	{
 		off_t offset = alloc(size);
@@ -1089,7 +1068,7 @@ namespace zakero
 	void MemoryPool::free(off_t& offset ///< The memory to free
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "free");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "free");
 
 		std::lock_guard<std::mutex> lock(mutex);
 
@@ -1100,7 +1079,7 @@ namespace zakero
 			return;
 		}
 
-		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
+		#ifdef ZAKERO_MEMORYPOOL_ZERO_ON_FREE
 		memset(memory + segment[index].offset
 			, '\0'
 			, segment[index].size
@@ -1147,7 +1126,7 @@ namespace zakero
 		, size_t                size   ///< The size in bytes
 		) noexcept
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		return realloc(offset, size, error);
 	}
@@ -1175,7 +1154,7 @@ namespace zakero
 	 * // Do stuff
 	 * // Oops, need more space
 	 *
-	 * std::error_condition error;
+	 * std::error_code error;
 	 * auto new_offset = memory_pool.resize(offset, 96, error);
 	 * if(error(bool) == true)
 	 * {
@@ -1191,10 +1170,10 @@ namespace zakero
 	 */
 	off_t MemoryPool::realloc(off_t offset ///< The memory to resize
 		, size_t                size   ///< The size in bytes
-		, std::error_condition& error  ///< The error
+		, std::error_code&      error  ///< The error
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "realloc");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "realloc");
 
 		// Validate Input
 
@@ -1296,7 +1275,7 @@ namespace zakero
 	uint8_t* MemoryPool::addressOf(off_t offset ///< The offset
 		) const noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "addressOf");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "addressOf");
 
 		size_t index = 0;
 
@@ -1502,7 +1481,7 @@ namespace zakero
 		, size_t&                   index         ///< The new index
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool", "expandToFit");
+		//ZAKERO_PROFILER_DURATION("MemoryPool", "expandToFit");
 
 		if(pool_can_expand == false)
 		{
@@ -1598,7 +1577,7 @@ namespace zakero
 		, const size_t                      size  ///< The new size
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Expand");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "Expand");
 
 		const size_t index_next = index + 1;
 		if(index_next >= segment.size())
@@ -1650,7 +1629,7 @@ namespace zakero
 		, size_t& index                               ///< The index if found
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindBestFit");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "FindBestFit");
 
 		for(size_t i = 0; i < segment.size(); i++)
 		{
@@ -1679,7 +1658,7 @@ namespace zakero
 		, size_t&                             index  ///< The index if found
 		) const noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "FindInUse");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "FindInUse");
 
 		for(size_t i = 0; i < segment.size(); i++)
 		{
@@ -1715,7 +1694,7 @@ namespace zakero
 	void MemoryPool::segmentMergeNext(const size_t index ///< The segment to merge
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergeNext");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "MergeNext");
 
 		size_t index_next = index + 1;
 
@@ -1754,7 +1733,7 @@ namespace zakero
 	void MemoryPool::segmentMergePrev(const size_t index ///< The segment to merge
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "MergePrev");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "MergePrev");
 
 		if(index == 0)
 		{
@@ -1798,7 +1777,7 @@ namespace zakero
 		, size_t&                           dst_index ///< The destination segment
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Move");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "Move");
 
 		Segment&       src_segment = segment[src_index];
 		const uint8_t* src_addr    = memory + src_segment.offset;
@@ -1812,7 +1791,7 @@ namespace zakero
 
 		memcpy(dst_addr, src_addr, src_size);
 
-		#if defined (ZAKERO_MEMORYPOOL_ZERO_ON_FREE)
+		#ifdef ZAKERO_MEMORYPOOL_ZERO_ON_FREE
 		memset(src_addr, '\0', src_size);
 		#endif
 		src_segment.in_use = false;
@@ -1860,7 +1839,7 @@ namespace zakero
 		, size_t                     size  ///< The "new" segment size
 		) noexcept
 	{
-		ZAKERO_MEMORYPOOL__PROFILER_DURATION("MemoryPool::Segment", "Split");
+		//ZAKERO_PROFILER_DURATION("MemoryPool::Segment", "Split");
 
 		Segment& this_segment = segment[index];
 

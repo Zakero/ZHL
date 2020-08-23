@@ -208,9 +208,9 @@ namespace zakero
 	 * method does not save that many keystrokes, it does lead to more 
 	 * readable code.
 	 *
-	 * \code
 	 * \par "Example"
 	 * \parblock
+	 * \code
 	 * std::vector<int> v = { 0, 1, 2, 3 };
 	 *
 	 * if(vectorContains(std::begin(v), std::end(v), 1)

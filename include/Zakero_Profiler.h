@@ -1,4 +1,6 @@
-/* *******************************************************************
+/******************************************************************************
+ * Copyright 2010-2019 Andrew Moore
+ * 
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -12,32 +14,36 @@
  *
  * \brief Zakero Profiler
  *
+|                        |                           |                           |                           |                          |                          |                              |
+|------------------------|---------------------------|---------------------------|---------------------------|--------------------------|--------------------------|------------------------------|
+| \api{zakero::Profiler} | \refdeps{zakero_profiler} | \reftldr{zakero_profiler} | \refwhat{zakero_profiler} | \refwhy{zakero_profiler} | \refhow{zakero_profiler} | \refversion{zakero_profiler} |
+ * 
  * An invasive profiler to provide timing data output.
  * 
  * \note "Invasive" means that you must add profiler code to your source code.
  *  
- * \dependencies
- * - Zakero_Base.h<br>
+ * \pardeps{zakero_profiler}
+ * - Zakero_Base.h
+ * \endpardeps
  *
- * \par TL;DR:
- * \parblock
+ * \partldr{zakero_profiler}
  * This library will generate profiling data while your application is running.  
  * To use, add the implementation to a source code file:
  * ~~~
  * #define ZAKERO_PROFILER_IMPLEMENTATION
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  *
  * Next, add the library to the source code where it is "always enabled"
  * ~~~
  * #define ZAKERO_PROFILER_ENABLE
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  *
  * Or. enable the profiler at compile time.  Only include the library in the 
  * source code:
  * ~~~
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  * Then use a compiler flag when building:
  * ~~~
@@ -45,10 +51,9 @@
  * ~~~
  *
  * Finally, add the profiler macros to your code.
- * \endparblock
+ * \endpartldr
  *
- * \par What Is It?
- * \parblock
+ * \parwhat{zakero_profiler}
  * Profiling a program helps you determine how much time is being used by 
  * different sections of code.  This information can be used to determine where 
  * code optimizations will have the most pay-off or help locate an area that 
@@ -69,10 +74,9 @@
  * your code with profiler stuff which can make code harder to read.  This 
  * implementation is no different, but it does try to keep the mess to a 
  * minimum by using a few macros.
- * \endparblock
+ * \endparwhat
  *
- * \par Why Use It?
- * \parblock
+ * \parwhy{zakero_profiler}
  * The first benefit is the generated profiler output is JSON formatted.  There 
  * are many JSON parsers available allowing you to parse and use the data 
  * easily.  Which leads into the main benefit...
@@ -84,13 +88,13 @@
  * And the final reason to use the _Zakero Profiler_ is that it is a "Single 
  * Header Library".  Just include the header file where ever you need or want 
  * to add profiling.
- * \endparblock
+ * \endparwhy
  *
- * \par How To Use It?
- * \parblock
+ * \parhow{zakero_profiler}
  * __Step 0__
  *
- * Your compiler must support at least the C++20 standard.
+ * Your compiler must support at least the C++20 standard.  The location of the 
+ * `Zakero_*.h` header files _must_ be in your compiler's include path.
  *
  * __Step 1__
  *
@@ -100,7 +104,7 @@
  *
  * ~~~
  * #define ZAKERO_PROFILER_IMPLEMENTATION
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  *
  * The macro \ref ZAKERO_PROFILER_IMPLEMENTATION tells the header file to 
@@ -114,7 +118,7 @@
  *
  * ~~~
  * #define ZAKERO_PROFILER_ENABLE
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  *
  * This, however, is not very realistic.  A better solution is to configure 
@@ -122,7 +126,7 @@
  * the _Zakero Profiler_ header and macros where desired.
  *
  * ~~~
- * #include "path/to/Zakero_Profiler.h"
+ * #include "Zakero_Profiler.h"
  * ~~~
  *
  * And if your "build system" is the command-line, the following will turn on 
@@ -200,21 +204,28 @@
  * > Open a new tab enter __about:tracing__ for the URL.
  *
  * Next, drag the _Zakero Profiler_ output file into the tab to see your data.
- * \endparblock
+ * \endparhow
  *
- * \version 0.9.0
+ * \parversion{zakero_profiler}
+ * __0.9.0__
+ * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
+ * time
+ * - Bug Fix: Don't write to a _null_ stream in the destructor
+ * 
+ * __0.8.0__
  * - Updated to use Zakero_Base.h
- *
- * \version 0.8.2
+ * 
+ * __0.7.0__
  * - Bug fixes
- *
- * \version 0.8.1
+ * 
+ * __0.6.0__
  * - Bug fixes
  * - Macro name changes
- *
- * \version 0.8.0
+ * 
+ * __0.5.0__
  * - Profile time duration in C++ code blocks
  * - Add "instant" markers to the timeline
+ * \endparversion
  *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
@@ -229,26 +240,32 @@
  * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
-// POSIX
-#include <chrono>
+
+/******************************************************************************
+ * Includes
+ */
+
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <thread>
 
 // C++20
 #include <experimental/source_location>
 
-// {{{ Dependencies
-
+// Zakero
 #include "Zakero_Base.h"
 
-// }}}
+
+/******************************************************************************
+ * Macros
+ */
 
 // {{{ Macros
 
-#if defined(ZAKERO_PROFILER_ENABLE)
+#ifdef ZAKERO_PROFILER_ENABLE
 
 /**
  * \brief Initialize the profiler.
@@ -265,12 +282,11 @@
  * life-span of the file.  Behavior is undefined (i.e. expect a crash) if the 
  * provided file name is not writable.
  *
- * \par Example
- * \code
+ * \parcode
  * ZAKERO_PROFILER_INIT(std::clog);
  * // --- or --- //
  * ZAKERO_PROFILER_INIT("profile.log");
- * \endcode
+ * \endparcode
  *
  * \note The _Zakero Profiler_ does not flush after writing data to the output 
  * using the stream operator (<<).  The reason for this is to allow the 
@@ -307,14 +323,13 @@
  * - displayTimeUnit
  * - traceEvents
  *
- * \par Example
- * \code
+ * \parcode
  * zakero::Profiler::MetaData meta_data =
  * {	{ "application", "MyApp" }
  * ,	{ "version",     "1.2.3" }
  * };
  * ZAKERO_PROFILER_INIT_METADATA("MyApp.profile_json", meta_data);
- * \endcode
+ * \endparcode
  *
  * \note The _Zakero Profiler_ does not flush after writing data to the output 
  * using the stream operator (<<).  The reason for this is to allow the 
@@ -346,8 +361,7 @@
  * have the profiler manually/programmatically activated, call 
  * ZAKERO_PROFILER_DEACTIVATE immediately after initialization.
  *
- * \par Example
- * \code
+ * \parcode
  * int main()
  * {
  * 	ZAKERO_PROFILER_INIT("profiler.json")
@@ -372,7 +386,7 @@
  * {
  * 	ZAKERO_PROFILER_DEACTIVATE
  * }
- * \endcode
+ * \endparcode
  *
  * \see ZAKERO_PROFILER_DEACTIVATE
  */
@@ -418,8 +432,7 @@
  *
  * \note The file name and function name are automatically recorded.
  *
- * \par Example
- * \code
+ * \parcode
  * void func()
  * {
  *     ZAKERO_PROFILER_DURATION("busy", "doing stuff")
@@ -440,7 +453,7 @@
  *         }
  *     }
  * }
- * \endcode
+ * \endparcode
  *
  * \param category_ The category of the data
  * \param name_     The name of the data
@@ -484,45 +497,12 @@
 
 #endif
 
-// {{{ Defines : Doxygen
-
-#if defined(ZAKERO__DOXYGEN_DEFINE_DOCS)
-
-// Only used for generating Doxygen documentation
-
-/**
- * \brief Enable the profiler
- *
- * The _Zakero Profiler_ is a macro based system.  When this macro is defined, 
- * the macros will be replaced with code.  If this macro is __not__ defined, 
- * the macros will be removed at compile time.
- *
- * \note It does not matter if the macro is given a value or not, only its 
- * existence is checked.
- */
-#define ZAKERO_PROFILER_ENABLE
-
-/**
- * \brief Activate the implementation code.
- *
- * Defining this macro will cause the _Zakero Profiler_ implementation to be 
- * included.  This should only be done once, since compiler and/or linker 
- * errors will typically be generated if more than a single implementation is 
- * found.
- *
- * \note It does not matter if the macro is given a value or not, only its 
- * existence is checked.
- */
-#define ZAKERO_PROFILER_IMPLEMENTATION
-
-#endif
-
 // }}}
-// }}}
-// {{{ Declaration
 
 namespace zakero
 {
+	// {{{ Declaration
+
 	class Profiler
 	{
 		public:
@@ -568,29 +548,77 @@ namespace zakero
 			static void report(const zakero::Profiler::Data&) noexcept;
 
 		private:
+			std::mutex    mutex;
 			std::ostream* stream;
 			std::ofstream file_output;
 			bool          is_active;
 	};
+
+	// }}}
 }
 
-// }}}
 // {{{ Implementation
 
-#if defined (ZAKERO_PROFILER_IMPLEMENTATION)
+#ifdef ZAKERO_PROFILER_IMPLEMENTATION
 
+// {{{ Macros
+// {{{ Macros : Doxygen
+
+#ifdef ZAKERO__DOXYGEN_DEFINE_DOCS
+
+// Only used for generating Doxygen documentation
+
+/**
+ * \brief Activate the implementation code.
+ *
+ * Defining this macro will cause the _Zakero Profiler_ implementation to be 
+ * included.  This should only be done once, since compiler and/or linker 
+ * errors will typically be generated if more than a single implementation is 
+ * found.
+ *
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ */
+#define ZAKERO_PROFILER_IMPLEMENTATION
+
+/**
+ * \brief Enable the profiler
+ *
+ * The _Zakero Profiler_ is a macro based system.  When this macro is defined, 
+ * the macros will be replaced with code.  If this macro is __not__ defined, 
+ * the macros will be removed at compile time.
+ *
+ * \note It does not matter if the macro is given a value or not, only its 
+ * existence is checked.
+ */
+#define ZAKERO_PROFILER_ENABLE
+
+#endif // ZAKERO__DOXYGEN_DEFINE_DOCS
+
+// }}}
+
+/**
+ * \internal
+ *
+ * \def ZAKERO_PROFILER__PID
+ *
+ * \brief Get the Process Id.
+ *
+ * \todo This might be a candidate for Zakero_Base.h
+ */
 #ifdef __linux__
 #include <sys/types.h>
 #include <unistd.h>
-#define ZAKERO_PROFILER_PID getpid()
+#define ZAKERO_PROFILER__PID getpid()
 #else
-#define ZAKERO_PROFILER_PID -1
+#define ZAKERO_PROFILER__PID -1
 #endif
 
-#define ZAKERO__TIME_NOW \
-std::chrono::duration_cast<std::chrono::microseconds>(      \
-	std::chrono::steady_clock::now().time_since_epoch() \
-	).count()                                           \
+// }}}
+
+namespace zakero
+{
+// {{{ Anonymous Namespace
 
 namespace
 {
@@ -601,9 +629,8 @@ namespace
 	//uint64_t total = 0;
 }
 
-
-namespace zakero
-{
+// }}}
+// {{{ Documentation
 
 /**
  * \internal
@@ -631,6 +658,8 @@ namespace zakero
  * - deactivate()
  */
 
+// }}}
+
 /**
  * \brief Constructor
  *
@@ -638,7 +667,8 @@ namespace zakero
  * to be active until after one of the init() methods have been called.
  */
 Profiler::Profiler() noexcept
-	: stream(nullptr)
+	: mutex()
+	, stream(nullptr)
 	, file_output()
 	, is_active(false)
 {
@@ -652,11 +682,16 @@ Profiler::Profiler() noexcept
  */
 Profiler::~Profiler() noexcept
 {
-	(*stream) << "]}" << std::endl;
+	std::lock_guard<std::mutex> lock(zakero_profiler.mutex);
 
-	if(file_output.is_open())
+	if(stream != nullptr)
 	{
-		file_output.close();
+		(*stream) << "]}" << std::endl;
+
+		if(file_output.is_open())
+		{
+			file_output.close();
+		}
 	}
 
 	// std::format performance testing
@@ -704,6 +739,8 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	, zakero::Profiler::MetaData      meta_data     ///< Extra meta data
 	) noexcept
 {
+	std::lock_guard<std::mutex> lock(zakero_profiler.mutex);
+
 	if(zakero_profiler.stream != nullptr)
 	{
 		return;
@@ -777,6 +814,8 @@ void zakero::Profiler::deactivate() noexcept
 void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 	) noexcept
 {
+	std::lock_guard<std::mutex> lock(zakero_profiler.mutex);
+
 	// std::format performance testing
 	//const auto t1  = std::chrono::steady_clock::now();
 
@@ -846,9 +885,9 @@ Profiler::Data::Data(const char                     phase    ///< The phase
 	: category(category)
 	, name(name)
 	, location(location)
-	, time_stamp(ZAKERO__TIME_NOW)
+	, time_stamp(ZAKERO_STEADY_TIME_NOW(microseconds))
 	, thread_id(std::this_thread::get_id())
-	, process_id(ZAKERO_PROFILER_PID)
+	, process_id(ZAKERO_PROFILER__PID)
 	, phase(phase)
 {
 }
@@ -894,7 +933,7 @@ Profiler::Duration::~Duration() noexcept
 		zakero::Profiler::report(*this);
 
 		phase = 'E';
-		time_stamp = ZAKERO__TIME_NOW;
+		time_stamp = ZAKERO_STEADY_TIME_NOW(microseconds);
 		zakero::Profiler::report(*this);
 	}
 }

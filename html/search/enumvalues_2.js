@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['horizontal_353',['Horizontal',['../classzakero_1_1Yetani.html#a42274f7b4896cb3a82707a7659fba5f2ac1b5fa03ecdb95d4a45dd1c40b02527f',1,'zakero::Yetani']]]
+  ['released_343',['Released',['../classzakero_1_1Yetani.html#a443f97670ca82036adb6684fcadef53baea1e34304a5d8ffa7c9b0ed8ede4ef1a',1,'zakero::Yetani']]]
 ];

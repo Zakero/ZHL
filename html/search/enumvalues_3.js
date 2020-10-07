@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['maximized_354',['Maximized',['../classzakero_1_1Yetani.html#ac2601eed0ec5db5e6117d26535a8e0e6a49d903a5c02560cf79bf6b516cc89457',1,'zakero::Yetani']]]
+  ['unknown_344',['Unknown',['../classzakero_1_1Yetani.html#a42274f7b4896cb3a82707a7659fba5f2a88183b946cc5f0e8c96b2e66e1c74a7e',1,'zakero::Yetani::Unknown()'],['../classzakero_1_1Yetani.html#a58ba4ebcc1abb40b936d22821fe4daaba88183b946cc5f0e8c96b2e66e1c74a7e',1,'zakero::Yetani::Unknown()']]]
 ];

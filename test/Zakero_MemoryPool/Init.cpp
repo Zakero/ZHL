@@ -39,7 +39,7 @@ TEST_CASE("Init")
 
 	SECTION("Bad Init")
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		error = memory_pool.init(0);
 		INFO(error.value() << "\t" << error.message());

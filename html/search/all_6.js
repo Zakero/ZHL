@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['height_28',['height',['../structzakero_1_1Yetani_1_1SizeMm.html#aea09514369038afb866bf3bf4bc40a14',1,'zakero::Yetani::SizeMm::height()'],['../structzakero_1_1Yetani_1_1SizePercent.html#ac7a921a8abf8b175c7181348469baeba',1,'zakero::Yetani::SizePercent::height()'],['../structzakero_1_1Yetani_1_1SizePixel.html#a9a01037b22ebe008881e83df179bfc21',1,'zakero::Yetani::SizePixel::height()'],['../classzakero_1_1Yetani.html#a26b4ae0f485e823355e92796b1d1672e',1,'zakero::Yetani::Output::height()']]],
-  ['horizontal_29',['Horizontal',['../classzakero_1_1Yetani.html#a42274f7b4896cb3a82707a7659fba5f2ac1b5fa03ecdb95d4a45dd1c40b02527f',1,'zakero::Yetani']]],
-  ['hotspot_5fx_30',['hotspot_x',['../classzakero_1_1Yetani.html#a6200a0bb358ab2adfb0f02709d4a6769',1,'zakero::Yetani::CursorConfig']]],
-  ['hotspot_5fy_31',['hotspot_y',['../classzakero_1_1Yetani.html#a7b3e3b9c9b56db6c521df68bfc6933ec',1,'zakero::Yetani::CursorConfig']]]
+  ['height_25',['height',['../structzakero_1_1Yetani_1_1SizeMm.html#aea09514369038afb866bf3bf4bc40a14',1,'zakero::Yetani::SizeMm::height()'],['../structzakero_1_1Yetani_1_1SizePercent.html#ac7a921a8abf8b175c7181348469baeba',1,'zakero::Yetani::SizePercent::height()'],['../structzakero_1_1Yetani_1_1SizePixel.html#a9a01037b22ebe008881e83df179bfc21',1,'zakero::Yetani::SizePixel::height()'],['../classzakero_1_1Yetani.html#a26b4ae0f485e823355e92796b1d1672e',1,'zakero::Yetani::Output::height()']]],
+  ['hotspot_5fx_26',['hotspot_x',['../classzakero_1_1Yetani.html#a6200a0bb358ab2adfb0f02709d4a6769',1,'zakero::Yetani::CursorConfig']]],
+  ['hotspot_5fy_27',['hotspot_y',['../classzakero_1_1Yetani.html#a7b3e3b9c9b56db6c521df68bfc6933ec',1,'zakero::Yetani::CursorConfig']]]
 ];

@@ -178,6 +178,9 @@
  * \endparhow
  *
  * \parversion{zakero_yetani}
+ * __v0.6.1__
+ * - Moved to_string(std::error_code) to Zakero_Base.h
+ *
  * __v0.6.0__
  * - Fully Documented
  * - No Known Bugs

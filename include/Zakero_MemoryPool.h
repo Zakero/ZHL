@@ -343,6 +343,11 @@ namespace zakero
 			              void   segmentMergePrev(const size_t) noexcept;
 			[[nodiscard]] size_t segmentMove(const size_t, const size_t, size_t&) noexcept;
 			              void   segmentSplit(size_t, size_t) noexcept;
+
+			// -------------------------------------------------- //
+
+			MemoryPool(const MemoryPool&) = delete;
+			MemoryPool& operator=(const MemoryPool&) = delete;
 	};
 
 	// }}}
@@ -435,8 +440,8 @@ namespace
 	 * \name Lambda's that do nothing.
 	 * \{
 	 */
-	zakero::MemoryPool::LambdaSize       LambdaSize_DoNothing       = [](size_t){};
-	zakero::MemoryPool::LambdaAddressMap LambdaAddressMap_DoNothing = [](const zakero::MemoryPool::AddressMap&){};
+	zakero::MemoryPool::LambdaSize       LambdaSize_DoNothing       = [](size_t) noexcept {};
+	zakero::MemoryPool::LambdaAddressMap LambdaAddressMap_DoNothing = [](const zakero::MemoryPool::AddressMap&) noexcept {};
 	/**
 	 * \}
 	 */
@@ -1010,8 +1015,8 @@ namespace
 	 * memory_pool.init(1024);
 	 *
 	 * std::error_code error;
-	 * off_t data_offset = memory_pool.alloc(512, uint32_t(0xaaaa5555), 
-	 * error);
+	 * const uint32_t fill = 0xaaaa5555;
+	 * off_t data_offset = memory_pool.alloc(512, fill, error);
 	 *
 	 * if(error.value() != 0)
 	 * {
@@ -1022,11 +1027,11 @@ namespace
 	 * \return The offset of the block of memory.
 	 */
 	off_t MemoryPool::alloc(size_t size  ///< The size in bytes
-		, uint32_t             value ///< The fill value
+		, const uint32_t       value ///< The fill value
 		, std::error_code&     error ///< The error
 		) noexcept
 	{
-		off_t offset = alloc(size);
+		off_t offset = alloc(size, error);
 
 		if(offset < 0)
 		{

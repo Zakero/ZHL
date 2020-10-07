@@ -343,6 +343,24 @@ namespace zakero
 	}
 
 
+	/**
+	 * \brief Convert an std::error_code to a std::string.
+	 *
+	 * The provided \p error will be converted to a string.
+	 *
+	 * \return A string
+	 */
+	std::string to_string(const std::error_code& error ///< The value
+		) noexcept
+	{
+		std::string str = std::string(error.category().name())
+			+ "," + std::to_string(error.value())
+			+ "," + std::string(error.message())
+			;
+
+		return str;
+	}
+
 #if 0 // Future?
 	using VectorString = std::vector<std::string>;
 

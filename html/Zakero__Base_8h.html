@@ -130,6 +130,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ab6eb17866baa07bf3529c1229deee575"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__Base_8h.html#ab6eb17866baa07bf3529c1229deee575">zakero::convert</a> (const uint64_t size, const <a class="el" href="Zakero__Base_8h.html#a91527d290403cbcf2e34f76e34ae09b9">zakero::Storage</a> from, const <a class="el" href="Zakero__Base_8h.html#a91527d290403cbcf2e34f76e34ae09b9">zakero::Storage</a> to) noexcept</td></tr>
 <tr class="memdesc:ab6eb17866baa07bf3529c1229deee575"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert storage sizes.  <a href="Zakero__Base_8h.html#ab6eb17866baa07bf3529c1229deee575">More...</a><br /></td></tr>
 <tr class="separator:ab6eb17866baa07bf3529c1229deee575"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a69db77331b1ac868a2f7400f1e119fc3"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__Base_8h.html#a69db77331b1ac868a2f7400f1e119fc3">zakero::to_string</a> (const std::error_code &amp;error) noexcept</td></tr>
+<tr class="memdesc:a69db77331b1ac868a2f7400f1e119fc3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert an std::error_code to a std::string.  <a href="Zakero__Base_8h.html#a69db77331b1ac868a2f7400f1e119fc3">More...</a><br /></td></tr>
+<tr class="separator:a69db77331b1ac868a2f7400f1e119fc3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa939a096886f8989f7abb8b11c49ea81"><td class="memTemplParams" colspan="2">template&lt;class Type &gt; </td></tr>
 <tr class="memitem:aa939a096886f8989f7abb8b11c49ea81"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="Zakero__Base_8h.html#aa939a096886f8989f7abb8b11c49ea81">zakero::vectorContains</a> (const std::vector&lt; Type &gt; &amp;vector, const Type &amp;value) noexcept</td></tr>
 <tr class="memdesc:aa939a096886f8989f7abb8b11c49ea81"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check the contents of a std::vector.  <a href="Zakero__Base_8h.html#aa939a096886f8989f7abb8b11c49ea81">More...</a><br /></td></tr>
@@ -437,6 +440,40 @@ Functions</h2></td></tr>
     <tr><td class="paramname">size</td><td>The size to convert </td></tr>
     <tr><td class="paramname">from</td><td>The source unit </td></tr>
     <tr><td class="paramname">to</td><td>The destination unit </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a69db77331b1ac868a2f7400f1e119fc3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a69db77331b1ac868a2f7400f1e119fc3">&#9670;&nbsp;</a></span>to_string()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string zakero::to_string </td>
+          <td>(</td>
+          <td class="paramtype">const std::error_code &amp;&#160;</td>
+          <td class="paramname"><em>error</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>The provided <code>error</code> will be converted to a string.</p>
+<dl class="section return"><dt>Returns</dt><dd>A string </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">error</td><td>The value </td></tr>
   </table>
   </dd>
 </dl>

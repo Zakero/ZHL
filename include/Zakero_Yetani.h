@@ -1046,10 +1046,10 @@ namespace zakero
 
 			struct KeyModifier
 			{
-				uint32_t pressed;
-				uint32_t latched;
-				uint32_t locked;
-				uint32_t group;
+				uint32_t pressed = 0;
+				uint32_t latched = 0;
+				uint32_t locked  = 0;
+				uint32_t group   = 0;
 			};
 
 			// }}}
@@ -1408,6 +1408,9 @@ namespace zakero
 					struct zxdg_toplevel_decoration_v1* xdg_decoration;
 					Yetani::Window::Memory              window_memory;
 					wl_shm_format                       pixel_format;
+
+					Window(const Window&) = delete;
+					Window& operator=(const Window&) = delete;
 			};
 
 			// -------------------------------------------------- //
@@ -1447,16 +1450,16 @@ namespace zakero
 
 			struct Cursor
 			{
-				struct wl_surface*        wl_surface;
-				std::vector<::wl_buffer*> buffer_vector;
-				wl_shm_format             format;
-				int64_t                   next_frame_time;
-				size_t                    buffer_index;
-				uint32_t                  time_per_frame;
-				int32_t                   width;
-				int32_t                   height;
-				int32_t                   hotspot_x;
-				int32_t                   hotspot_y;
+				struct wl_surface*        wl_surface      = nullptr;
+				std::vector<::wl_buffer*> buffer_vector   = {};
+				wl_shm_format             format          = WL_SHM_FORMAT_ARGB8888;
+				int64_t                   next_frame_time = 0;
+				size_t                    buffer_index    = 0;
+				uint32_t                  time_per_frame  = 0;
+				int32_t                   width           = 0;
+				int32_t                   height          = 0;
+				int32_t                   hotspot_x       = 0;
+				int32_t                   hotspot_y       = 0;
 			};
 
 			using MapStringCursor = std::unordered_map<std::string, Yetani::Cursor>;
@@ -1551,8 +1554,8 @@ namespace zakero
 
 			struct KeyRepeatData
 			{
-				std::chrono::time_point<std::chrono::steady_clock> trigger_time;
-				uint32_t                                           base_time;
+				std::chrono::time_point<std::chrono::steady_clock> trigger_time = {};
+				uint32_t                                           base_time    = 0;
 			};
 
 			using KeyRepeatMap = std::map<uint32_t, Yetani::KeyRepeatData>;
@@ -1561,9 +1564,9 @@ namespace zakero
 
 			struct KeyboardEvent
 			{
-				Yetani::Lambda    on_enter;
-				Yetani::Lambda    on_leave;
-				Yetani::LambdaKey on_key;
+				Yetani::Lambda    on_enter = {};
+				Yetani::Lambda    on_leave = {};
+				Yetani::LambdaKey on_key   = {};
 			};
 
 			using MapKeyboardEvent = std::unordered_map<struct wl_surface*, Yetani::KeyboardEvent>;
@@ -1575,7 +1578,7 @@ namespace zakero
 				struct wl_surface*       wl_surface   = nullptr;
 				Yetani::KeyboardEvent*   event        = nullptr;
 				Yetani::MapKeyboardEvent event_map    = {};
-				Yetani::KeyModifier      modifier     = { 0 };
+				Yetani::KeyModifier      modifier     = {};
 				Yetani::KeyRepeatMap     repeat_map   = {};
 				char*                    keymap       = nullptr;
 				uint32_t                 keymap_size  = 0;
@@ -1598,20 +1601,20 @@ namespace zakero
 
 			struct PointerEvent
 			{
-				Yetani::LambdaAxis          on_axis;
-				Yetani::Lambda              on_axis_discrete;
-				Yetani::Lambda              on_axis_source;
-				Yetani::Lambda              on_axis_stop;
-				Yetani::LambdaButtonMm      on_button_mm;
-				Yetani::LambdaButtonPercent on_button_percent;
-				Yetani::LambdaButtonPixel   on_button_pixel;
-				Yetani::LambdaPointMm       on_enter_mm;
-				Yetani::LambdaPointPercent  on_enter_percent;
-				Yetani::LambdaPointPixel    on_enter_pixel;
-				Yetani::Lambda              on_leave;
-				Yetani::LambdaPointMm       on_motion_mm;
-				Yetani::LambdaPointPercent  on_motion_percent;
-				Yetani::LambdaPointPixel    on_motion_pixel;
+				Yetani::LambdaAxis          on_axis           = {};
+				Yetani::Lambda              on_axis_discrete  = {};
+				Yetani::Lambda              on_axis_source    = {};
+				Yetani::Lambda              on_axis_stop      = {};
+				Yetani::LambdaButtonMm      on_button_mm      = {};
+				Yetani::LambdaButtonPercent on_button_percent = {};
+				Yetani::LambdaButtonPixel   on_button_pixel   = {};
+				Yetani::LambdaPointMm       on_enter_mm       = {};
+				Yetani::LambdaPointPercent  on_enter_percent  = {};
+				Yetani::LambdaPointPixel    on_enter_pixel    = {};
+				Yetani::Lambda              on_leave          = {};
+				Yetani::LambdaPointMm       on_motion_mm      = {};
+				Yetani::LambdaPointPercent  on_motion_percent = {};
+				Yetani::LambdaPointPixel    on_motion_pixel   = {};
 			};
 
 			using MapPointerEvent = std::unordered_map<struct wl_surface*, Yetani::PointerEvent>;
@@ -1720,8 +1723,8 @@ namespace zakero
 
 			struct BufferData
 			{
-				MemoryPool* memory_pool;
-				off_t       offset;
+				MemoryPool* memory_pool = nullptr;
+				off_t       offset      = 0;
 			};
 
 			using MapBufferData = std::unordered_map<struct wl_buffer*, BufferData>;
@@ -1730,8 +1733,8 @@ namespace zakero
 
 			struct Buffer
 			{
-				MapBufferData map;
-				std::mutex    mutex;
+				MapBufferData map   = {};
+				std::mutex    mutex = {};
 			};
 
 			Buffer buffer;
@@ -1747,9 +1750,9 @@ namespace zakero
 
 			struct SurfaceEvent
 			{
-				Yetani::LambdaSizeMm      on_size_mm_change;
-				Yetani::LambdaSizePercent on_size_percent_change;
-				Yetani::LambdaSizePixel   on_size_pixel_change;
+				Yetani::LambdaSizeMm      on_size_mm_change      = {};
+				Yetani::LambdaSizePercent on_size_percent_change = {};
+				Yetani::LambdaSizePixel   on_size_pixel_change   = {};
 			};
 
 			using MapSurfaceEvent = std::map<struct wl_surface*, Yetani::SurfaceEvent>;
@@ -1768,14 +1771,14 @@ namespace zakero
 			// Use mainly by XdgSurface related methods
 			struct SurfaceExtent
 			{
-				Yetani::SizeUnit    preferred_unit;
-				Yetani::SizeMm      preferred_mm;
-				Yetani::SizePercent preferred_percent;
-				Yetani::SizeMm      size_mm;
-				Yetani::SizePercent size_percent;
-				Yetani::SizePixel   size_pixel;
-				Yetani::SizePixel   size_pixel_max;
-				Yetani::SizePixel   size_pixel_min;
+				Yetani::SizeUnit    preferred_unit    = {};
+				Yetani::SizeMm      preferred_mm      = {};
+				Yetani::SizePercent preferred_percent = {};
+				Yetani::SizeMm      size_mm           = {};
+				Yetani::SizePercent size_percent      = {};
+				Yetani::SizePixel   size_pixel        = {};
+				Yetani::SizePixel   size_pixel_max    = {};
+				Yetani::SizePixel   size_pixel_min    = {};
 			};
 
 			using MapSurfaceExtent = std::unordered_map<struct wl_surface*, Yetani::SurfaceExtent>;
@@ -1787,12 +1790,12 @@ namespace zakero
 
 			struct SurfaceFrame
 			{
-				struct wl_callback*     callback;
-				struct wl_surface*      wl_surface;
-				std::atomic<wl_buffer*> buffer_next;
-				uint32_t                width;
-				uint32_t                height;
-				uint32_t                time_ms;
+				struct wl_callback*     callback    = nullptr;
+				struct wl_surface*      wl_surface  = nullptr;
+				std::atomic<wl_buffer*> buffer_next = {};
+				uint32_t                width       = 0;
+				uint32_t                height      = 0;
+				uint32_t                time_ms     = 0;
 			};
 
 			using MapSurfaceFrame = std::unordered_map<struct wl_surface*, Yetani::SurfaceFrame>;
@@ -1919,14 +1922,14 @@ namespace zakero
 
 			struct XdgToplevel
 			{
-				Yetani::VectorXdgStateChange* state_change;
-				Yetani::Lambda                close_request_lambda;
-				Yetani::LambdaBool            is_active_lambda;
-				bool                          is_active;
-				Yetani::XdgState              window_state;
-				Yetani::LambdaWindowMode      window_state_lambda;
-				Yetani::SizePixel             previous_size;
-				struct xdg_toplevel*          xdg_toplevel;
+				Yetani::VectorXdgStateChange* state_change         = nullptr;
+				Yetani::Lambda                close_request_lambda = {};
+				Yetani::LambdaBool            is_active_lambda     = {};
+				bool                          is_active            = false;
+				Yetani::XdgState              window_state         = XdgState::Unknown;
+				Yetani::LambdaWindowMode      window_state_lambda  = {};
+				Yetani::SizePixel             previous_size        = {};
+				struct xdg_toplevel*          xdg_toplevel         = nullptr;
 			};
 
 			using MapXdgToplevel = std::unordered_map<struct xdg_surface*, Yetani::XdgToplevel>;
@@ -1946,10 +1949,10 @@ namespace zakero
 
 			struct XdgDecoration
 			{
-				Yetani::VectorXdgStateChange*   state_change;
-				Yetani::LambdaWindowDecorations lambda;
-				uint32_t                        state;
-				bool                            is_present;
+				Yetani::VectorXdgStateChange*   state_change = nullptr;
+				Yetani::LambdaWindowDecorations lambda       = {};
+				uint32_t                        state        = 0;
+				bool                            is_present   = false;
 				//struct zxdg_toplevel_decoration_v1* xdg_decoration;
 			};
 
@@ -2039,6 +2042,9 @@ namespace zakero
 			static void handlerXdgToplevelDecorationConfigure(void*, struct zxdg_toplevel_decoration_v1*, uint32_t mode) noexcept;
 
 			// }}}
+
+			Yetani(const Yetani&) = delete;
+			Yetani& operator=(const Yetani&) = delete;
 	}; // class Yetani
 
 	// }}}
@@ -2594,22 +2600,22 @@ namespace
 	 * \name Lambda's that do nothing.
 	 * \{
 	 */
-	Yetani::Lambda                  Lambda_DoNothing                  = [](){};
-	Yetani::LambdaKey               LambdaKey_DoNothing               = [](const Yetani::Key&, const Yetani::KeyModifier&){};
-	Yetani::LambdaAxis              LambdaAxis_DoNothing              = [](const Yetani::PointerAxis&, const Yetani::KeyModifier&){};
-	Yetani::LambdaButtonMm          LambdaButtonMm_DoNothing          = [](const Yetani::PointerButton&, const Yetani::PointMm&, const Yetani::KeyModifier&){};
-	Yetani::LambdaButtonPercent     LambdaButtonPercent_DoNothing     = [](const Yetani::PointerButton&, const Yetani::PointPercent&, const Yetani::KeyModifier&){};
-	Yetani::LambdaButtonPixel       LambdaButtonPixel_DoNothing       = [](const Yetani::PointerButton&, const Yetani::PointPixel&, const Yetani::KeyModifier&){};
-	Yetani::LambdaPointMm           LambdaPointMm_DoNothing           = [](const Yetani::PointMm&, const Yetani::KeyModifier&){};
-	Yetani::LambdaPointPercent      LambdaPointPercent_DoNothing      = [](const Yetani::PointPercent&, const Yetani::KeyModifier&){};
-	Yetani::LambdaPointPixel        LambdaPointPixel_DoNothing        = [](const Yetani::PointPixel&, const Yetani::KeyModifier&){};
-	Yetani::LambdaBool              LambdaBool_DoNothing              = [](const bool){};
-	Yetani::LambdaOutputId          LambdaOutputId_DoNothing          = [](const Yetani::OutputId){};
-	Yetani::LambdaWindowDecorations LambdaWindowDecorations_DoNothing = [](const Yetani::WindowDecorations){};
-	Yetani::LambdaWindowMode        LambdaWindowMode_DoNothing        = [](const Yetani::WindowMode){};
-	Yetani::LambdaSizeMm            LambdaSizeMm_DoNothing            = [](const Yetani::SizeMm&){};
-	Yetani::LambdaSizePercent       LambdaSizePercent_DoNothing       = [](const Yetani::SizePercent&){};
-	Yetani::LambdaSizePixel         LambdaSizePixel_DoNothing         = [](const Yetani::SizePixel&){};
+	Yetani::Lambda                  Lambda_DoNothing                  = []() noexcept {};
+	Yetani::LambdaKey               LambdaKey_DoNothing               = [](const Yetani::Key&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaAxis              LambdaAxis_DoNothing              = [](const Yetani::PointerAxis&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaButtonMm          LambdaButtonMm_DoNothing          = [](const Yetani::PointerButton&, const Yetani::PointMm&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaButtonPercent     LambdaButtonPercent_DoNothing     = [](const Yetani::PointerButton&, const Yetani::PointPercent&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaButtonPixel       LambdaButtonPixel_DoNothing       = [](const Yetani::PointerButton&, const Yetani::PointPixel&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaPointMm           LambdaPointMm_DoNothing           = [](const Yetani::PointMm&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaPointPercent      LambdaPointPercent_DoNothing      = [](const Yetani::PointPercent&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaPointPixel        LambdaPointPixel_DoNothing        = [](const Yetani::PointPixel&, const Yetani::KeyModifier&) noexcept {};
+	Yetani::LambdaBool              LambdaBool_DoNothing              = [](const bool) noexcept {};
+	Yetani::LambdaOutputId          LambdaOutputId_DoNothing          = [](const Yetani::OutputId) noexcept {};
+	Yetani::LambdaWindowDecorations LambdaWindowDecorations_DoNothing = [](const Yetani::WindowDecorations) noexcept {};
+	Yetani::LambdaWindowMode        LambdaWindowMode_DoNothing        = [](const Yetani::WindowMode) noexcept {};
+	Yetani::LambdaSizeMm            LambdaSizeMm_DoNothing            = [](const Yetani::SizeMm&) noexcept {};
+	Yetani::LambdaSizePercent       LambdaSizePercent_DoNothing       = [](const Yetani::SizePercent&) noexcept {};
+	Yetani::LambdaSizePixel         LambdaSizePixel_DoNothing         = [](const Yetani::SizePixel&) noexcept {};
 	/**
 	 * \}
 	 */
@@ -3804,7 +3810,8 @@ std::error_code Yetani::cursorCreateCursor(const std::string& cursor_name   ///<
 	const size_t  frame_count     = cursor_config.image_data.size();
 
 	Yetani::Cursor cursor =
-	{	.buffer_vector   = { frame_count, nullptr }
+	{	.wl_surface      = wl_compositor_create_surface(compositor)
+	,	.buffer_vector   = { frame_count, nullptr }
 	,	.format          = cursor_config.format
 	,	.next_frame_time = ZAKERO_STEADY_TIME_NOW(milliseconds)
 	,	.buffer_index    = 0
@@ -3819,8 +3826,6 @@ std::error_code Yetani::cursorCreateCursor(const std::string& cursor_name   ///<
 	{
 		cursor.time_per_frame = Size_Max;
 	}
-
-	cursor.wl_surface = wl_compositor_create_surface(compositor);
 
 	const int    stride     = cursor.width * bytes_per_pixel;
 	const size_t image_size = stride * cursor.height;
@@ -4794,7 +4799,7 @@ Yetani::PointMm Yetani::outputConvertToMm(const Yetani::OutputId output_id ///< 
 
 	if(output_data.outputid_to_wloutput.contains(output_id) == false)
 	{
-		return { 0, 0 };
+		return { point.time, 0, 0 };
 	}
 
 	struct wl_output*     wl_output = output_data.outputid_to_wloutput.at(output_id);
@@ -4824,7 +4829,7 @@ Yetani::PointPercent Yetani::outputConvertToPercent(const Yetani::OutputId outpu
 
 	if(output_data.outputid_to_wloutput.contains(output_id) == false)
 	{
-		return { 0, 0 };
+		return { point.time, 0, 0 };
 	}
 
 	struct wl_output*     wl_output = output_data.outputid_to_wloutput.at(output_id);
@@ -4854,7 +4859,7 @@ Yetani::PointPixel Yetani::outputConvertToPixel(const Yetani::OutputId output_id
 
 	if(output_data.outputid_to_wloutput.contains(output_id) == false)
 	{
-		return { 0, 0 };
+		return { point.time, 0, 0 };
 	}
 
 	struct wl_output*     wl_output = output_data.outputid_to_wloutput.at(output_id);
@@ -4884,7 +4889,7 @@ Yetani::PointPixel Yetani::outputConvertToPixel(const Yetani::OutputId output_id
 
 	if(output_data.outputid_to_wloutput.contains(output_id) == false)
 	{
-		return { 0, 0 };
+		return { point.time, 0, 0 };
 	}
 
 	struct wl_output*     wl_output = output_data.outputid_to_wloutput.at(output_id);
@@ -6176,7 +6181,7 @@ void Yetani::handlerOutputScale(void* data      ///< User data
  * \brief Handle Wayland Pointer Axis events
  */
 void Yetani::handlerPointerAxis(void* data       ///< Handler data
-	, struct wl_pointer*          wl_pointer ///< The Wayland Pointer
+	, struct wl_pointer*          //wl_pointer ///< The Wayland Pointer
 	, uint32_t                    time       ///< Event time
 	, uint32_t                    axis       ///< The axis
 	, wl_fixed_t                  value      ///< Axis movement
@@ -6206,8 +6211,8 @@ void Yetani::handlerPointerAxis(void* data       ///< Handler data
  * \brief Handle Wayland Pointer Axis events
  */
 void Yetani::handlerPointerAxisDiscrete(void* data       ///< Handler data
-	, struct wl_pointer*                  wl_pointer ///< The Wayland Pointer
-	, uint32_t                            axis       ///< The axis
+	, struct wl_pointer*                  //wl_pointer ///< The Wayland Pointer
+	, uint32_t                            //axis       ///< The axis
 	, int32_t                             discrete   ///< The steps
 	) noexcept
 {
@@ -6221,7 +6226,7 @@ void Yetani::handlerPointerAxisDiscrete(void* data       ///< Handler data
  * \brief Handle Wayland Pointer Axis events
  */
 void Yetani::handlerPointerAxisSource(void* data        ///< Handler data
-	, struct wl_pointer*                wl_pointer  ///< The Wayland Pointer
+	, struct wl_pointer*                //wl_pointer  ///< The Wayland Pointer
 	, uint32_t                          axis_source ///< The source of the event
 	) noexcept
 {
@@ -6277,8 +6282,8 @@ void Yetani::handlerPointerAxisStop(void*
  * \brief Handle Wayland Pointer Button events
  */
 void Yetani::handlerPointerButton(void* data       ///< Handler data
-	, struct wl_pointer*            wl_pointer ///< The Wayland Pointer
-	, uint32_t                      serial     ///< The Event Id
+	, struct wl_pointer*            //wl_pointer ///< The Wayland Pointer
+	, uint32_t                      //serial     ///< The Event Id
 	, uint32_t                      time       ///< Event time
 	, uint32_t                      button     ///< The button
 	, uint32_t                      state      ///< The button state
@@ -6304,7 +6309,7 @@ void Yetani::handlerPointerButton(void* data       ///< Handler data
  * \brief Handle Wayland Pointer Enter events
  */
 void Yetani::handlerPointerEnter(void* data       ///< Handler data
-	, struct wl_pointer*           wl_pointer ///< The Wayland Pointer
+	, struct wl_pointer*           //wl_pointer ///< The Wayland Pointer
 	, uint32_t                     serial     ///< Event Id
 	, struct wl_surface*           wl_surface ///< The entered surface
 	, wl_fixed_t                   surface_x  ///< The surface location
@@ -6452,8 +6457,8 @@ void Yetani::handlerPointerFrame(void* data       ///< Handler data
  * \brief Handle Wayland Pointer Leave events
  */
 void Yetani::handlerPointerLeave(void* data       ///< Handler data
-	, struct wl_pointer*           wl_pointer ///< The Wayland Pointer
-	, uint32_t                     serial     ///< The Event Id
+	, struct wl_pointer*           //wl_pointer ///< The Wayland Pointer
+	, uint32_t                     //serial     ///< The Event Id
 	, struct wl_surface*           wl_surface ///< The Wayland Surface
 	) noexcept
 {
@@ -6467,7 +6472,7 @@ void Yetani::handlerPointerLeave(void* data       ///< Handler data
  * \brief Handle Wayland Pointer Motion events
  */
 void Yetani::handlerPointerMotion(void* data       ///< Handler data
-	, struct wl_pointer*            wl_pointer ///< The Wayland Pointer
+	, struct wl_pointer*            //wl_pointer ///< The Wayland Pointer
 	, uint32_t                      time       ///< The Event Time
 	, wl_fixed_t                    surface_x  ///< The surface location
 	, wl_fixed_t                    surface_y  ///< The surface location
@@ -6602,7 +6607,7 @@ void Yetani::handlerRegistryGlobal(void* data      ///< User data
  * \brief Handle Wayland Registry Global events
  */
 void Yetani::handlerRegistryRemove(void* data     ///< User data
-	, struct wl_registry*            registry ///< The registry object
+	, struct wl_registry*            //registry ///< The registry object
 	, uint32_t                       id       ///< The ID of the thing
 	) noexcept
 {
@@ -7518,7 +7523,7 @@ struct zxdg_toplevel_decoration_v1* Yetani::xdgDecorationCreate(struct xdg_surfa
  * __This feature is not part of Wayland(Stable)__
  */
 void Yetani::xdgDecorationDestroy(struct xdg_surface* xdg_surface    ///< The XDG Surface
-	, struct xdg_toplevel*                        xdg_toplevel   ///< The XDG Toplevel
+	, struct xdg_toplevel*                        //xdg_toplevel   ///< The XDG Toplevel
 	, struct zxdg_toplevel_decoration_v1*&        xdg_decoration ///< The XDG Toplevel Decoration
 	) noexcept
 {
@@ -7739,7 +7744,7 @@ void Yetani::handlerXdgSurfaceConfigure(void* data        ///< User data
  * \brief Handle XDG Toplevel close requests.
  */
 void Yetani::handlerXdgToplevelClose(void* data         ///< User data
-	, struct xdg_toplevel*             xdg_toplevel ///< The toplevel surface
+	, struct xdg_toplevel*             //xdg_toplevel ///< The toplevel surface
 	) noexcept
 {
 	Yetani::XdgToplevel* toplevel = (Yetani::XdgToplevel*)data;
@@ -7752,7 +7757,7 @@ void Yetani::handlerXdgToplevelClose(void* data         ///< User data
  * \brief Handle XDG Toplevel configuration changes.
  */
 void Yetani::handlerXdgToplevelConfigure(void* data         ///< User data
-	, struct xdg_toplevel*                 xdg_toplevel ///< The toplevel surface
+	, struct xdg_toplevel*                 //xdg_toplevel ///< The toplevel surface
 	, int32_t                              width        ///< Suggested width
 	, int32_t                              height       ///< Suggested height
 	, struct wl_array*                     state_array  ///< Active states
@@ -7810,7 +7815,7 @@ void Yetani::handlerXdgToplevelConfigure(void* data         ///< User data
 /**
  * \brief Tell the Wayland Compositor that we are alive.
  */
-void Yetani::handlerXdgWmBasePing(void* data        ///< User data
+void Yetani::handlerXdgWmBasePing(void* //data        ///< User data
 	, struct xdg_wm_base*           xdg_wm_base ///< Window Manager
 	, uint32_t                      serial      ///< Event ID
 	) noexcept
@@ -7825,7 +7830,7 @@ void Yetani::handlerXdgWmBasePing(void* data        ///< User data
  * \brief Handle XDG Toplevel Decoration configuration changes.
  */
 void Yetani::handlerXdgToplevelDecorationConfigure(void* data       ///< User data
-	, struct zxdg_toplevel_decoration_v1*            decoration ///< The Decoration object
+	, struct zxdg_toplevel_decoration_v1*            //decoration ///< The Decoration object
 	, uint32_t                                       mode       ///< The new decoration mode
 	) noexcept
 {

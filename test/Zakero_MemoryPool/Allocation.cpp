@@ -29,7 +29,7 @@ TEST_CASE("Fixed Size MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset = -1;
 
 		INFO("Allocation size of 0 not allowed.");
@@ -65,7 +65,7 @@ TEST_CASE("Fixed Size MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size() / 2;
@@ -106,7 +106,7 @@ TEST_CASE("Fixed Size MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size() / 2;
@@ -141,7 +141,7 @@ TEST_CASE("Fixed Size MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size() / (sizeof(uint32_t) * 2);
@@ -183,7 +183,7 @@ TEST_CASE("Dynamic Sized MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset = -1;
 
 		INFO("Allocation size of 0 not allowed.");
@@ -205,7 +205,7 @@ TEST_CASE("Dynamic Sized MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size();
@@ -246,7 +246,7 @@ TEST_CASE("Dynamic Sized MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size();
@@ -281,7 +281,7 @@ TEST_CASE("Dynamic Sized MemoryPool")
 			);
 		REQUIRE(bool(retval) == false);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 		size_t size = memory_pool.size();
@@ -381,7 +381,7 @@ TEST_CASE("Resize")
 
 	SECTION("Bad Resize")
 	{
-		std::error_condition error;
+		std::error_code error;
 
 		off_t retval = -1;
 		(void)retval;
@@ -418,7 +418,7 @@ TEST_CASE("Resize")
 			, MemoryPool::Alignment::Bits_8
 			);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 
@@ -440,7 +440,7 @@ TEST_CASE("Resize")
 			, MemoryPool::Alignment::Bits_8
 			);
 
-		std::error_condition error;
+		std::error_code error;
 		off_t offset_1 = -1;
 		off_t offset_2 = -1;
 

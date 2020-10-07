@@ -171,7 +171,7 @@
  *
  * \parversion{zakero_memorypool}
  * __0.9.0__
- * - Updated to use `std::error_code` instead of `std::error_condition`
+ * - Updated to use `std::error_code` instead of `std::error_code`
  * - Removed the Zakero_Base.h dependency
  *
  * __0.8.0__

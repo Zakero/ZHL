@@ -10311,25 +10311,6 @@ void Yetani::Window::pointerOnAxisDiscrete(Yetani::Lambda lambda ///< The lambda
 // {{{ Convenience
 
 /**
- * \brief Convert an std::error_code to a std::string.
- *
- * The provided \p error will be converted to a string.
- *
- * \return A string
- */
-std::string to_string(const std::error_code& error ///< The value
-	) noexcept
-{
-	std::string str = std::string(error.category().name())
-		+ ":" + std::to_string(error.value())
-		+ ":" + std::string(error.message())
-		;
-
-	return str;
-}
-
-
-/**
  * \brief Convert a value to a std::string.
  *
  * The %Wayland SHM color format will be converted into a std::string.

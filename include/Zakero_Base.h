@@ -20,12 +20,15 @@
  * Include this header in your source code to use these features.
  *
  * \parversion{zakero_base}
- * __0.9.1__
+ * __v0.9.2__
+ * - Added to_string(std::error_code)
+ *
+ * __v0.9.1__
  * - Added macro ZAKERO_STEADY_TIME_NOW()
  * - Added macro ZAKERO_SYSTEM_TIME_NOW()
  * - Added vectorErase()
  *
- * __0.9.0__
+ * __v0.9.0__
  * - The initial collection
  * \endparversion
  *

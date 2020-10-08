@@ -353,7 +353,8 @@ namespace zakero
 	 *
 	 * \return A string
 	 */
-	std::string to_string(const std::error_code& error ///< The value
+	[[nodiscard]]
+	inline std::string to_string(const std::error_code& error ///< The value
 		) noexcept
 	{
 		std::string str = std::string(error.category().name())

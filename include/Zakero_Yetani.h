@@ -303,9 +303,6 @@
  * slight variations.  By including the code directly, the generated code is 
  * from a known baseline.
  *
- * The "wayland-protocol/protocol.sh" script uses the "// {{{ Generated Code", 
- * plus matching "// }}}" as markers to know where to add and remove code.
- *
  * TL;DR: The code you are looking for is in the Yetani class.
  */
 
@@ -313,6 +310,10 @@
  * \cond Doxygen_Ignore
  */
 
+/*
+ * The "wayland-protocol/protocol.sh" script uses this fold as markers to know 
+ * where to add and remove code.
+ */
 // {{{ Generated Code
 // {{{ xdg-decoration-unstable-v1
 struct xdg_toplevel;
@@ -405,6 +406,7 @@ zxdg_toplevel_decoration_v1_unset_mode(struct zxdg_toplevel_decoration_v1 *zxdg_
  wl_proxy_marshal((struct wl_proxy *) zxdg_toplevel_decoration_v1,
     2);
 }
+#ifdef ZAKERO_YETANI_IMPLEMENTATION
 extern const struct wl_interface xdg_toplevel_interface;
 extern const struct wl_interface zxdg_toplevel_decoration_v1_interface;
 static const struct wl_interface *xdg_decoration_unstable_v1_types[] = {
@@ -434,6 +436,7 @@ const struct wl_interface zxdg_toplevel_decoration_v1_interface = {
  3, zxdg_toplevel_decoration_v1_requests,
  1, zxdg_toplevel_decoration_v1_events,
 };
+#endif // ZAKERO_YETANI_IMPLEMENTATION
 // }}}
 // {{{ xdg-shell
 struct wl_output;
@@ -884,6 +887,7 @@ xdg_popup_reposition(struct xdg_popup *xdg_popup, struct xdg_positioner *positio
  wl_proxy_marshal((struct wl_proxy *) xdg_popup,
     2, positioner, token);
 }
+#ifdef ZAKERO_YETANI_IMPLEMENTATION
 extern const struct wl_interface wl_output_interface;
 extern const struct wl_interface wl_seat_interface;
 extern const struct wl_interface wl_surface_interface;
@@ -1005,6 +1009,7 @@ const struct wl_interface xdg_popup_interface = {
  3, xdg_popup_requests,
  3, xdg_popup_events,
 };
+#endif // ZAKERO_YETANI_IMPLEMENTATION
 // }}}
 // }}}
 

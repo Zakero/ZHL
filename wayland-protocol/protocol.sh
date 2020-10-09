@@ -141,6 +141,8 @@ main()
 ###############################################################################
 protocol_add()
 {
+	protocol_remove $*
+
 	for xml in $*
 	do
 		protocol=`basename --suffix=".xml" $xml`
@@ -165,6 +167,8 @@ protocol_add()
 			| sed '/^# /d' \
 			>> $file
 
+		echo "#ifdef ZAKERO_YETANI_IMPLEMENTATION" >> $file
+
 		sed "/^#include /d" $file_c \
 			| gcc -E -xc - \
 			| sed 's/WL_EXPORT //g' \
@@ -172,9 +176,8 @@ protocol_add()
 			| sed '/^# /d' \
 			>> $file
 
+		echo "#endif // ZAKERO_YETANI_IMPLEMENTATION" >> $file
 		echo "$fold_end" >> $file
-
-		protocol_remove $protocol
 
 		# Insert Protocol Code
 		sed -i -e "/\/\/ {{{ Generated Code/r$file" $header_library
@@ -190,7 +193,7 @@ protocol_remove()
 {
 	protocol_list=""
 
-	for file in $file_list
+	for file in $*
 	do
 		protocol_list="$protocol_list `basename --suffix=.xml $file`"
 	done

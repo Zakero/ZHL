@@ -1046,11 +1046,12 @@ namespace zakero
 				KeyState state;
 			};
 
-			static constexpr uint32_t KeyModifier_Alt      = 0x00000008;
+			static constexpr uint32_t KeyModifier_Shift    = 0x00000001;
 			static constexpr uint32_t KeyModifier_CapsLock = 0x00000002;
 			static constexpr uint32_t KeyModifier_Control  = 0x00000004;
+			static constexpr uint32_t KeyModifier_Alt      = 0x00000008;
+			static constexpr uint32_t KeyModifier_NumLock  = 0x00000010;
 			static constexpr uint32_t KeyModifier_Meta     = 0x00000040;
-			static constexpr uint32_t KeyModifier_Shift    = 0x00000001;
 
 			struct KeyModifier
 			{

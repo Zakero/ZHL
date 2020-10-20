@@ -1798,7 +1798,6 @@ namespace zakero
 
 			struct SurfaceFrame
 			{
-				struct wl_callback*     callback    = nullptr;
 				struct wl_surface*      wl_surface  = nullptr;
 				std::atomic<wl_buffer*> buffer_next = {};
 				uint32_t                width       = 0;
@@ -5672,7 +5671,6 @@ struct wl_surface* Yetani::surfaceCreate(Yetani* yetani        ///< Yetani
 	surface_size.bytes_per_pixel = shmFormatBytesPerPixel(pixel_format);
 
 	Yetani::SurfaceFrame& surface_frame = yetani->surface_frame_map[wl_surface];
-	surface_frame.callback   = nullptr;
 	surface_frame.wl_surface = wl_surface;
 	surface_frame.time_ms    = 0;
 	
@@ -5745,12 +5743,6 @@ void Yetani::surfaceDestroy(Yetani* yetani     ///< Yetani
 	if(yetani->surface_frame_map.contains(wl_surface))
 	{
 		Yetani::SurfaceFrame& surface_frame = yetani->surface_frame_map[wl_surface];
-
-		if(surface_frame.callback != nullptr)
-		{
-			wl_callback_destroy(surface_frame.callback);
-			surface_frame.callback = nullptr;
-		}
 
 		struct wl_buffer* wl_buffer = nullptr;
 		wl_buffer = surface_frame.buffer_next.exchange(nullptr);
@@ -6889,9 +6881,9 @@ void Yetani::handlerSwapBuffers(void* data     ///< User data
 
 	wl_callback_destroy(callback);
 
-	surface_frame->callback = wl_surface_frame(surface_frame->wl_surface);
+	callback = wl_surface_frame(surface_frame->wl_surface);
 
-	wl_callback_add_listener(surface_frame->callback
+	wl_callback_add_listener(callback
 		, &frame_callback_listener
 		, data
 		);
@@ -7367,7 +7359,7 @@ void Yetani::xdgToplevelWindowChange(Yetani* yetani       ///< Yetani
 	) noexcept
 {
 	Yetani::SurfaceExtent& surface_extent = yetani->surface_extent_map[wl_surface];
-	Yetani::SizePixel      new_size(1, 1);
+	Yetani::SizePixel      new_size{1, 1};
 
 	toplevel.window_state = window_state;
 
@@ -7639,9 +7631,9 @@ void Yetani::handlerXdgSurfaceConfigure(void* data        ///< User data
 					, 0, 0
 					);
 
-				surface_frame.callback = wl_surface_frame(surface_frame.wl_surface);
+				struct wl_callback* callback = wl_surface_frame(surface_frame.wl_surface);
 
-				wl_callback_add_listener(surface_frame.callback
+				wl_callback_add_listener(callback
 					, &frame_callback_listener
 					, &surface_frame
 					);

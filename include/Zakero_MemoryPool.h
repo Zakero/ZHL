@@ -573,7 +573,7 @@ namespace
 	 *
 	 * Release all allocated resources.
 	 */
-	MemoryPool::~MemoryPool()
+	MemoryPool::~MemoryPool() noexcept
 	{
 		on_remap = LambdaAddressMap_DoNothing;
 		segment.clear();

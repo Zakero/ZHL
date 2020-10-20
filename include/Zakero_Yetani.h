@@ -1751,7 +1751,6 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			static wl_buffer* bufferCreate(Yetani::SurfaceSize&, Yetani::Window::Memory*, Yetani::Buffer*) noexcept;
-			static wl_buffer* bufferCreateAndRelease(Yetani*, Yetani::SurfaceSize&, Yetani::Window::Memory*) noexcept;
 			static void       bufferDestroy(struct wl_buffer*&) noexcept;
 
 			// }}}
@@ -1836,7 +1835,7 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			static void               surfaceCalculateSize(Yetani*, struct wl_surface*, const Yetani::SizePixel&) noexcept;
-			static struct wl_surface* surfaceCreate(Yetani*, const wl_shm_format, const Yetani::SizePixel&, const bool, Yetani::Window::Memory&) noexcept;
+			static struct wl_surface* surfaceCreate(Yetani*, const wl_shm_format, const Yetani::SizePixel&, Yetani::Window::Memory&) noexcept;
 			static void               surfaceDestroy(Yetani*, struct wl_surface*&) noexcept;
 
 			// }}}
@@ -4540,33 +4539,6 @@ struct wl_buffer* Yetani::bufferCreate(Yetani::SurfaceSize& surface_size  ///< T
 
 
 /**
- * \brief Create a Wayland buffer.
- *
- * After this method calls bufferCreate(), it will configure the new Wayland 
- * buffer to be automatically destroyed when the Wayland Compositor is done 
- * with it..
- *
- * \return A pointer to a wl_buffer.
- *
- * \thread_user
- */
-struct wl_buffer* Yetani::bufferCreateAndRelease(Yetani* yetani        ///< The Yetani instance
-	, Yetani::SurfaceSize&                           surface_size  ///< The size of the Surface
-	, Yetani::Window::Memory*                        window_memory ///< The memory pool to use
-	) noexcept
-{
-	struct wl_buffer* wl_buffer = bufferCreate(surface_size, window_memory, &yetani->buffer);
-
-	wl_buffer_add_listener(wl_buffer
-		, &Yetani::buffer_listener
-		, &yetani->buffer
-		);
-
-	return wl_buffer;
-}
-
-
-/**
  * \brief Destroy a Wayland buffer.
  *
  * All associated data with the \p wl_buffer will be destroyed along with the 
@@ -5673,6 +5645,16 @@ void Yetani::surfaceCalculateSize(Yetani* yetani     ///< Yetani
 /**
  * \brief Create a Wayland Surface
  *
+ * \todo There are two ways to render buffers in a surface.
+ *       1. Submit the buffer to the surface then wait for the buffer to be 
+ *       released/returned.
+ *       2. Give the buffer to the surface then destroy the buffer when it is 
+ *       no longer needed.
+ *       .
+ *       These are mutually exclusive and should be determined by the "type" of 
+ *       surface. Or the buffer itself should determine if it should be 
+ *       destroyed or saved.
+ *
  * Create a new Wayland surface and all other supporting data.
  *
  * \return A pointer to the Wayland Surface.
@@ -5680,7 +5662,6 @@ void Yetani::surfaceCalculateSize(Yetani* yetani     ///< Yetani
 struct wl_surface* Yetani::surfaceCreate(Yetani* yetani        ///< Yetani
 	, const wl_shm_format                    pixel_format  ///< The pixel format
 	, const Yetani::SizePixel&               size          ///< The surface size
-	, const bool                             attach_buffer ///< Attach a buffer or not
 	, Yetani::Window::Memory&                window_memory ///< The memory pool to use
 	) noexcept
 {
@@ -5697,21 +5678,7 @@ struct wl_surface* Yetani::surfaceCreate(Yetani* yetani        ///< Yetani
 	
 	surfaceCalculateSize(yetani, wl_surface, size);
 
-	surface_frame.buffer_next = bufferCreateAndRelease(yetani, surface_size, &window_memory);
-
-	if(attach_buffer)
-	{
-		wl_surface_attach(surface_frame.wl_surface, surface_frame.buffer_next, 0, 0);
-
-		surface_frame.callback = wl_surface_frame(wl_surface);
-
-		wl_callback_add_listener(surface_frame.callback
-			, &frame_callback_listener
-			, &surface_frame
-			);
-
-		wl_surface_commit(wl_surface);
-	}
+	surface_frame.buffer_next = bufferCreate(surface_size, &window_memory, &yetani->buffer);
 
 	// A future configuration setting
 	bool event_keyboard = true;
@@ -6932,6 +6899,11 @@ void Yetani::handlerSwapBuffers(void* data     ///< User data
 	struct wl_buffer* wl_buffer = surface_frame->buffer_next.exchange(nullptr);
 	if(wl_buffer != nullptr)
 	{
+		wl_buffer_add_listener(wl_buffer
+			, &Yetani::buffer_listener
+			, wl_buffer_get_user_data(wl_buffer)
+			);
+
 		surface_frame->time_ms = time_ms;
 
 		wl_surface_attach(surface_frame->wl_surface, wl_buffer, 0, 0);
@@ -8770,7 +8742,6 @@ Yetani::Window::Window(void* ptr ///< data
 	wl_surface = yetani->surfaceCreate(yetani
 		, pixel_format
 		, window_data.size_pixel
-		, false
 		, window_memory
 		);
 
@@ -9366,9 +9337,9 @@ std::error_code Yetani::Window::imageNext(uint8_t*& image ///< The image data
 
 	yetani->surface_resize_mutex_map[wl_surface].lock();
 	{
-		wl_buffer = bufferCreateAndRelease(yetani
-			, surface_size
+		wl_buffer = bufferCreate(surface_size
 			, &window_memory
+			, &yetani->buffer
 			);
 	}
 	yetani->surface_resize_mutex_map[wl_surface].unlock();

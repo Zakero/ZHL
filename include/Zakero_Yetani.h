@@ -2820,6 +2820,30 @@ namespace
  * API.  Also, the API may change any way to fix the Maximized/Fullscreen 
  * update lag.
  *
+ * \todo Window::imageNext() currently always creates a new wl_buffer.  While 
+ * this process is fast, it could be even faster if the wl_buffer was reused.  
+ * Try to make this happen.
+ *
+ * \todo SurfaceFrame should be renamed to RenderFrame since it is only used 
+ * for rendering.  Window::imageNext() needs to set the following as an atomic 
+ * operation:
+ * - The new wl_buffer
+ * - The buffer width
+ * - The buffer height
+ * .
+ * handleSwapBuffers() will then atomically copy that data to render the next 
+ * buffer.  (Basically, the same as the current process.)
+ *
+ * \todo handleSwapBuffers() should use the wl_buffer size as the damage area 
+ * and not the surface size.  This will fix the most glaring/obvious resizing 
+ * artifacts.
+ *
+ * \todo bufferCreate() should return the memory pool offset.  This will 
+ * removed the need for additional map lookups.
+ *
+ * \todo Using the Wayland render events does not provide a consistent frame 
+ * rate.  Move the rendering directly into the eventLoop.
+ *
  * \todo Make the API consistent:
  * - Window::onFocusChange() : Lambda handles both "is active" and "not active"
  * - Window::keyboardOn{Enter|Leave}() : One lambda for each state
@@ -2832,11 +2856,9 @@ namespace
  * - This may require the cursor timer to be changed to 64-bit variable.
  * - Remove Size_Max if it is no longer needed/used.
  *
- * \internal
- *
- * \todo Add XCursor support.  Might need to do a full source port.
- *       - https://www.x.org/releases/X11R7.5/doc/man/man3/Xcursor.3.html
- *       - https://www.freedesktop.org/wiki/Specifications/cursor-spec/
+ * \todo [Maybe] Add XCursor support.  Might need to do a full source port.
+ * - https://www.x.org/releases/X11R7.5/doc/man/man3/Xcursor.3.html
+ * - https://www.freedesktop.org/wiki/Specifications/cursor-spec/
  */
 
 /**

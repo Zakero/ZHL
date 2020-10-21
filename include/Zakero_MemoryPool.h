@@ -280,10 +280,19 @@ namespace zakero
 			,	Byte_8 = Bits_64
 			};
 
+			struct Segment
+			{
+				off_t offset;
+				off_t size;
+				bool  in_use;
+			};
+
 			using AddressMap = std::map<uint8_t*, uint8_t*>;
 
 			using LambdaSize       = std::function<void(size_t)>;
 			using LambdaAddressMap = std::function<void(const MemoryPool::AddressMap&)>;
+
+			using VectorSegment = std::vector<Segment>;
 
 			MemoryPool(const std::string&) noexcept;
 			~MemoryPool() noexcept;
@@ -308,19 +317,9 @@ namespace zakero
 			[[nodiscard]] static uint8_t* remap(const MemoryPool::AddressMap&, uint8_t*) noexcept;
 
 			[[nodiscard]] std::string     dump(size_t, size_t) const noexcept;
+			[[nodiscard]] VectorSegment   segmentList() const noexcept;
 
 		private:
-			struct Segment
-			{
-				off_t offset;
-				off_t size;
-				bool  in_use;
-			};
-
-			using VectorSegment = std::vector<Segment>;
-
-			// -------------------------------------------------- //
-
 			uint8_t*                     memory;
 			std::string                  name;
 			mutable std::mutex           mutex;
@@ -349,6 +348,11 @@ namespace zakero
 			MemoryPool(const MemoryPool&) = delete;
 			MemoryPool& operator=(const MemoryPool&) = delete;
 	};
+
+	// }}}
+	// {{{ Convenience
+
+	std::string to_string(const MemoryPool::VectorSegment&) noexcept;
 
 	// }}}
 }
@@ -539,6 +543,7 @@ namespace
  */
 
 // }}}
+// {{{ MemoryPool
 
 	/**
 	 * \brief Constructor.
@@ -600,7 +605,8 @@ namespace
 	 * \brief Initialize the MemoryPool.
 	 *
 	 * The MemoryPool must be initialized before it can be used.  At a 
-	 * minimum, the size of the MemoryPool must be specified in bytes.
+	 * minimum, the size of the MemoryPool must be specified in bytes and 
+	 * the size must be greater than 0.
 	 *
 	 * The maximum allowable size is MemoryPool::Size_Max which represents 
 	 * the largest offset value supported by the MemoryPool.  Your hardware 
@@ -1477,6 +1483,18 @@ namespace
 
 
 	/**
+	 * \brief Information about the current internal state.
+	 */
+	MemoryPool::VectorSegment MemoryPool::segmentList(
+		) const noexcept
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		return segment;
+	}
+
+
+	/**
 	 * \brief Increase the size of the memory pool.
 	 *
 	 * \retval true  The memory pool size was increased.
@@ -1888,9 +1906,41 @@ namespace
 			}
 		}
 	}
+
+// }}}
+// {{{ Convenience
+
+	/**
+	 * \brief Convert VectorSegment into a JSON formated string.
+	 *
+	 * \return The JSON formatted string.
+	 */
+	std::string to_string(const MemoryPool::VectorSegment& segment
+		) noexcept
+	{
+		std::string str = "";
+
+		std::string delim = "[ ";
+		for(const auto& seg : segment)
+		{
+			str += delim;
+			str += "{ \"offset\": " + std::to_string(seg.offset)
+				+ ", \"size\": "   + std::to_string(seg.size)
+				+ ", \"in_use\": " + std::to_string(seg.in_use)
+				+ " }\n";
+
+			delim = ", ";
+		}
+		str += "]\n";
+
+		return str;
+	}
+
+// }}}
+
 }
 
-#endif
+#endif // ZAKERO_MEMORYPOOL_IMPLEMENTATION
 
 // }}}
 

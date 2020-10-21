@@ -47,7 +47,7 @@ TEST_CASE("Fixed Size MemoryPool")
 		REQUIRE(offset == -1);
 		REQUIRE(error.value() == MemoryPool::Error_Out_Of_Memory);
 
-		INFO("Allocat too much");
+		INFO("Allocate too much");
 		offset = memory_pool.alloc(memory_pool.size(), error);
 		REQUIRE(offset >= 0);
 		REQUIRE(error.value() == MemoryPool::Error_None);

@@ -49,13 +49,13 @@
  *
  * \parwhat{zakero_yetani}
  * Wayland is a Windowing System and was intended to strip all the cruft that 
- * has built up in X11.  The part of Wayland that does the rendering is the 
- * "Wayland Compositor".  The part that is the application is the "Wayland 
- * Client".  And they talk using the "Wayland Protocol". This is a 
- * simplification.  If you want more details, please do a search on the 
- * internet._
+ * has built up in X11.  The part of Wayland that does the rendering is called 
+ * the "Wayland Compositor".  The "Wayland Client" is the application that the 
+ * user interacts with.  Communication between the two is done using the 
+ * "Wayland Protocol".  _This is a simplification.  If you want more details, 
+ * please do a search on the internet._
  *
- * Implementing the "Wayland Protocol" in "Wayland Client" is easy to do.  
+ * Implementing the "Wayland Protocol" for a "Wayland Client" is easy to do.  
  * However, this code is verbose and tedious.  Plus, once you start working on 
  * your second and third "Wayland Client", much of this code is duplicated.  
  * Consolidating this redundant code is one of the reasons behind Yetani.
@@ -10602,7 +10602,7 @@ bool operator==(Yetani::SizeMm& lhs ///< Left-Hand side
  * \brief Compare two Point objects.
  *
  * The width of both objects are considered to be equal if they are less than 
- * 0.00001mm difference in length.
+ * 0.001% difference in length.
  *
  * The same applies with the height.
  *

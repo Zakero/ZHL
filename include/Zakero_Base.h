@@ -23,6 +23,7 @@
  * __v0.9.2__
  * - Added to_string(std::error_code)
  * - Added operator<<(std::ostream&, std::error_code)
+ * - Added ZAKERO_UNUSED()
  *
  * __v0.9.1__
  * - Added macro ZAKERO_STEADY_TIME_NOW()
@@ -147,6 +148,15 @@
 std::chrono::duration_cast<std::chrono::unit_>(             \
         std::chrono::steady_clock::now().time_since_epoch() \
         ).count()                                           \
+
+
+/**
+ * \brief Prevent "unused variable" compilier warnings.
+ *
+ * \param var_ The "unused variable".
+ */
+#define ZAKERO_UNUSED(var_) \
+	(void)(var_);
 
 // }}}
 

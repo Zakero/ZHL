@@ -28,10 +28,7 @@ int main()
 	zakero::Yetani* yetani = zakero::Yetani::connect(error);
 	if(error)
 	{
-		std::cout 
-			<< "Error: "
-			<< zakero::to_string(error)
-			<< '\n';
+		std::cout << "Error: " << error << '\n';
 		return 1;
 	}
 

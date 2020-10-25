@@ -22,6 +22,7 @@
  * \parversion{zakero_base}
  * __v0.9.2__
  * - Added to_string(std::error_code)
+ * - Added operator<<(std::ostream&, std::error_code)
  *
  * __v0.9.1__
  * - Added macro ZAKERO_STEADY_TIME_NOW()
@@ -113,7 +114,8 @@
  * This macro will get the current time count of the 
  * `std::chrono::steady_clock`.
  *
- * \note The `std::chrono` is automatically applied to the \p unit_.
+ * \note The `std::chrono` namespace is automatically prepended to the \p 
+ * unit_.
  *
  * \parcode
  * auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
@@ -132,7 +134,8 @@
  * This macro will get the current time count of the 
  * `std::chrono::system_clock`.
  *
- * \note The `std::chrono` is automatically applied to the \p unit_.
+ * \note The `std::chrono` namespace is automatically prepended to the \p 
+ * unit_.
  *
  * \parcode
  * auto time_now = ZAKERO_SYSTEM_TIME_NOW(milliseconds);
@@ -278,7 +281,7 @@ namespace zakero
 	/**
 	 * \brief Check the contents of a std::vector.
 	 *
-	 * A convience method to make searching a vector easier.  While this 
+	 * A convenience method to make searching a vector easier.  While this 
 	 * method does not save that many keystrokes, it does lead to more 
 	 * readable code.
 	 *
@@ -293,7 +296,7 @@ namespace zakero
 	 * }
 	 *
 	 * // Compare with the "long" form, the
-	 * // value that is searhed for gets lost
+	 * // value that is searched for gets lost
 	 * // very easily.
 	 * if(std::find(std::begin(v), std::end(v), 1) != std::end(v))
 	 * {
@@ -310,7 +313,7 @@ namespace zakero
 		>
 	[[nodiscard]]
 	inline bool vectorContains(InputIter first ///< Start searching here
-		, InputIter                  last  ///< Stop seaching here
+		, InputIter                  last  ///< Stop searching here
 		, const Type&                value ///< The value to look for
 		) noexcept
 	{
@@ -321,7 +324,8 @@ namespace zakero
 	/**
 	 * \brief Erase the contents of a std::vector.
 	 *
-	 * A convience method to make removing content from a vector easier.
+	 * A convenience method to make removing content from a vector easier.  
+	 * Uses the "Erase/Remove Idiom".
 	 *
 	 * \par "Example"
 	 * \parblock
@@ -357,44 +361,36 @@ namespace zakero
 	inline std::string to_string(const std::error_code& error ///< The value
 		) noexcept
 	{
-		std::string str = std::string(error.category().name())
-			+ "," + std::to_string(error.value())
-			+ "," + std::string(error.message())
+		std::string str = std::string()
+			+ "{ \"category\": \"" + std::string(error.category().name()) + "\""
+			+ ", \"value\": "      + std::to_string(error.value())
+			+ ", \"message\": \""  + error.message() + "\""
+			+ " }"
 			;
 
 		return str;
 	}
+} // namespace zakero
 
-#if 0 // Future?
-	using VectorString = std::vector<std::string>;
 
-	[[nodiscard]]
-	std::string to_string(const Yetani::VectorString&) noexcept;
+/**
+ * \brief Insert std::error_code into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+inline std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const std::error_code&              error  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"category\": \"" << std::string(error.category().name()) << "\""
+		<< ", \"value\": "      << std::to_string(error.value())
+		<< ", \"message\": \""  << error.message() << "\""
+		<< " }"
+		;
 
-	[[nodiscard]]
-	std::string to_string(const Yetani::VectorString& vector ///< The value
-		) noexcept
-	{
-		if(vector.empty())
-		{
-			return "[]";
-		}
-
-		std::string string = "";
-		std::string delim  = "[ \"";
-
-		for(const auto& str : vector)
-		{
-			string += delim + str;
-
-			delim = "\", \"";
-		}
-
-		string += "\" ]";
-
-		return string;
-	}
-#endif
+	return stream;
 }
 
 #endif // zakero_Base_h

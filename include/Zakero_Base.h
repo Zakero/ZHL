@@ -155,6 +155,19 @@
 	~(~define_ + 0) == 0 && ~(~define_ + 1) == 1
 
 /**
+ * \def ZAKERO_PID
+ *
+ * \brief Get the Process Id.
+ */
+#ifdef __linux__
+#include <sys/types.h>
+#include <unistd.h>
+#define ZAKERO_PID getpid()
+#else
+#define ZAKERO_PID -1
+#endif
+
+/**
  * \brief Get the current time.
  *
  * This macro will get the current time count of the 

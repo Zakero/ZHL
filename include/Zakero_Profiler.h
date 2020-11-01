@@ -596,24 +596,6 @@ namespace zakero
 #endif // ZAKERO__DOXYGEN_DEFINE_DOCS
 
 // }}}
-
-/**
- * \internal
- *
- * \def ZAKERO_PROFILER__PID
- *
- * \brief Get the Process Id.
- *
- * \todo This might be a candidate for Zakero_Base.h
- */
-#ifdef __linux__
-#include <sys/types.h>
-#include <unistd.h>
-#define ZAKERO_PROFILER__PID getpid()
-#else
-#define ZAKERO_PROFILER__PID -1
-#endif
-
 // }}}
 
 namespace zakero
@@ -887,7 +869,7 @@ Profiler::Data::Data(const char                     phase    ///< The phase
 	, location(location)
 	, time_stamp(ZAKERO_STEADY_TIME_NOW(microseconds))
 	, thread_id(std::this_thread::get_id())
-	, process_id(ZAKERO_PROFILER__PID)
+	, process_id(ZAKERO_PID)
 	, phase(phase)
 {
 }

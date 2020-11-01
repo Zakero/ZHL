@@ -23,6 +23,8 @@
  * __v0.9.2__
  * - Added to_string(std::error_code)
  * - Added operator<<(std::ostream&, std::error_code)
+ * - Added ZAKERO_DELETE()
+ * - Added ZAKERO_FREE()
  * - Added ZAKERO_UNUSED()
  *
  * __v0.9.1__
@@ -87,6 +89,49 @@
  * \param thing_2_ Symbol right side
  */
 #define ZAKERO_CONCAT(thing_1_, thing_2_) ZAKERO_CONCAT_(thing_1_, thing_2_)
+
+
+/**
+ * \brief Delete memory
+ *
+ * Using this macro will help catch instances of using a pointer after 
+ * delete'ing the new'ed memory.  It does this by setting the value of \p ptr_ 
+ * to \null after calling `delete`.
+ *
+ * \param  ptr_  The value to free.
+ *
+ * \note The `++p` and `p++` syntax should work:
+ * > ZAKERO_DELETE(p++);
+ * > ZAKERO_DELETE(p++);
+ */
+#define ZAKERO_DELETE(ptr_) \
+{                                    \
+	auto*& var##__LINE__ = ptr_; \
+	delete var##__LINE__;        \
+	var##__LINE__ = nullptr;     \
+}                                    \
+
+
+/**
+ * \brief Free memory
+ *
+ * Using this macro will help catch instances of using a pointer after free'ing 
+ * the memory.  It does this by setting the value of \p ptr_ to \null after 
+ * calling free().
+ *
+ * \param  ptr_  The value to free.
+ *
+ * \note The `++p` and `p++` syntax should work:
+ * > ZAKERO_FREE(p++);
+ * > ZAKERO_FREE(p++);
+ */
+#define ZAKERO_FREE(ptr_) \
+{                                    \
+	auto*& var##__LINE__ = ptr_; \
+	free(var##__LINE__);         \
+	var##__LINE__ = nullptr;     \
+}                                    \
+
 
 /**
  * \brief Check if a macro has a value.

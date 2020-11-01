@@ -2360,21 +2360,21 @@ namespace zakero
 /**
  * \internal
  *
- * \brief Convent the enum to string.
+ * \brief Convert the enum to a string.
  */
 #define ZAKERO_YETANI__OUTPUT_SUBPIXEL \
-	X(WL_OUTPUT_SUBPIXEL_UNKNOWN        , "Unkown Geometry" ) \
-	X(WL_OUTPUT_SUBPIXEL_NONE           , "No Geometry"     ) \
-	X(WL_OUTPUT_SUBPIXEL_HORIZONTAL_RGB , "Horizontal RGB"  ) \
-	X(WL_OUTPUT_SUBPIXEL_HORIZONTAL_BGR , "Horizontal BGR"  ) \
-	X(WL_OUTPUT_SUBPIXEL_VERTICAL_RGB   , "Vertical RGB"    ) \
-	X(WL_OUTPUT_SUBPIXEL_VERTICAL_BGR   , "Vertical BGR"    ) \
+	X(WL_OUTPUT_SUBPIXEL_UNKNOWN        , "Unkown Subpixel Format" ) \
+	X(WL_OUTPUT_SUBPIXEL_NONE           , "No Subpixels"           ) \
+	X(WL_OUTPUT_SUBPIXEL_HORIZONTAL_RGB , "Horizontal RGB"         ) \
+	X(WL_OUTPUT_SUBPIXEL_HORIZONTAL_BGR , "Horizontal BGR"         ) \
+	X(WL_OUTPUT_SUBPIXEL_VERTICAL_RGB   , "Vertical RGB"           ) \
+	X(WL_OUTPUT_SUBPIXEL_VERTICAL_BGR   , "Vertical BGR"           ) \
 
 
 /**
  * \internal
  *
- * \brief Convent the enum to string.
+ * \brief Convert the enum to a string.
  */
 #define ZAKERO_YETANI__OUTPUT_TRANSFORM \
 	X(WL_OUTPUT_TRANSFORM_NORMAL      , "No Transform"                                  ) \
@@ -2810,6 +2810,7 @@ namespace
  * \todo cursorAliasRemove() (maybe)
  * \todo cursorAvailableNames() (maybe)
  * \todo cursorXDGLoad() (maybe)
+ * \todo Use ZAKERO_DELETE() where it makes sense
  *
  * \internal
  *
@@ -4635,7 +4636,7 @@ void Yetani::bufferDestroy(struct wl_buffer*& wl_buffer ///< The buffer to destr
  * \brief Transform that maps framebuffer to output.
  *
  * \var Yetani::Output::flags
- * \brief Device flags.
+ * \brief wl_output_mode bitfield properties.
  *
  * \var Yetani::Output::pixels_per_mm_horizontal
  * \brief A pre-calculated value.
@@ -4675,9 +4676,9 @@ void Yetani::bufferDestroy(struct wl_buffer*& wl_buffer ///< The buffer to destr
 /**
  * \brief Get a copy of the Output information.
  *
- * All the available information about a Wayland output device will be 
- * provided.  It is possible that an output device is removed after the data 
- * has been retrieved, so consider the provided data as a "snapshot in time".
+ * All the available information about an output device will be provided.  It 
+ * is possible that an output device is removed after the data has been 
+ * retrieved, so consider the provided data as a "snapshot in time".
  *
  * If the provided \p output_id is not valid, then the returned data will be 
  * empty.
@@ -4686,7 +4687,7 @@ void Yetani::bufferDestroy(struct wl_buffer*& wl_buffer ///< The buffer to destr
  *
  * \thread_user
  */
-Yetani::Output Yetani::output(Yetani::OutputId output_id ///< The Output Id
+Yetani::Output Yetani::output(const Yetani::OutputId output_id ///< The Output Id
 	) const noexcept
 {
 	std::lock_guard<std::mutex> lock(output_data.mutex);
@@ -4710,9 +4711,9 @@ Yetani::Output Yetani::output(Yetani::OutputId output_id ///< The Output Id
 /**
  * \brief Get a list of the Output Id's.
  *
- * All the Wayland Output will be returned.  It is possible that an output 
- * device is removed after the data has been retrieved, so consider the 
- * provided data as a "snapshot in time".
+ * All the Output IDs will be returned.  It is possible that an output device 
+ * is removed after the data has been retrieved, so consider the provided data 
+ * as a "snapshot in time".
  *
  * \return The Output Id's.
  *

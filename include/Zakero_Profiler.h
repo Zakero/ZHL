@@ -234,7 +234,6 @@
  * \author Andrew "Zakero" Moore
  * 	- Original Author
  *
- * \todo Add meta data to ZAKERO_PROFILER_INSTANT
  * \todo Add support for std::filesystem
  * \todo Add error handling
  * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
@@ -413,7 +412,7 @@
  * - function_name
  * 
  * \note The file name and function name are automatically recorded and stored 
- * in the MetaData..
+ * in the MetaData.
  *
  * \parcode
  * void func()
@@ -461,15 +460,24 @@
  * The \p category_ and \p name_ serve the same function as in 
  * ZAKERO_PROFILER_DURATION().
  *
- * \param category_ The category of the data
- * \param name_     The name of the data
+ * The \p meta_data_ arg is optional.  The \p meta_data_ is a map of 
+ * _%std::string/%std::string_ key/value pairs.  Any data placed in the \p 
+ * meta_data_ map will appear as "args" when being viewed.  The following keys 
+ * will be over written if used:
+ * - file_name
+ * - function_name
+ * 
+ * \param category_  The category of the data
+ * \param name_      The name of the data
+ * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_INSTANT(category_, name_)                                  \
+#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)                   \
 	{                                                                          \
 	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_instant_) \
 	( category_                                                                \
 	, name_                                                                    \
 	, std::experimental::source_location::current()                            \
+	, ##meta_data_                                                             \
 	);                                                                         \
 	}                                                                          \
 
@@ -479,7 +487,7 @@
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
 #define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)
-#define ZAKERO_PROFILER_INSTANT(category_, name_)
+#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)
 
 #endif
 
@@ -520,7 +528,7 @@ namespace zakero
 			struct Instant
 				: public zakero::Profiler::Data
 			{
-				Instant(const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
+				Instant(const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
 			};
 
 			Profiler() noexcept;
@@ -934,11 +942,12 @@ Profiler::Duration::~Duration() noexcept
  * Since this object is a member of Profiler, it has access to Profiler's 
  * private methods.
  */
-Profiler::Instant::Instant(const std::string&       category ///< The category
-	, const std::string&                        name     ///< The name
-	, const std::experimental::source_location& location ///< The location
+Profiler::Instant::Instant(const std::string&       category  ///< The category
+	, const std::string&                        name      ///< The name
+	, const std::experimental::source_location& location  ///< The location
+	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
 	) noexcept
-	: zakero::Profiler::Data('I', category, name, location)
+	: zakero::Profiler::Data('I', category, name, location, meta_data)
 {
 	if(zakero_profiler.is_active)
 	{

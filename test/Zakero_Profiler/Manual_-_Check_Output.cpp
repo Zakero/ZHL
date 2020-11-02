@@ -60,11 +60,11 @@ int main()
 	const std::string TestName("Manual_-_Check_Output");
 	const std::string TestFile = TestName + ".json";
 
-	zakero::Profiler::MetaData meta_data =
-	{	{ "application" , TestName }
-	,	{ "version"     , "1.0.0" }
-	};
-	ZAKERO_PROFILER_INIT_METADATA(TestFile, meta_data);
+	ZAKERO_PROFILER_INIT(TestFile
+	,	{	{ "application" , TestName }
+		,	{ "version"     , "1.0.0" }
+		}
+	);
 
 	func1();
 	func2();

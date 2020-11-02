@@ -144,21 +144,18 @@
  * __Step 2__
  *
  * Next, is to initialize the _Zakero Profiler_.  Somewhere in your code, 
- * before any profiling is done (such as in _main()_) add one of the 
- * initializer macros (ZAKERO_PROFILER_INIT(), 
- * ZAKERO_PROFILER_INIT_METADATA()).
+ * before any profiling is done (such as in _main()_) add the initializer macro 
+ * ZAKERO_PROFILER_INIT().
  *
  * The following example will have the _Zakero Profiler_ write to a file and 
  * include information about the application.
  *
  * ~~~
- * zakero::Profiler::MetaData meta_data =
+ * ZAKERO_PROFILER_INIT("MyApp.profiler_json",
  * {	{ "application", "MyApp"                      }
  * ,	{ "version",     "1.0.0"                      }
  * ,	{ "intent",      "=Locate Allocation Delays=" }
- * };
- * 
- * ZAKERO_PROFILER_INIT_METADATA("MyApp.profiler_json", meta_data);
+ * });
  * ~~~
  *
  * __Step 3__
@@ -207,6 +204,10 @@
  * \endparhow
  *
  * \parversion{zakero_profiler}
+ * __0.9.1__
+ * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
+ * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
+ *
  * __0.9.0__
  * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
  * time
@@ -288,36 +289,8 @@
  * ZAKERO_PROFILER_INIT("profile.log");
  * \endparcode
  *
- * \note The _Zakero Profiler_ does not flush after writing data to the output 
- * using the stream operator (<<).  The reason for this is to allow the 
- * operating system to decide the best time to write the data, reducing the 
- * number of I/O requests the profiler makes.  As a result of this, profiling 
- * data will be incomplete if the application does not cleanly exit.
- *
- * \see ZAKERO_PROFILER_INIT_METADATA()
- *
- * \param output_ Where to stream the profile data.
- */
-#define ZAKERO_PROFILER_INIT(output_) \
-	zakero::Profiler::init(output_, {});
-
-/**
- * \brief Initialize the profiler.
- *
- * The profiler __must__ be initialized before any of the other macros are 
- * used.
- *
- * The \p output_ can be a file name or a _std::ostream_ object.  If a 
- * _std::ostream_ object is used, the profiler will use a pointer to that 
- * stream.  This means the provided \p output_ stream must remain valid for the 
- * life of the profiler.
- *
- * However, if a file name is given, then the profiler will maintain the 
- * life-span of the file.  Behavior is undefined (i.e. expect a crash) if the 
- * provided file name is not writable.
- *
  * Any extra data that should appear in the profiler output can be added using 
- * the \p meta_data_.  \p meta_data_ is a map of _%std::string/%std::string_ 
+ * \p meta_data_.  The \p meta_data_ is a map of _%std::string/%std::string_ 
  * key/value pairs.  The "date" key will be automatically added if not already 
  * present.  The following keys will be over written if used:
  * - displayTimeUnit
@@ -326,9 +299,14 @@
  * \parcode
  * zakero::Profiler::MetaData meta_data =
  * {	{ "application", "MyApp" }
- * ,	{ "version",     "1.2.3" }
+ * ,	{ "version",     "1.0.0" }
  * };
- * ZAKERO_PROFILER_INIT_METADATA("MyApp.profile_json", meta_data);
+ * ZAKERO_PROFILER_INIT(std::clog, meta_data);
+ * // --- or --- //
+ * ZAKERO_PROFILER_INIT("profile.log",
+ * {	{ "application", "MyApp" }
+ * ,	{ "version",     "1.0.0" }
+ * });
  * \endparcode
  *
  * \note The _Zakero Profiler_ does not flush after writing data to the output 
@@ -337,13 +315,11 @@
  * number of I/O requests the profiler makes.  As a result of this, profiling 
  * data will be incomplete if the application does not cleanly exit.
  *
- * \see ZAKERO_PROFILER_INIT()
- *
- * \param output_    Where to stream the profile data
+ * \param output_ Where to stream the profile data.
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_) \
-	zakero::Profiler::init(output_, meta_data_);
+#define ZAKERO_PROFILER_INIT(output_, meta_data_...) \
+	zakero::Profiler::init(output_, ##meta_data_);
 
 /**
  * \brief Activate Profiling
@@ -489,7 +465,6 @@
 #else
 
 #define ZAKERO_PROFILER_INIT(output_)
-#define ZAKERO_PROFILER_INIT_METADATA(output_, meta_data_)
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
 #define ZAKERO_PROFILER_DURATION(category_, name_)
@@ -539,8 +514,8 @@ namespace zakero
 			Profiler() noexcept;
 			~Profiler() noexcept;
 
-			static void init(std::ostream&, zakero::Profiler::MetaData) noexcept;
-			static void init(std::string, zakero::Profiler::MetaData) noexcept;
+			static void init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
+			static void init(std::string, zakero::Profiler::MetaData = {}) noexcept;
 
 			static void activate() noexcept;
 			static void deactivate() noexcept;
@@ -688,9 +663,8 @@ Profiler::~Profiler() noexcept
  * Profiler will maintain the life-time of the output stream.
  *
  * Any information in the \p meta_data will be immediately written to the 
- * output stream.  See the documentation for the 
- * ZAKERO_PROFILER_INIT_METADATA() macro for information on keys that will be 
- * over-written.
+ * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
+ * for information on keys that will be over-written.
  */
 void zakero::Profiler::init(std::string file_name ///< The file name
 	, zakero::Profiler::MetaData    meta_data ///< Extra meta data
@@ -713,9 +687,8 @@ void zakero::Profiler::init(std::string file_name ///< The file name
  * The provided \p output_stream will be used when writing the profiling data.
  *
  * Any information in the \p meta_data will be immediately written to the 
- * output stream.  See the documentation for the 
- * ZAKERO_PROFILER_INIT_METADATA() macro for information on keys that will be 
- * over-written.
+ * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
+ * for information on keys that will be over-written.
  */
 void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	, zakero::Profiler::MetaData      meta_data     ///< Extra meta data

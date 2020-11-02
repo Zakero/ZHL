@@ -31,7 +31,7 @@ void func2()
 
 void func3()
 {
-	ZAKERO_PROFILER_DURATION("test", "layer")
+	ZAKERO_PROFILER_DURATION("test", "layer");
 
 	//ZAKERO_PROFILER_DEACTIVATE
 
@@ -42,12 +42,16 @@ void func3()
 
 		if(i % 2)
 		{
-			ZAKERO_PROFILER_DURATION("test", "sub")
+			ZAKERO_PROFILER_DURATION("test", "sub",
+				{ { "i", std::to_string(i) }
+				})
 			total -= i;
 		}
 		else
 		{
-			ZAKERO_PROFILER_DURATION("test", "add")
+			ZAKERO_PROFILER_DURATION("test", "add",
+				{ { "i", std::to_string(i) }
+				})
 			total += i;
 		}
 	}
@@ -60,11 +64,11 @@ int main()
 	const std::string TestName("Manual_-_Check_Output");
 	const std::string TestFile = TestName + ".json";
 
-	zakero::Profiler::MetaData meta_data =
-	{	{ "application" , TestName }
-	,	{ "version"     , "1.0.0" }
-	};
-	ZAKERO_PROFILER_INIT_METADATA(TestFile, meta_data);
+	ZAKERO_PROFILER_INIT(TestFile
+	,	{	{ "application" , TestName }
+		,	{ "version"     , "1.0.0" }
+		}
+	);
 
 	func1();
 	func2();

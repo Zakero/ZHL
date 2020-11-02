@@ -234,7 +234,6 @@
  * \author Andrew "Zakero" Moore
  * 	- Original Author
  *
- * \todo Add meta data to ZAKERO_PROFILER_DURATION
  * \todo Add meta data to ZAKERO_PROFILER_INSTANT
  * \todo Add support for std::filesystem
  * \todo Add error handling
@@ -406,7 +405,15 @@
  * example, profiling a C++ class could use the class name for the category and 
  * the \p name_ would be the part of the class being profiled.
  *
- * \note The file name and function name are automatically recorded.
+ * The \p meta_data_ arg is optional.  The \p meta_data_ is a map of 
+ * _%std::string/%std::string_ key/value pairs.  Any data placed in the \p 
+ * meta_data_ map will appear as "args" when being viewed.  The following keys 
+ * will be over written if used:
+ * - file_name
+ * - function_name
+ * 
+ * \note The file name and function name are automatically recorded and stored 
+ * in the MetaData..
  *
  * \parcode
  * void func()
@@ -417,7 +424,9 @@
  *     
  *     for(int i = 0; i < max_i; i++)
  *     {
- *         ZAKERO_PROFILER_DURATION("busy", "gone loopy")
+ *         ZAKERO_PROFILER_DURATION("busy", "gone loopy",
+ *         {    { "i", std::to_string(i) }
+ *         })
  *         
  *         // Doing more stuff
  *         
@@ -431,14 +440,16 @@
  * }
  * \endparcode
  *
- * \param category_ The category of the data
- * \param name_     The name of the data
+ * \param category_  The category of the data
+ * \param name_      The name of the data
+ * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_DURATION(category_, name_)                                   \
+#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)                    \
 	zakero::Profiler::Duration ZAKERO_PROFILER_UNIQUE(zakero_profiler_duration_) \
 	( category_                                                                  \
 	, name_                                                                      \
 	, std::experimental::source_location::current()                              \
+	, ##meta_data_                                                               \
 	);                                                                           \
 
 /**
@@ -464,10 +475,10 @@
 
 #else
 
-#define ZAKERO_PROFILER_INIT(output_)
+#define ZAKERO_PROFILER_INIT(output_, meta_data_...)
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
-#define ZAKERO_PROFILER_DURATION(category_, name_)
+#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)
 #define ZAKERO_PROFILER_INSTANT(category_, name_)
 
 #endif
@@ -485,6 +496,7 @@ namespace zakero
 
 			struct Data
 			{
+				MetaData                           meta_data;
 				std::string                        category;
 				std::string                        name;
 				std::experimental::source_location location;
@@ -493,7 +505,7 @@ namespace zakero
 				pid_t                              process_id;
 				char                               phase;
 
-				Data(const char, const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
+				Data(const char, const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
 			};
 
 			struct Duration
@@ -501,7 +513,7 @@ namespace zakero
 			{
 				bool was_active;
 
-				Duration(const std::string&, const std::string&, const std::experimental::source_location&) noexcept;
+				Duration(const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
 				~Duration() noexcept;
 			};
 
@@ -784,9 +796,16 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 		<<  ",\"args\":"
 			<< "{\"file_name\":\""     << data.location.file_name() << "\""
 			<< ",\"function_name\":\"" << data.location.function_name() << "\""
-			<< "}"
-		<< "}\n"
 		;
+	for(const auto& iter : data.meta_data)
+	{
+		(*zakero_profiler.stream)
+			<< ",\"" << iter.first << "\":\"" << iter.second << "\""
+			;
+	}
+
+	(*zakero_profiler.stream) << "}}\n";
+
 	/* C++20 std::format ready
 	(*zakero_profiler.stream) << std::format(
 		",{{\"ph\":\"{}\""
@@ -832,12 +851,14 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
  *
  * Initialize the data using the provided values as well as run-time values.  
  */
-Profiler::Data::Data(const char                     phase    ///< The phase
-	, const std::string&                        category ///< The category
-	, const std::string&                        name     ///< The name
-	, const std::experimental::source_location& location ///< The location
+Profiler::Data::Data(const char                     phase     ///< The phase
+	, const std::string&                        category  ///< The category
+	, const std::string&                        name      ///< The name
+	, const std::experimental::source_location& location  ///< The location
+	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
 	) noexcept
-	: category(category)
+	: meta_data(meta_data)
+	, category(category)
 	, name(name)
 	, location(location)
 	, time_stamp(ZAKERO_STEADY_TIME_NOW(microseconds))
@@ -866,11 +887,12 @@ Profiler::Data::Data(const char                     phase    ///< The phase
  * Since this object is a member of Profiler, it has access to Profiler's 
  * private methods.
  */
-Profiler::Duration::Duration(const std::string&     category ///< The category
-	, const std::string&                        name     ///< The name
-	, const std::experimental::source_location& location ///< The location
+Profiler::Duration::Duration(const std::string&     category  ///< The category
+	, const std::string&                        name      ///< The name
+	, const std::experimental::source_location& location  ///< The location
+	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
 	) noexcept
-	: zakero::Profiler::Data('B', category, name, location)
+	: zakero::Profiler::Data('B', category, name, location, meta_data)
 	, was_active(zakero_profiler.is_active)
 {
 }

@@ -50,8 +50,27 @@ int main()
 	});
 
 	printf("Hello\n");
-	sleep(10);
 
+	zakero::Xenium::SizePixel size{400, 400};
+	auto* window = xenium->windowCreate(size, error);
+	if(error)
+	{
+		std::cout << error << '\n';
+	}
+
+	bool time_to_die = false;
+	window->onCloseRequest([&]()
+	{
+		printf("--- Closing Time\n");
+		time_to_die = true;
+	});
+
+	while(!time_to_die)
+	{
+		usleep(10);
+	}
+
+	delete window;
 	delete xenium;
 	printf("Good Bye\n");
 

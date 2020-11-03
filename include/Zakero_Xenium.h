@@ -443,6 +443,8 @@ namespace zakero
 			// }}}
 			// {{{ Window
 
+			using WindowId = uint32_t;
+
 			enum struct WindowDecorations
 			{	Client_Side
 			,	Server_Side
@@ -477,7 +479,7 @@ namespace zakero
 			class Window
 			{
 				public:
-					Window();
+					Window(void*);
 					virtual ~Window();
 
 					// {{{ Configuration
@@ -565,6 +567,9 @@ namespace zakero
 					// }}}
 
 				private:
+					Xenium*  xenium;
+					WindowId id;
+
 					Window(const Window&) = delete;
 					Window& operator=(const Window&) = delete;
 			};
@@ -641,6 +646,16 @@ namespace zakero
 			const xcb_setup_t* setup      = nullptr;
 			xcb_screen_t*      screen     = nullptr;
 
+			// -------------------------------------------------- //
+
+			void xcbEvent(const xcb_client_message_event_t*) noexcept;
+
+			// }}}
+			// {{{ XCB : Atom
+
+			xcb_atom_t atomCreateDeleteWindow(const WindowId, xcb_generic_error_t&) noexcept;
+			xcb_atom_t internAtom(const std::string&, const bool, xcb_generic_error_t&) noexcept;
+
 			// }}}
 			// {{{ XCB : RandR
 
@@ -659,7 +674,34 @@ namespace zakero
 			void randrEvent(const xcb_randr_screen_change_notify_event_t*) noexcept;
 
 			// }}}
+			// {{{ XCB : Utility
+
+			bool requestCheckHasError(const xcb_void_cookie_t&) noexcept;
+			bool requestCheckHasError(const xcb_void_cookie_t&, xcb_generic_error_t&) noexcept;
+
+			// }}}
 			// {{{ Window
+			
+			struct WindowData
+			{
+				Xenium*    xenium;
+				WindowId   id;
+			};
+
+			struct WindowDelete
+			{
+				Xenium::Lambda close_request_lambda;
+				xcb_atom_t     atom;
+			};
+
+			using WindowDeleteMap = std::unordered_map<WindowId, WindowDelete>;
+
+			WindowDeleteMap window_delete_map = {};
+
+			// -------------------------------------------------- //
+
+			void windowDestroy(WindowId) noexcept;
+			bool windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
 
 			// }}}
 			// {{{ Utility
@@ -766,7 +808,7 @@ namespace zakero
 
 
 /**
- * \def ZAKERO_XENIUM_ENABLE_DEBUG_STREAM
+ * \def ZAKERO_XENIUM_DEBUG_STREAM
  *
  * \brief The stream to use for debugging output.
  *
@@ -774,11 +816,11 @@ namespace zakero
  * If this macro is undefined at compile time, then `std::cerr` will be used.
  *
  * \parcode
- * #define ZAKERO_XENIUM_ENABLE_DEBUG_STREAM MyLogger::errorLogStream()
+ * #define ZAKERO_XENIUM_DEBUG_STREAM MyLogger::errorLogStream()
  * \endparcode
  */
-#ifndef ZAKERO_XENIUM_ENABLE_DEBUG_STREAM
-#define ZAKERO_XENIUM_ENABLE_DEBUG_STREAM std::cerr
+#ifndef ZAKERO_XENIUM_DEBUG_STREAM
+#define ZAKERO_XENIUM_DEBUG_STREAM std::cerr
 #endif
 
 
@@ -799,13 +841,14 @@ namespace zakero
  * \todo Use std::source_location instead of macros once that feature is no 
  * longer experimental.
  */
-#define ZAKERO_XENIUM__DEBUG                   \
-	if(ZAKERO_XENIUM__DEBUG_DISABLED) {}   \
-	else ZAKERO_XENIUM_ENABLE_DEBUG_STREAM \
-		<< __FILE__"("                 \
-		<< std::to_string(__LINE__)    \
-		<< ") "                        \
-		<< __PRETTY_FUNCTION__         \
+#define ZAKERO_XENIUM__DEBUG                                     \
+	if(ZAKERO_XENIUM__DEBUG_DISABLED) {}                     \
+	else ZAKERO_XENIUM_DEBUG_STREAM                          \
+		<< "pid(" << std::to_string(int64_t(ZAKERO_PID)) \
+		<< ") " __FILE__ "("                             \
+		<< std::to_string(__LINE__)                      \
+		<< ") "                                          \
+		<< __PRETTY_FUNCTION__                           \
 		<< " "
 
 /**
@@ -879,6 +922,222 @@ namespace zakero
 // }}}
 
 #include <sstream>
+
+// {{{ Stream Operators
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_generic_error_t&          error  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": " << uint32_t(error.response_type)
+		<< ", \"error_code\": "    << uint32_t(error.error_code)
+		<< ", \"sequence\": "      << uint32_t(error.sequence)
+		<< ", \"resource_id\": "   << uint32_t(error.resource_id)
+		<< ", \"minor_code\": "    << uint32_t(error.minor_code)
+		<< ", \"major_code\": "    << uint32_t(error.major_code)
+		<< ", \"full_sequence\": " << uint32_t(error.full_sequence)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_generic_error_t&          error  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< " }";
+
+	return stream;
+}
+ */
+
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_client_message_event_t&   event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"format\": "        << uint32_t(event.format)
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"window\": "        << uint32_t(event.window)
+		<< ", \"type\": "          << uint32_t(event.type)
+		<< ", \"data\": [ 0x"      << std::hex << uint32_t(event.data.data8[ 0]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 1]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 2]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 3]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 4]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 5]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 6]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 7]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 8]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 9]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[10]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[11]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[12]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[13]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[14]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[15]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[16]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[17]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[18]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.data.data8[19]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_generic_event_t&          event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"pad\": [ 0x"       << std::hex << uint32_t(event.pad[0]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[1]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[2]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[3]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[4]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[5]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad[6]) << std::dec
+			<< " ]"
+		<< ", \"full_sequence\": " << uint32_t(event.full_sequence)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_format_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_format_t&                 format ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"depth\": "          << uint32_t(format.depth)
+		<< ", \"bits_per_pixel\": " << uint32_t(format.bits_per_pixel)
+		<< ", \"scanline_pad\": "   << uint32_t(format.scanline_pad)
+		<< ", \"pad0\": [ 0x"       << std::hex << uint32_t(format.pad0[0]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(format.pad0[1]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(format.pad0[2]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(format.pad0[3]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(format.pad0[4]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_screen_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_screen_t&                 screen ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"root\": "                  << uint32_t(screen.root)
+		<< ", \"default_colormap\": "      << uint32_t(screen.default_colormap)
+		<< ", \"white_pixel\": "           << uint32_t(screen.white_pixel)
+		<< ", \"black_pixel\": "           << uint32_t(screen.black_pixel)
+		<< ", \"current_input_masks\": "   << uint32_t(screen.current_input_masks)
+		<< ", \"width_in_pixels\": "       << uint32_t(screen.width_in_pixels)
+		<< ", \"height_in_pixels\": "      << uint32_t(screen.height_in_pixels)
+		<< ", \"width_in_millimeters\": "  << uint32_t(screen.width_in_millimeters)
+		<< ", \"height_in_millimeters\": " << uint32_t(screen.height_in_millimeters)
+		<< ", \"min_installed_maps\": "    << uint32_t(screen.min_installed_maps)
+		<< ", \"max_installed_maps\": "    << uint32_t(screen.max_installed_maps)
+		<< ", \"root_visual\": "           << uint32_t(screen.root_visual)
+		<< ", \"backing_stores\": "        << uint32_t(screen.backing_stores)
+		<< ", \"save_unders\": "           << uint32_t(screen.save_unders)
+		<< ", \"root_depth\": "            << uint32_t(screen.root_depth)
+		<< ", \"allowed_depths_len\": "    << uint32_t(screen.allowed_depths_len)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_setup_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_setup_t&                  setup  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"status\": "                      << uint32_t(setup.status)
+		<< ", \"pad0\": "                        << uint32_t(setup.pad0)
+		<< ", \"protocol_major_version\": "      << uint32_t(setup.protocol_major_version)
+		<< ", \"protocol_minor_version\": "      << uint32_t(setup.protocol_minor_version)
+		<< ", \"length\": "                      << uint32_t(setup.length)
+		<< ", \"release_number\": "              << uint32_t(setup.release_number)
+		<< ", \"resource_id_base\": "            << uint32_t(setup.resource_id_base)
+		<< ", \"resource_id_mask\": "            << uint32_t(setup.resource_id_mask)
+		<< ", \"motion_buffer_size\": "          << uint32_t(setup.motion_buffer_size)
+		<< ", \"vendor_len\": "                  << uint32_t(setup.vendor_len)
+		<< ", \"maximum_request_length\": "      << uint32_t(setup.maximum_request_length)
+		<< ", \"roots_len\": "                   << uint32_t(setup.roots_len)
+		<< ", \"pixmap_formats_len\": "          << uint32_t(setup.pixmap_formats_len)
+		<< ", \"image_byte_order\": "            << uint32_t(setup.image_byte_order)
+		<< ", \"bitmap_format_bit_order\": "     << uint32_t(setup.bitmap_format_bit_order)
+		<< ", \"bitmap_format_scanline_unit\": " << uint32_t(setup.bitmap_format_scanline_unit)
+		<< ", \"bitmap_format_scanline_pad\": "  << uint32_t(setup.bitmap_format_scanline_pad)
+		<< ", \"min_keycode\": "                 << uint32_t(setup.min_keycode)
+		<< ", \"max_keycode\": "                 << uint32_t(setup.max_keycode)
+		<< ", \"pad1\": [ 0x"                    << std::hex << uint32_t(setup.pad1[0]) << std::dec
+			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[1]) << std::dec
+			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[2]) << std::dec
+			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[3]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+// }}}
 
 namespace zakero
 {
@@ -1151,72 +1410,6 @@ namespace
 	{
 		return (std::abs(a - b) < delta);
 	}
-
-
-	/*
-	std::string to_string(const xcb_screen_t& screen)
-	{
-		std::ostringstream buf;
-
-		buf
-			<< "{ \"root\": "                  << uint32_t(screen.root)
-			<< ", \"default_colormap\": "      << uint32_t(screen.default_colormap)
-			<< ", \"white_pixel\": "           << uint32_t(screen.white_pixel)
-			<< ", \"black_pixel\": "           << uint32_t(screen.black_pixel)
-			<< ", \"current_input_masks\": "   << uint32_t(screen.current_input_masks)
-			<< ", \"width_in_pixels\": "       << uint32_t(screen.width_in_pixels)
-			<< ", \"height_in_pixels\": "      << uint32_t(screen.height_in_pixels)
-			<< ", \"width_in_millimeters\": "  << uint32_t(screen.width_in_millimeters)
-			<< ", \"height_in_millimeters\": " << uint32_t(screen.height_in_millimeters)
-			<< ", \"min_installed_maps\": "    << uint32_t(screen.min_installed_maps)
-			<< ", \"max_installed_maps\": "    << uint32_t(screen.max_installed_maps)
-			<< ", \"root_visual\": "           << uint32_t(screen.root_visual)
-			<< ", \"backing_stores\": "        << uint32_t(screen.backing_stores)
-			<< ", \"save_unders\": "           << uint32_t(screen.save_unders)
-			<< ", \"root_depth\": "            << uint32_t(screen.root_depth)
-			<< ", \"allowed_depths_len\": "    << uint32_t(screen.allowed_depths_len)
-			<< " }";
-		
-		return buf.str();
-	}
-	*/
-
-
-	/*
-	std::string to_string(const xcb_setup_t& setup)
-	{
-		std::ostringstream buf;
-
-		buf
-			<< "{ \"status\": "                      << uint32_t(setup.status)
-			<< ", \"pad0\": "                        << uint32_t(setup.pad0)
-			<< ", \"protocol_major_version\": "      << uint32_t(setup.protocol_major_version)
-			<< ", \"protocol_minor_version\": "      << uint32_t(setup.protocol_minor_version)
-			<< ", \"length\": "                      << uint32_t(setup.length)
-			<< ", \"release_number\": "              << uint32_t(setup.release_number)
-			<< ", \"resource_id_base\": "            << uint32_t(setup.resource_id_base)
-			<< ", \"resource_id_mask\": "            << uint32_t(setup.resource_id_mask)
-			<< ", \"motion_buffer_size\": "          << uint32_t(setup.motion_buffer_size)
-			<< ", \"vendor_len\": "                  << uint32_t(setup.vendor_len)
-			<< ", \"maximum_request_length\": "      << uint32_t(setup.maximum_request_length)
-			<< ", \"roots_len\": "                   << uint32_t(setup.roots_len)
-			<< ", \"pixmap_formats_len\": "          << uint32_t(setup.pixmap_formats_len)
-			<< ", \"image_byte_order\": "            << uint32_t(setup.image_byte_order)
-			<< ", \"bitmap_format_bit_order\": "     << uint32_t(setup.bitmap_format_bit_order)
-			<< ", \"bitmap_format_scanline_unit\": " << uint32_t(setup.bitmap_format_scanline_unit)
-			<< ", \"bitmap_format_scanline_pad\": "  << uint32_t(setup.bitmap_format_scanline_pad)
-			<< ", \"min_keycode\": "                 << uint32_t(setup.min_keycode)
-			<< ", \"max_keycode\": "                 << uint32_t(setup.max_keycode)
-			<< ", \"pad1\": [ "                      << uint32_t(setup.pad1[0])
-				<< ", "                          << uint32_t(setup.pad1[1])
-				<< ", "                          << uint32_t(setup.pad1[2])
-				<< ", "                          << uint32_t(setup.pad1[3])
-				<< " ]"
-			<< " }";
-		
-		return buf.str();
-	}
-	*/
 
 
 	/**
@@ -1782,7 +1975,7 @@ Xenium* Xenium::connect(const std::string& display ///! The Display Name or ID
 	error = xenium->init(connection, screen_number);
 	if(error)
 	{
-		ZAKERO_DELETE(xenium);
+		delete xenium;
 
 		return nullptr;
 	}
@@ -1833,6 +2026,7 @@ std::error_code Xenium::init(xcb_connection_t* connection ///< The XCB Connectio
 
 	// --- X11 Server Setup Information --- //
 	this->setup = xcb_get_setup(this->connection);
+	ZAKERO_XENIUM__DEBUG_VAR(*setup);
 
 	// --- Find the current screen --- //
 	xcb_screen_iterator_t screen_iterator = xcb_setup_roots_iterator(this->setup);
@@ -1843,6 +2037,7 @@ std::error_code Xenium::init(xcb_connection_t* connection ///< The XCB Connectio
 	}
 
 	this->screen = screen_iterator.data;
+	ZAKERO_XENIUM__DEBUG_VAR(*screen);
 
 	// --- Initialize The Internals --- //
 	std::error_code error;
@@ -1941,15 +2136,29 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			event->response_type &= 0x7f;
 
-			//printf("Event Type: %d\n", event->response_type);
-			//printf("Base: %d\n", xenium->randr_event_base);
-			//printf("Root: %08x\n", xenium->screen->root);
-
-			if(event->response_type == Randr_Notify_Event)
+			switch(event->response_type)
 			{
-				xenium->randrEvent(
-					(xcb_randr_notify_event_t*)event
-					);
+				case XCB_CLIENT_MESSAGE:
+					xenium->xcbEvent(
+						(xcb_client_message_event_t*)event
+						);
+					break;
+				default:
+					if(event->response_type == Randr_Notify_Event)
+					{
+						xenium->randrEvent(
+							(xcb_randr_notify_event_t*)event
+							);
+					}
+					else
+					{
+						/*
+						ZAKERO_XENIUM__DEBUG
+							<< "Event: "
+							<< *event
+							<< '\n';
+						*/
+					}
 			}
 
 			free(event);
@@ -2418,7 +2627,7 @@ std::error_code Xenium::outputInit() noexcept
 			)
 		{
 			// Output Info is not usable
-			ZAKERO_FREE(output_info);
+			free(output_info);
 			continue;
 		}
 
@@ -2433,18 +2642,18 @@ std::error_code Xenium::outputInit() noexcept
 
 		if(crtc_info == nullptr)
 		{
-			ZAKERO_FREE(crtc_info);
-			ZAKERO_FREE(output_info);
+			free(crtc_info);
+			free(output_info);
 			continue;
 		}
 
 		outputAdd(crtc_info, output_info);
 
-		ZAKERO_FREE(crtc_info);
-		ZAKERO_FREE(output_info);
+		free(crtc_info);
+		free(output_info);
 	}
 
-	ZAKERO_FREE(screen_resources);
+	free(screen_resources);
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -2499,7 +2708,7 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 
 	if(output_info == nullptr)
 	{
-		ZAKERO_FREE(screen_resources);
+		free(screen_resources);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Not_Found);
 	}
@@ -2508,8 +2717,8 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 		|| output_info->mm_height == 0
 		)
 	{
-		ZAKERO_FREE(output_info);
-		ZAKERO_FREE(screen_resources);
+		free(output_info);
+		free(screen_resources);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete);
 	}
@@ -2525,17 +2734,17 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 
 	if(crtc_info == nullptr)
 	{
-		ZAKERO_FREE(output_info);
-		ZAKERO_FREE(screen_resources);
+		free(output_info);
+		free(screen_resources);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_CRTC_Info_Not_Found);
 	}
 
 	outputAdd(crtc_info, output_info);
 
-	ZAKERO_FREE(crtc_info);
-	ZAKERO_FREE(output_info);
-	ZAKERO_FREE(screen_resources);
+	free(crtc_info);
+	free(output_info);
+	free(screen_resources);
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -2793,7 +3002,154 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
 
 	error = ZAKERO_XENIUM__ERROR(Error_None);
 
-	return nullptr;
+	WindowId window_id = xcb_generate_id(this->connection);
+
+	uint32_t value_mask = 0
+		| XCB_CW_BACK_PIXMAP
+		| XCB_CW_BACK_PIXEL        // Not Used
+		//| XCB_CW_BORDER_PIXMAP     // Not Used
+		//| XCB_CW_BORDER_PIXEL      // Not Used
+		| XCB_CW_BIT_GRAVITY
+		| XCB_CW_WIN_GRAVITY
+		| XCB_CW_BACKING_STORE
+		//| XCB_CW_BACKING_PLANES    // Not Used
+		//| XCB_CW_BACKING_PIXEL     // Not Used
+		//| XCB_CW_OVERRIDE_REDIRECT // Future?
+		| XCB_CW_SAVE_UNDER
+		| XCB_CW_EVENT_MASK
+		//| XCB_CW_DONT_PROPAGATE    // Future?
+		| XCB_CW_COLORMAP
+		//| XCB_CW_CURSOR            // Future?
+		;
+
+	xcb_create_window_value_list_t value_list =
+	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
+	,	.background_pixel      = 0
+	,	.border_pixmap         = XCB_BACK_PIXMAP_NONE
+	,	.border_pixel          = 0
+	,	.bit_gravity           = XCB_GRAVITY_CENTER
+	,	.win_gravity           = XCB_GRAVITY_NORTH_EAST
+	,	.backing_store         = XCB_BACKING_STORE_NOT_USEFUL
+	,	.backing_planes        = 0
+	,	.backing_pixel         = 0
+	,	.override_redirect     = 0
+	,	.save_under            = 0
+	,	.event_mask            = 0
+		                         | XCB_EVENT_MASK_KEY_PRESS
+		                         | XCB_EVENT_MASK_KEY_RELEASE
+		                         | XCB_EVENT_MASK_BUTTON_PRESS
+		                         | XCB_EVENT_MASK_BUTTON_RELEASE
+		                         | XCB_EVENT_MASK_ENTER_WINDOW
+		                         | XCB_EVENT_MASK_LEAVE_WINDOW
+		                         | XCB_EVENT_MASK_POINTER_MOTION
+		                         //| XCB_EVENT_MASK_POINTER_MOTION_HINT
+		                         //| XCB_EVENT_MASK_BUTTON_1_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_2_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_3_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_4_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_5_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_MOTION
+		                         //| XCB_EVENT_MASK_KEYMAP_STATE
+		                         | XCB_EVENT_MASK_EXPOSURE
+		                         | XCB_EVENT_MASK_VISIBILITY_CHANGE
+		                         | XCB_EVENT_MASK_STRUCTURE_NOTIFY
+		                         //| XCB_EVENT_MASK_RESIZE_REDIRECT
+		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+		                         | XCB_EVENT_MASK_FOCUS_CHANGE
+		                         //| XCB_EVENT_MASK_PROPERTY_CHANGE
+		                         //| XCB_EVENT_MASK_COLOR_MAP_CHANGE
+		                         //| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
+	,	.do_not_propogate_mask = XCB_EVENT_MASK_NO_EVENT
+	,	.colormap              = XCB_COPY_FROM_PARENT
+	,	.cursor                = 0
+	};
+
+	xcb_void_cookie_t cookie =
+		xcb_create_window_aux_checked(this->connection
+			, this->screen->root_depth      // depth
+			, window_id                     // requested id
+			, this->screen->root            // parent window id
+			, 0, 0                          // location x,y
+			, size.width, size.height       // size width,height
+			, 0                             // border width
+			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
+			, this->screen->root_visual     // visual
+			, value_mask
+			, &value_list
+			);
+
+	xcb_generic_error_t generic_error;
+
+	if(requestCheckHasError(cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		return nullptr;
+	}
+
+	xcb_atom_t atom	= atomCreateDeleteWindow(window_id
+		, generic_error
+		);
+
+	if(atom == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		return nullptr;
+	}
+
+	// --- All data has been created --- //
+	// ---  Now populate structures  --- //
+
+	window_delete_map[window_id] =
+	{	.close_request_lambda = Lambda_DoNothing
+	,	.atom                 = atom
+	};
+
+	WindowData window_data =
+	{	.xenium             = this
+	,	.id                 = window_id
+	};
+	Window* window = new Window(&window_data);
+
+	xcb_map_window(this->connection, window_id);
+
+	xcb_flush(this->connection);
+
+	return window;
+}
+
+
+void Xenium::windowDestroy(WindowId window_id
+	) noexcept
+{
+	window_delete_map.erase(window_id);
+
+	xcb_destroy_window(this->connection, window_id);
+}
+
+
+bool Xenium::windowPropertySet(WindowId window_id
+	, const xcb_atom_t              property
+	, const xcb_atom_t              value
+	, xcb_generic_error_t&          generic_error
+	) noexcept
+{
+	xcb_void_cookie_t void_cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE // mode
+			, window_id             // window
+			, property              // property
+			, XCB_ATOM_ATOM         // type
+			, 32                    // format : 32-bit pointer
+			, 1                     // data_len
+			, &value                // data
+			);
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		return false;
+	}
+
+	return true;
 }
 
 // }}}
@@ -2902,8 +3258,10 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
  * It is expected that the caller will check the WindowData error and delete 
  * the incomplete %Window if needed.
  */
-Xenium::Window::Window(
+Xenium::Window::Window(void* data
 	)
+	: xenium(((WindowData*)data)->xenium)
+	, id(((WindowData*)data)->id)
 {
 }
 
@@ -2913,6 +3271,10 @@ Xenium::Window::Window(
  */
 Xenium::Window::~Window()
 {
+	xenium->windowDestroy(id);
+
+	id     = 0;
+	xenium = nullptr;
 }
 
 // }}}
@@ -3425,7 +3787,16 @@ Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size
 void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	WindowDelete& window_delete = xenium->window_delete_map[id];
+
+	if(lambda == nullptr)
+	{
+		window_delete.close_request_lambda = Lambda_DoNothing;
+	}
+	else
+	{
+		window_delete.close_request_lambda = lambda;
+	}
 }
 
 
@@ -3780,6 +4151,116 @@ void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
 // {{{ Window : Helpers
 
 // }}}
+// {{{ XCB
+
+void Xenium::xcbEvent(const xcb_client_message_event_t* event
+	) noexcept
+{
+bool dump_event = true;
+
+	if(window_delete_map.contains(event->window))
+	{
+		WindowDelete& window_delete = window_delete_map[event->window];
+		if(event->data.data32[0] == window_delete.atom)
+		{
+			window_delete.close_request_lambda();
+			windowDestroy(event->window);
+dump_event = false;
+		}
+	}
+
+if(dump_event) { ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n'; }
+}
+
+// }}}
+// {{{ XCB : Atom
+
+xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
+	, xcb_generic_error_t&                           generic_error
+	) noexcept
+{
+	xcb_atom_t atom_protocols = internAtom("WM_PROTOCOLS", true, generic_error);
+	if(atom_protocols == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		return XCB_ATOM_NONE;
+	}
+
+	xcb_atom_t atom_delete_window = internAtom("WM_DELETE_WINDOW", true, generic_error);
+	if(atom_delete_window == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		return XCB_ATOM_NONE;
+	}
+
+	bool property_was_set = windowPropertySet(window_id
+		, atom_protocols
+		, atom_delete_window
+		, generic_error
+		);
+
+	if(property_was_set == false)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		return XCB_ATOM_NONE;
+	}
+
+	return atom_delete_window;
+}
+
+
+xcb_atom_t Xenium::internAtom(const std::string& atom_name
+	, const bool                             create_if_needed
+	, xcb_generic_error_t&                   generic_error
+	) noexcept
+{
+	xcb_generic_error_t* error = nullptr;
+
+	xcb_intern_atom_reply_t* atom_reply =
+		xcb_intern_atom_reply(this->connection
+			, xcb_intern_atom(this->connection
+				// 0: Create if needed
+				// 1: result XCB_ATOM_NONE if not exist
+				, create_if_needed ? 0 : 1
+				, atom_name.length()
+				, atom_name.c_str()
+				)
+			, &error
+			);
+
+	xcb_atom_t atom;
+
+	if(error != nullptr)
+	{
+		atom = XCB_ATOM_NONE;
+		generic_error = *error;
+		free(error);
+
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+	}
+	else if(atom_reply->atom == XCB_ATOM_NONE
+		&& atom_name != "XCB_ATOM_NONE"
+		)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: Failed to get \""
+			<< atom_name
+			<< "\" atom.\n"
+			;
+
+		atom = XCB_ATOM_NONE;
+	}
+	else
+	{
+		atom = atom_reply->atom;
+	}
+
+	free(atom_reply);
+
+	return atom;
+}
+
+
+// }}}
 // {{{ XCB : RandR
 
 /**
@@ -4008,6 +4489,47 @@ void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///<
 	printf("w: %08x\n",  event->request_window);
 	printf("d: %ux%u\n", event->width, event->height);
 	printf("m: %ux%u\n", event->mwidth, event->mheight);
+}
+
+// }}}
+// {{{ XCB : Utility
+
+bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
+	) noexcept
+{
+	xcb_generic_error_t* error = xcb_request_check(this->connection, void_cookie);
+
+	if(error != nullptr)
+	{
+		std::cout << "requestCheck Error: " << *error << '\n';
+
+		free(error);
+
+		return true;
+	}
+
+	return false;
+}
+
+
+bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
+	, xcb_generic_error_t&                             generic_error
+	) noexcept
+{
+	xcb_generic_error_t* error = xcb_request_check(this->connection, void_cookie);
+
+	if(error != nullptr)
+	{
+		std::cout << "requestCheck Error: " << *error << '\n';
+
+		generic_error = *error;
+
+		free(error);
+
+		return true;
+	}
+
+	return false;
 }
 
 // }}}

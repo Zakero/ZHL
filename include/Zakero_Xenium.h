@@ -395,8 +395,6 @@ namespace zakero
 			struct Output
 			{
 				std::string name                     = "";
-				//std::string make                     = ""; // Not Available?
-				//std::string model                    = ""; // Not Available?
 				int32_t     x                        = 0;
 				int32_t     y                        = 0;
 				int32_t     width                    = 0;
@@ -404,11 +402,13 @@ namespace zakero
 				int64_t     physical_width_mm        = 0;
 				int64_t     physical_height_mm       = 0;
 				int32_t     subpixel                 = 0;
-				//int32_t     refresh_mHz              = 0; // Not Available?
-				//int32_t     scale_factor             = 0; // Not Available?
-				int32_t     transform                = 0; // Not Available?
+				int32_t     transform                = 0;
 				float       pixels_per_mm_horizontal = 0.0;
 				float       pixels_per_mm_vertical   = 0.0;
+				//std::string make                     = ""; // Not Available?
+				//std::string model                    = ""; // Not Available?
+				//int32_t     refresh_mHz              = 0; // Not Available?
+				//int32_t     scale_factor             = 0; // Not Available?
 			};
 
 			// -------------------------------------------------- //
@@ -568,7 +568,7 @@ namespace zakero
 
 				private:
 					Xenium*  xenium;
-					WindowId id;
+					WindowId window_id;
 
 					Window(const Window&) = delete;
 					Window& operator=(const Window&) = delete;
@@ -635,6 +635,7 @@ namespace zakero
 
 			// -------------------------------------------------- //
 
+			Xenium::Output  output(const int16_t, const int16_t) noexcept;
 			std::error_code outputInit() noexcept;
 			std::error_code outputAdd(xcb_randr_crtc_t, xcb_randr_output_t) noexcept;
 			void            outputAdd(const xcb_randr_get_crtc_info_reply_t*, const xcb_randr_get_output_info_reply_t*) noexcept;
@@ -649,6 +650,9 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			void xcbEvent(const xcb_client_message_event_t*) noexcept;
+			void xcbEvent(const xcb_configure_notify_event_t*) noexcept;
+			void xcbEvent(const xcb_expose_event_t*) noexcept;
+			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
 
 			// }}}
 			// {{{ XCB : Atom
@@ -682,10 +686,19 @@ namespace zakero
 			// }}}
 			// {{{ Window
 			
+			struct MotifHints
+			{
+				uint32_t flags;
+				uint32_t functions;
+				uint32_t decorations;
+				int32_t  input_mode;
+				uint32_t status;
+			};
+	
 			struct WindowData
 			{
 				Xenium*    xenium;
-				WindowId   id;
+				WindowId   window_id;
 			};
 
 			struct WindowDelete
@@ -694,14 +707,39 @@ namespace zakero
 				xcb_atom_t     atom;
 			};
 
-			using WindowDeleteMap = std::unordered_map<WindowId, WindowDelete>;
+			enum struct SizeUnit
+			{	Millimeter
+			,	Percent
+			,	Pixel
+			};
 
-			WindowDeleteMap window_delete_map = {};
+			struct WindowSize
+			{
+				Xenium::SizeMm      mm      = {};
+				Xenium::SizePercent percent = {};
+				Xenium::SizePixel   pixel   = {};
+				Xenium::SizeUnit    unit    = SizeUnit::Pixel;
+				bool                exposed = false;
+			};
+
+			using WindowMap       = std::unordered_map<WindowId, Window*>;
+			using WindowDeleteMap = std::unordered_map<WindowId, WindowDelete>;
+			using WindowSizeMap   = std::unordered_map<WindowId, WindowSize>;
+
+			WindowMap          window_map        = {};
+			WindowDeleteMap    window_delete_map = {};
+			WindowSizeMap      window_size       = {};
+			mutable std::mutex window_size_mutex  = {};
 
 			// -------------------------------------------------- //
 
+			std::error_code windowBorder(const WindowId, const bool) noexcept;
+			std::error_code windowSet(const WindowId, const SizePixel&) noexcept;
+			std::error_code windowSet(const WindowId, const PointPixel&) noexcept;
 			void windowDestroy(WindowId) noexcept;
+			void windowOutputConfigure(const WindowId, const Output&) noexcept;
 			bool windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
+			bool windowPropertySet(WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
 
 			// }}}
 			// {{{ Utility
@@ -731,6 +769,18 @@ namespace zakero
 
 	// }}}
 }
+
+
+/**
+ * \brief Insert an Output object into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&  stream ///< The stream to use
+	, const zakero::Xenium::Output& output ///< The value in insert into the stream
+	) noexcept;
+
 
 // {{{ Implementation
 
@@ -967,7 +1017,7 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
 
 
 /**
- * \brief Insert an xcb_generic_error_t into an output stream.
+ * \brief Insert an xcb_client_message_event_t into an output stream.
  *
  * \return The \p stream.
  */
@@ -1010,7 +1060,66 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
 
 
 /**
- * \brief Insert an xcb_generic_error_t into an output stream.
+ * \brief Insert an xcb_configure_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&        stream ///< The stream to use
+	, const xcb_configure_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "     << uint32_t(event.response_type)
+		<< ", \"pad0\": "              << uint32_t(event.pad0)
+		<< ", \"sequence\": "          << uint32_t(event.sequence)
+		<< ", \"event\": "             << uint32_t(event.event)
+		<< ", \"window\": "            << uint32_t(event.window)
+		<< ", \"above_sibling\": "     << uint32_t(event.above_sibling)
+		<< ", \"x\": "                 << int32_t(event.x)
+		<< ", \"y\": "                 << int32_t(event.y)
+		<< ", \"width\": "             << uint32_t(event.width)
+		<< ", \"height\": "            << uint32_t(event.height)
+		<< ", \"border_width\": "      << uint32_t(event.border_width)
+		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
+		<< ", \"pad1\": "              << uint32_t(event.pad1)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_expose_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_expose_event_t&    event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"window\": "        << uint32_t(event.window)
+		<< ", \"x\": "             << int32_t(event.x)
+		<< ", \"y\": "             << int32_t(event.y)
+		<< ", \"width\": "         << uint32_t(event.width)
+		<< ", \"height\": "        << uint32_t(event.height)
+		<< ", \"count\": "         << uint32_t(event.count)
+		<< ", \"pad1\": [ 0x"      << std::hex << uint32_t(event.pad1[0]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_generic_event_t into an output stream.
  *
  * \return The \p stream.
  */
@@ -1032,6 +1141,33 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
 			<< ", 0x"          << std::hex << uint32_t(event.pad[6]) << std::dec
 			<< " ]"
 		<< ", \"full_sequence\": " << uint32_t(event.full_sequence)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_map_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&  stream ///< The stream to use
+	, const xcb_map_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "     << uint32_t(event.response_type)
+		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "          << uint32_t(event.sequence)
+		<< ", \"event\": "             << uint32_t(event.event)
+		<< ", \"window\": "            << uint32_t(event.window)
+		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
+		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
+			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
+			<< " ]"
 		<< " }";
 
 	return stream;
@@ -1458,6 +1594,14 @@ namespace
 
 		return ZAKERO_XENIUM__ERROR(Xenium::Error_None);
 	};
+
+	struct ScreenPosition
+	{
+		int32_t x;
+		int32_t y;
+	};
+
+	std::unordered_map<Xenium::WindowId, ScreenPosition> delayed_window_move = {};
 }
 
 // }}}
@@ -1539,6 +1683,8 @@ namespace
  *
  * If a struct contains a mutex, that mutex should be locked before interacting 
  * with the contents of the struct.
+ *
+ * \todo Convert all the `Error_Unknown` to actual errors.
  */
 
 /**
@@ -2136,12 +2282,38 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			event->response_type &= 0x7f;
 
+//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
+
 			switch(event->response_type)
 			{
 				case XCB_CLIENT_MESSAGE:
 					xenium->xcbEvent(
 						(xcb_client_message_event_t*)event
 						);
+					break;
+				case XCB_CONFIGURE_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_configure_notify_event_t*)event
+						);
+					break;
+				case XCB_EXPOSE:
+					xenium->xcbEvent(
+						(xcb_expose_event_t*)event
+						);
+					break;
+				case XCB_GRAVITY_NOTIFY:
+					// ignore
+					break;
+				case XCB_MAP_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_map_notify_event_t*)event
+						);
+					break;
+				case XCB_REPARENT_NOTIFY:
+					// ignore
+					break;
+				case XCB_VISIBILITY_NOTIFY:
+					// ignore
 					break;
 				default:
 					if(event->response_type == Randr_Notify_Event)
@@ -2153,16 +2325,24 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 					else
 					{
 						/*
-						ZAKERO_XENIUM__DEBUG
-							<< "Event: "
-							<< *event
-							<< '\n';
-						*/
+						ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
+						 */
 					}
 			}
 
 			free(event);
 		}
+
+		for(auto& iter : delayed_window_move)
+		{
+ZAKERO_XENIUM__DEBUG << "-------------------------------------------\n";
+			WindowId window_id = iter.first;
+			int32_t  x         = iter.second.x;
+			int32_t  y         = iter.second.y;
+
+			xenium->windowOutputConfigure(window_id, xenium->output(x, y));
+		}
+		delayed_window_move.clear();
 
 
 		// Update and render windows
@@ -2216,6 +2396,31 @@ Xenium::Output Xenium::output(const Xenium::OutputId output_id
 	}
 
 	return output_data.map.at(output_id);
+}
+
+
+Xenium::Output Xenium::output(const int16_t x
+	, const int16_t                     y
+	) noexcept
+{
+	std::lock_guard<std::mutex> lock(output_data.mutex);
+
+	for(const auto& iter : output_data.map)
+	{
+		const Output& output = iter.second;
+
+		if(x >= output.x
+			&& x < (output.x + output.width)
+			&& y >= output.y
+			&& y < (output.y + output.height)
+			)
+		{
+			return output;
+		}
+	}
+
+
+	return {};
 }
 
 
@@ -2784,6 +2989,8 @@ void Xenium::outputAdd(const xcb_randr_get_crtc_info_reply_t* crtc_info   ///< C
 	,	.pixels_per_mm_horizontal = (float)crtc_info->width  / output_info->mm_width
 	,	.pixels_per_mm_vertical   = (float)crtc_info->height / output_info->mm_height
 	};
+
+ZAKERO_XENIUM__DEBUG_VAR(this->output_data.map[output_id].name)
 }
 
 
@@ -3097,6 +3304,20 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
 		return nullptr;
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(window_size_mutex);
+
+		window_size[window_id] =
+		{	.mm      = { 1, 1 }
+		,	.percent = { 0.5, 0.5 }
+		//,	.percent = { 1, 1 }
+		,	.pixel   = size
+		,	.unit    = SizeUnit::Percent
+		//,	.unit    = SizeUnit::Pixel
+		,	.exposed = false
+		};
+	}
+
 	// --- All data has been created --- //
 	// ---  Now populate structures  --- //
 
@@ -3106,10 +3327,12 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
 	};
 
 	WindowData window_data =
-	{	.xenium             = this
-	,	.id                 = window_id
+	{	.xenium    = this
+	,	.window_id = window_id
 	};
 	Window* window = new Window(&window_data);
+
+	this->window_map[window_id] = window;
 
 	xcb_map_window(this->connection, window_id);
 
@@ -3123,8 +3346,67 @@ void Xenium::windowDestroy(WindowId window_id
 	) noexcept
 {
 	window_delete_map.erase(window_id);
+	window_map.erase(window_id);
 
 	xcb_destroy_window(this->connection, window_id);
+}
+
+
+void Xenium::windowOutputConfigure(const WindowId window_id
+	, const Output&                           output
+	) noexcept
+{
+	if(output.width == 0)
+	{
+		return;
+	}
+
+	WindowSize size;
+
+	{
+		std::lock_guard<std::mutex> lock(window_size_mutex);
+
+		size = window_size[window_id];
+	}
+
+	if(size.exposed == false)
+	{
+		return;
+	}
+
+	SizePixel new_size;
+
+	if(size.unit == SizeUnit::Millimeter)
+	{
+		auto value = convertMmToPixel(output
+			, size.mm.width
+			, size.mm.height
+			);
+
+		new_size = {value.first, value.second};
+	}
+	else if(size.unit == SizeUnit::Percent)
+	{
+		auto value = convertPercentToPixel(output
+			, size.percent.width
+			, size.percent.height
+			);
+
+		new_size = {value.first, value.second};
+	}
+	else
+	{
+		new_size = size.pixel;
+	}
+
+	if(new_size.width != size.pixel.width
+		|| new_size.height != size.pixel.height
+		)
+	{
+ZAKERO_XENIUM__DEBUG << "+++++++++++++++++++++++++++++++++++++++++++\n";
+
+		windowSet(window_id, new_size);
+	}
 }
 
 
@@ -3144,8 +3426,36 @@ bool Xenium::windowPropertySet(WindowId window_id
 			, 1                     // data_len
 			, &value                // data
 			);
+
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		return false;
+	}
+
+	return true;
+}
+
+
+bool Xenium::windowPropertySet(WindowId window_id
+	, const xcb_atom_t              property
+	, const std::string&            value
+	, xcb_generic_error_t&          generic_error
+	) noexcept
+{
+	xcb_void_cookie_t void_cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE // mode
+			, window_id             // window
+			, property              // property
+			, XCB_ATOM_STRING       // type
+			, 8                     // format : 32-bit pointer
+			, value.length()        // data_len
+			, value.data()          // data
+			);
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
 		return false;
 	}
 
@@ -3261,7 +3571,7 @@ bool Xenium::windowPropertySet(WindowId window_id
 Xenium::Window::Window(void* data
 	)
 	: xenium(((WindowData*)data)->xenium)
-	, id(((WindowData*)data)->id)
+	, window_id(((WindowData*)data)->window_id)
 {
 }
 
@@ -3271,10 +3581,10 @@ Xenium::Window::Window(void* data
  */
 Xenium::Window::~Window()
 {
-	xenium->windowDestroy(id);
+	xenium->windowDestroy(window_id);
 
-	id     = 0;
-	xenium = nullptr;
+	window_id = 0;
+	xenium    = nullptr;
 }
 
 // }}}
@@ -3302,7 +3612,19 @@ Xenium::Window::~Window()
 void Xenium::Window::setClass(const std::string& class_name ///< The class name
 	) noexcept
 {
-	ZAKERO_UNUSED(class_name);
+	bool                success;
+	xcb_generic_error_t generic_error;
+
+	success = xenium->windowPropertySet(window_id
+		, XCB_ATOM_WM_CLASS
+		, class_name
+		, generic_error
+		);
+
+	if(success == false)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+	}
 }
 
 
@@ -3315,7 +3637,19 @@ void Xenium::Window::setClass(const std::string& class_name ///< The class name
 void Xenium::Window::setTitle(const std::string& title ///< The window title
 	) noexcept
 {
-	ZAKERO_UNUSED(title);
+	bool                success;
+	xcb_generic_error_t generic_error;
+
+	success = xenium->windowPropertySet(window_id
+		, XCB_ATOM_WM_NAME
+		, title
+		, generic_error
+		);
+
+	if(success == false)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+	}
 }
 
 
@@ -3341,7 +3675,16 @@ void Xenium::Window::setTitle(const std::string& title ///< The window title
 std::error_code Xenium::Window::setDecorations(const Xenium::WindowDecorations decorations ///< The requested decorations
 	) noexcept
 {
-	ZAKERO_UNUSED(decorations);
+	if(decorations == WindowDecorations::Client_Side)
+	{
+		// The application will render the borders
+		xenium->windowBorder(window_id, false);
+	}
+	else
+	{
+		// The X11 will render the borders
+		xenium->windowBorder(window_id, true);
+	}
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -3463,9 +3806,9 @@ std::error_code Xenium::Window::setSize(const Xenium::SizePercent& size ///< The
 std::error_code Xenium::Window::setSize(const Xenium::SizePixel& size ///< The %Window size
 	) noexcept
 {
-	ZAKERO_UNUSED(size);
+	std::error_code error = xenium->windowSet(window_id, size);
 
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	return error;
 }
 
 
@@ -3787,7 +4130,7 @@ Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size
 void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
 	) noexcept
 {
-	WindowDelete& window_delete = xenium->window_delete_map[id];
+	WindowDelete& window_delete = xenium->window_delete_map[window_id];
 
 	if(lambda == nullptr)
 	{
@@ -4150,14 +4493,144 @@ void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
 // }}}
 // {{{ Window : Helpers
 
+/**
+ * \todo After an X11 connection has been established, create the frequently 
+ * used Atoms so that they don't have to be created or retrieved every time.
+ */
+std::error_code Xenium::windowBorder(const WindowId window_id
+	, const bool                                enable
+	) noexcept
+{
+	xcb_generic_error_t generic_error;
+
+	xcb_atom_t motif_wm_hints_atom = internAtom("_MOTIF_WM_HINTS"
+		, true
+		, generic_error
+		);
+
+	if(motif_wm_hints_atom == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	MotifHints hints_data =
+	{	.flags       = 2
+	,	.functions   = 0
+	,	.decorations = enable
+	,	.input_mode  = 0
+	,	.status      = 0
+	};
+
+	xcb_void_cookie_t void_cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE // mode
+			, window_id             // window
+			, motif_wm_hints_atom   // property
+			, motif_wm_hints_atom   // type
+			, 32                    // format : pointer to 32-bit data
+			, 5                     // data_len
+			, &hints_data           // data
+			);
+
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+std::error_code Xenium::windowSet(const WindowId window_id
+	, const Xenium::PointPixel&              point      ///< The %Window size
+	) noexcept
+{
+	xcb_configure_window_value_list_t value_list =
+	{	.x            = point.x
+	,	.y            = point.y
+	,	.width        = 0
+	,	.height       = 0
+	,	.border_width = 0
+	,	.sibling      = 0
+	,	.stack_mode   = 0
+	};
+
+	xcb_void_cookie_t void_cookie =
+		xcb_configure_window_aux_checked(this->connection
+			, window_id
+			, 0
+				| XCB_CONFIG_WINDOW_X
+				| XCB_CONFIG_WINDOW_Y
+			, &value_list
+			);
+
+	xcb_generic_error_t generic_error;
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+std::error_code Xenium::windowSet(const WindowId window_id
+	, const Xenium::SizePixel&               size      ///< The %Window size
+	) noexcept
+{
+	std::lock_guard<std::mutex> lock(window_size_mutex);
+
+	WindowSize& size_current = window_size[window_id];
+
+	if(size_current.pixel.width == size.width
+		&& size_current.pixel.height == size.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	size_current.pixel = size;
+
+	xcb_configure_window_value_list_t value_list =
+	{	.x            = 0
+	,	.y            = 0
+	,	.width        = (uint32_t)size.width
+	,	.height       = (uint32_t)size.height
+	,	.border_width = 0
+	,	.sibling      = 0
+	,	.stack_mode   = 0
+	};
+
+	xcb_void_cookie_t void_cookie =
+		xcb_configure_window_aux_checked(this->connection
+			, window_id
+			, 0
+				| XCB_CONFIG_WINDOW_WIDTH
+				| XCB_CONFIG_WINDOW_HEIGHT
+			, &value_list
+			);
+
+	xcb_generic_error_t generic_error;
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
 // }}}
 // {{{ XCB
 
 void Xenium::xcbEvent(const xcb_client_message_event_t* event
 	) noexcept
 {
-bool dump_event = true;
-
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDelete& window_delete = window_delete_map[event->window];
@@ -4165,11 +4638,45 @@ bool dump_event = true;
 		{
 			window_delete.close_request_lambda();
 			windowDestroy(event->window);
-dump_event = false;
 		}
 	}
 
-if(dump_event) { ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n'; }
+//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
+}
+
+
+void Xenium::xcbEvent(const xcb_configure_notify_event_t* event
+	) noexcept
+{
+	delayed_window_move[event->window] =
+	{	.x = event->x
+	,	.y = event->y
+	};
+
+ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
+//ZAKERO_XENIUM__DEBUG << "Output: " << output(event->x, event->y) << '\n';
+}
+
+
+void Xenium::xcbEvent(const xcb_expose_event_t* event
+	) noexcept
+{
+	std::lock_guard<std::mutex> lock(window_size_mutex);
+
+	window_size[event->window].exposed = true;
+
+//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
+}
+
+
+void Xenium::xcbEvent(const xcb_map_notify_event_t* event
+	) noexcept
+{
+	//std::lock_guard<std::mutex> lock(window_size_mutex);
+
+	window_size[event->window].exposed = true;
+
+//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
 }
 
 // }}}
@@ -4182,14 +4689,14 @@ xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
 	xcb_atom_t atom_protocols = internAtom("WM_PROTOCOLS", true, generic_error);
 	if(atom_protocols == XCB_ATOM_NONE)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
 		return XCB_ATOM_NONE;
 	}
 
 	xcb_atom_t atom_delete_window = internAtom("WM_DELETE_WINDOW", true, generic_error);
 	if(atom_delete_window == XCB_ATOM_NONE)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
 		return XCB_ATOM_NONE;
 	}
 
@@ -4201,7 +4708,7 @@ xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
 
 	if(property_was_set == false)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
 		return XCB_ATOM_NONE;
 	}
 
@@ -4953,6 +5460,38 @@ bool operator==(Xenium::SizePixel& lhs ///< Left-Hand side
 // }}}
 
 };
+
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&  stream ///< The stream to use
+	, const zakero::Xenium::Output& output ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"name\": \""                   << output.name << "\""
+		<< ", \"x\": "                        << std::to_string(output.x)
+		<< ", \"y\": "                        << std::to_string(output.y)
+		<< ", \"width\": "                    << std::to_string(output.width)
+		<< ", \"height\": "                   << std::to_string(output.height)
+		<< ", \"physical_width_mm\": "        << std::to_string(output.physical_width_mm)
+		<< ", \"physical_height_mm\": "       << std::to_string(output.physical_height_mm)
+		<< ", \"subpixel\": "                 << std::to_string(output.subpixel)
+		<< ", \"transform\": "                << std::to_string(output.transform)
+		<< ", \"pixels_per_mm_horizontal\": " << std::to_string(output.pixels_per_mm_horizontal)
+		<< ", \"pixels_per_mm_vertical\": "   << std::to_string(output.pixels_per_mm_vertical)
+		//<< ", \"make\": \""                   << output.make << "\""
+		//<< ", \"model\": \""                  << output.model << "\""
+		//<< ", \"refresh_mHz\": "              << std::to_string(output.refresh_mHz)
+		//<< ", \"scale_factor\": "             << std::to_string(output.scale_factor)
+		<< " }";
+
+	return stream;
+}
 
 #endif // ZAKERO_XENIUM_IMPLEMENTATION
 

@@ -57,6 +57,8 @@ int main()
 	{
 		std::cout << error << '\n';
 	}
+	window->setClass("Xenium : Manual_Window");
+	window->setTitle("Xenium");
 
 	bool time_to_die = false;
 	window->onCloseRequest([&]()
@@ -64,6 +66,12 @@ int main()
 		printf("--- Closing Time\n");
 		time_to_die = true;
 	});
+
+	/*
+	window->setDecorations(zakero::Xenium::WindowDecorations::Client_Side);
+	window->setDecorations(zakero::Xenium::WindowDecorations::Server_Side);
+	window->setSize(zakero::Xenium::SizePixel{500,300});
+	*/
 
 	while(!time_to_die)
 	{

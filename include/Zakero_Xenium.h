@@ -1594,14 +1594,6 @@ namespace
 
 		return ZAKERO_XENIUM__ERROR(Xenium::Error_None);
 	};
-
-	struct ScreenPosition
-	{
-		int32_t x;
-		int32_t y;
-	};
-
-	std::unordered_map<Xenium::WindowId, ScreenPosition> delayed_window_move = {};
 }
 
 // }}}
@@ -2260,8 +2252,7 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 	, Xenium*                      xenium       ///< The Xenium instance to use
 	) noexcept
 {
-	const int Randr_Notify_Event =
-		xenium->randr_event_base + XCB_RANDR_NOTIFY;
+	const int Randr_Notify_Event = xenium->randr_event_base + XCB_RANDR_NOTIFY;
 
 	xcb_generic_event_t* event = nullptr;
 
@@ -2280,11 +2271,7 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 				break;
 			}
 
-			event->response_type &= 0x7f;
-
-//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
-
-			switch(event->response_type)
+			switch(event->response_type & 0x7f)
 			{
 				case XCB_CLIENT_MESSAGE:
 					xenium->xcbEvent(
@@ -2297,9 +2284,10 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 						);
 					break;
 				case XCB_EXPOSE:
-					xenium->xcbEvent(
-						(xcb_expose_event_t*)event
-						);
+					// ignore
+					//xenium->xcbEvent(
+					//	(xcb_expose_event_t*)event
+					//	);
 					break;
 				case XCB_GRAVITY_NOTIFY:
 					// ignore
@@ -2321,29 +2309,16 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 						xenium->randrEvent(
 							(xcb_randr_notify_event_t*)event
 							);
+std::cout << "RandR Event:     " << *event << '\n';
 					}
 					else
 					{
-						/*
-						ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
-						 */
+std::cout << "Event:           " << *event << '\n';
 					}
 			}
 
 			free(event);
 		}
-
-		for(auto& iter : delayed_window_move)
-		{
-ZAKERO_XENIUM__DEBUG << "-------------------------------------------\n";
-			WindowId window_id = iter.first;
-			int32_t  x         = iter.second.x;
-			int32_t  y         = iter.second.y;
-
-			xenium->windowOutputConfigure(window_id, xenium->output(x, y));
-		}
-		delayed_window_move.clear();
-
 
 		// Update and render windows
 		/*
@@ -3365,6 +3340,11 @@ void Xenium::windowOutputConfigure(const WindowId window_id
 
 	{
 		std::lock_guard<std::mutex> lock(window_size_mutex);
+
+		if(window_size.contains(window_id) == false)
+		{
+			return;
+		}
 
 		size = window_size[window_id];
 	}
@@ -4631,6 +4611,7 @@ std::error_code Xenium::windowSet(const WindowId window_id
 void Xenium::xcbEvent(const xcb_client_message_event_t* event
 	) noexcept
 {
+std::cout << "Client Message:  " << *event << '\n';
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDelete& window_delete = window_delete_map[event->window];
@@ -4641,26 +4622,50 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event
 		}
 	}
 
-//ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
 }
 
 
-void Xenium::xcbEvent(const xcb_configure_notify_event_t* event
+/**
+ * \brief XCB Event handler
+ *
+ * Many modern X11 Servers send two Configure Notify events:
+ * - The "raw" location, with X and Y set to 0
+ * - The "compositor" location, with X and Y set to screen coordinates
+ *
+ * To tell the difference, check the MSB of the `response_type`.  If the bit is 
+ * `0`, then the Configuration Notify is the "raw" configuration.  If the bit 
+ * is `1`, then the Configuration Notify is from the compositor.
+ *
+ * This convention is use with the following X11 Servers
+ * - KWin (KDE Plasma)
+ *
+ * Unconfirmed X11 Servers
+ * - KWin (KDE Wayland with X11 support)
+ * - Enlightenment
+ * - Enlightenment (e16)
+ * - Gnome
+ * - Metacity
+ * - Openbox
+ * - Xfwm
+ */
+void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 	) noexcept
 {
-	delayed_window_move[event->window] =
-	{	.x = event->x
-	,	.y = event->y
-	};
+std::cout << "Configue Notify: " << *event << '\n';
+	if((event->response_type & 0x80) == 0)
+	{
+		// Only care about events with the "synthetic bit" set
+		return;
+	}
 
-ZAKERO_XENIUM__DEBUG << "Event: " << *event << '\n';
-//ZAKERO_XENIUM__DEBUG << "Output: " << output(event->x, event->y) << '\n';
+	windowOutputConfigure(event->window, output(event->x, event->y));
 }
 
 
 void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
+std::cout << "Expose:          " << *event << '\n';
 	std::lock_guard<std::mutex> lock(window_size_mutex);
 
 	window_size[event->window].exposed = true;
@@ -4672,6 +4677,7 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 void Xenium::xcbEvent(const xcb_map_notify_event_t* event
 	) noexcept
 {
+std::cout << "Map Notify:      " << *event << '\n';
 	//std::lock_guard<std::mutex> lock(window_size_mutex);
 
 	window_size[event->window].exposed = true;
@@ -4840,6 +4846,7 @@ std::error_code Xenium::randrInit() noexcept
 void Xenium::randrEvent(const xcb_randr_crtc_change_t* event ///< The event
 	) noexcept
 {
+//std::cout << "RandR CRTC Chang:" << *event << '\n';
 	OutputId output_id = event->crtc;
 
 	{
@@ -4884,6 +4891,7 @@ void Xenium::randrEvent(const xcb_randr_crtc_change_t* event ///< The event
 void Xenium::randrEvent(const xcb_randr_output_change_t* event ///< The event
 	) noexcept
 {
+//std::cout << "RandR Output Chg:" << *event << '\n';
 	OutputId output_id  = 0;
 	bool call_on_add    = false;
 	bool call_on_change = false;

@@ -51,7 +51,12 @@ int main()
 
 	printf("Hello\n");
 
+	zakero::Xenium::SizeMm size{16.0 * 15, 9.0 * 15};
+	/*
+	zakero::Xenium::SizeMm size{40, 40};
+	zakero::Xenium::SizePercent size{0.5, 0.5};
 	zakero::Xenium::SizePixel size{400, 400};
+	*/
 	auto* window = xenium->windowCreate(size, error);
 	if(error)
 	{

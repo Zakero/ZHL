@@ -2817,6 +2817,10 @@ namespace
  * If a struct contains a mutex, that mutex should be locked before interacting 
  * with the contents of the struct.
  *
+ * \todo Are Wayland sizes signed or unsigned int's? It might be better to use 
+ * uint32_t regardless.  However this will make the conversion code more 
+ * complicated (Point and Size can no longer use the same methods).
+ *
  * \todo Window::imageNext() always returns Error_None.  Consider changing the 
  * API.  Also, the API may change any way to fix the Maximized/Fullscreen 
  * update lag.

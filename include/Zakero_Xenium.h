@@ -577,8 +577,11 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			Xenium::Window* windowCreate(const Xenium::SizeMm&, std::error_code&) noexcept;
+			Xenium::Window* windowCreate(const Xenium::SizeMm&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
 			Xenium::Window* windowCreate(const Xenium::SizePercent&, std::error_code&) noexcept;
+			Xenium::Window* windowCreate(const Xenium::SizePercent&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
 			Xenium::Window* windowCreate(const Xenium::SizePixel&, std::error_code&) noexcept;
+			Xenium::Window* windowCreate(const Xenium::SizePixel&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
 
 			// }}}
 
@@ -653,6 +656,8 @@ namespace zakero
 			void xcbEvent(const xcb_configure_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_expose_event_t*) noexcept;
 			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
+
+			std::error_code xcbWindowCreate(const uint32_t, xcb_create_window_value_list_t&, WindowId&, xcb_atom_t&) noexcept;
 
 			// }}}
 			// {{{ XCB : Atom
@@ -749,10 +754,13 @@ namespace zakero
 			std::pair<int32_t, int32_t> convertMmToPixel(const Xenium::Output&, float, float) const noexcept;
 			std::pair<int32_t, int32_t> convertPercentToPixel(const Xenium::Output&, float, float) const noexcept;
 
-			using ExposeMap = std::unordered_map<WindowId, bool>;
-			ExposeMap expose_map = {};
+			Window* createWindow(WindowId, xcb_atom_t&, const SizeUnit, const SizeMm&, const SizePercent&, const SizePixel&) noexcept;
 
-			void waitForExposeEvent(const WindowId) noexcept;
+			using WindowReadyMap = std::unordered_map<WindowId, bool>;
+			WindowReadyMap window_ready_map = {};
+
+			void setWindowReady(const WindowId) noexcept;
+			void waitForWindowReady(const WindowId) noexcept;
 
 			// }}}
 
@@ -1431,6 +1439,68 @@ namespace
 
 	constexpr uint8_t XCB_KEY_REPEAT = XCB_KEY_PRESS | 0x80;
 
+	const uint32_t Default_Value_Mask = 0
+		//| XCB_CW_BACK_PIXMAP       // Not Used
+		| XCB_CW_BACK_PIXEL        // Not Used
+		//| XCB_CW_BORDER_PIXMAP     // Not Used
+		//| XCB_CW_BORDER_PIXEL      // Not Used
+		| XCB_CW_BIT_GRAVITY
+		| XCB_CW_WIN_GRAVITY
+		| XCB_CW_BACKING_STORE
+		//| XCB_CW_BACKING_PLANES    // Not Used
+		//| XCB_CW_BACKING_PIXEL     // Not Used
+		//| XCB_CW_OVERRIDE_REDIRECT // Future?
+		| XCB_CW_SAVE_UNDER
+		| XCB_CW_EVENT_MASK
+		//| XCB_CW_DONT_PROPAGATE    // Future?
+		| XCB_CW_COLORMAP
+		//| XCB_CW_CURSOR            // Future?
+		;
+
+	xcb_create_window_value_list_t Default_Value_List =
+	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
+	,	.background_pixel      = 0
+	,	.border_pixmap         = XCB_BACK_PIXMAP_NONE
+	,	.border_pixel          = 0
+	,	.bit_gravity           = XCB_GRAVITY_CENTER
+	,	.win_gravity           = XCB_GRAVITY_NORTH_EAST
+	,	.backing_store         = XCB_BACKING_STORE_NOT_USEFUL
+	,	.backing_planes        = 0
+	,	.backing_pixel         = 0
+	,	.override_redirect     = 0
+	,	.save_under            = 0
+	,	.event_mask            = 0
+		                         | XCB_EVENT_MASK_KEY_PRESS
+		                         | XCB_EVENT_MASK_KEY_RELEASE
+		                         | XCB_EVENT_MASK_BUTTON_PRESS
+		                         | XCB_EVENT_MASK_BUTTON_RELEASE
+		                         | XCB_EVENT_MASK_ENTER_WINDOW
+		                         | XCB_EVENT_MASK_LEAVE_WINDOW
+		                         | XCB_EVENT_MASK_POINTER_MOTION
+		                         //| XCB_EVENT_MASK_POINTER_MOTION_HINT
+		                         //| XCB_EVENT_MASK_BUTTON_1_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_2_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_3_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_4_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_5_MOTION
+		                         //| XCB_EVENT_MASK_BUTTON_MOTION
+		                         //| XCB_EVENT_MASK_KEYMAP_STATE
+		                         | XCB_EVENT_MASK_EXPOSURE
+		                         | XCB_EVENT_MASK_VISIBILITY_CHANGE
+		                         | XCB_EVENT_MASK_STRUCTURE_NOTIFY
+		                         //| XCB_EVENT_MASK_RESIZE_REDIRECT
+		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+		                         | XCB_EVENT_MASK_FOCUS_CHANGE
+		                         //| XCB_EVENT_MASK_PROPERTY_CHANGE
+		                         //| XCB_EVENT_MASK_COLOR_MAP_CHANGE
+		                         //| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
+	,	.do_not_propogate_mask = XCB_EVENT_MASK_NO_EVENT
+	,	.colormap              = XCB_COPY_FROM_PARENT
+	,	.cursor                = 0
+	};
+
+	
 	/**
 	 * \brief Error Categories.
 	 *
@@ -2317,7 +2387,7 @@ std::cout << "RandR Event:     " << *event << '\n';
 					}
 					else
 					{
-std::cout << "Event:           " << *event << '\n';
+std::cout << "Unknown:         " << *event << '\n';
 					}
 			}
 
@@ -3136,8 +3206,8 @@ ZAKERO_XENIUM__DEBUG_VAR(this->output_data.map[output_id].name)
 /**
  * \brief Create a window.
  *
- * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * Create a new Window with the specified \p size.  A pointer to the Window 
+ * will be returned.  If there was a problem, a `nullptr` will returned.
  *
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
@@ -3150,132 +3220,47 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window
 	, std::error_code&                                 error ///< The error state
 	) noexcept
 {
-	error = ZAKERO_XENIUM__ERROR(Error_None);
+	return windowCreate(size, Default_Value_Mask, Default_Value_List, error);
+}
 
-	WindowId window_id = xcb_generate_id(this->connection);
 
-	uint32_t value_mask = 0
-		//| XCB_CW_BACK_PIXMAP       // Not Used
-		| XCB_CW_BACK_PIXEL        // Not Used
-		//| XCB_CW_BORDER_PIXMAP     // Not Used
-		//| XCB_CW_BORDER_PIXEL      // Not Used
-		| XCB_CW_BIT_GRAVITY
-		| XCB_CW_WIN_GRAVITY
-		| XCB_CW_BACKING_STORE
-		//| XCB_CW_BACKING_PLANES    // Not Used
-		//| XCB_CW_BACKING_PIXEL     // Not Used
-		//| XCB_CW_OVERRIDE_REDIRECT // Future?
-		| XCB_CW_SAVE_UNDER
-		| XCB_CW_EVENT_MASK
-		//| XCB_CW_DONT_PROPAGATE    // Future?
-		| XCB_CW_COLORMAP
-		//| XCB_CW_CURSOR            // Future?
-		;
+/**
+ * \brief Create a window.
+ *
+ * Create a new Window with the specified \p size and values.  The \p 
+ * value_mask and \p value_list work together.  The \p value_list is a 
+ * collection of values that will be applied to the Window.  The \p value_mask 
+ * bit field determines which values will be used in the \p value_list.
+ *
+ * The \p error parameter will be set to Error_None if the window was 
+ * successfully created or it will be set to an appropriate error code.
+ *
+ * \note The size of a window __must__ be greater than `0`.
+ *
+ * \return A pointer to the new Window or `nullptr` on error.
+ */
+Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size       ///< The window size
+	, const uint32_t                                   value_mask ///< The value mask
+	, xcb_create_window_value_list_t&                  value_list ///< The value list
+	, std::error_code&                                 error      ///< The error state
+	) noexcept
+{
+	WindowId   window_id;
+	xcb_atom_t atom;
+	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
 
-	xcb_create_window_value_list_t value_list =
-	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
-	,	.background_pixel      = 0
-	,	.border_pixmap         = XCB_BACK_PIXMAP_NONE
-	,	.border_pixel          = 0
-	,	.bit_gravity           = XCB_GRAVITY_CENTER
-	,	.win_gravity           = XCB_GRAVITY_NORTH_EAST
-	,	.backing_store         = XCB_BACKING_STORE_NOT_USEFUL
-	,	.backing_planes        = 0
-	,	.backing_pixel         = 0
-	,	.override_redirect     = 0
-	,	.save_under            = 0
-	,	.event_mask            = 0
-		                         | XCB_EVENT_MASK_KEY_PRESS
-		                         | XCB_EVENT_MASK_KEY_RELEASE
-		                         | XCB_EVENT_MASK_BUTTON_PRESS
-		                         | XCB_EVENT_MASK_BUTTON_RELEASE
-		                         | XCB_EVENT_MASK_ENTER_WINDOW
-		                         | XCB_EVENT_MASK_LEAVE_WINDOW
-		                         | XCB_EVENT_MASK_POINTER_MOTION
-		                         //| XCB_EVENT_MASK_POINTER_MOTION_HINT
-		                         //| XCB_EVENT_MASK_BUTTON_1_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_2_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_3_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_4_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_5_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_MOTION
-		                         //| XCB_EVENT_MASK_KEYMAP_STATE
-		                         | XCB_EVENT_MASK_EXPOSURE
-		                         | XCB_EVENT_MASK_VISIBILITY_CHANGE
-		                         | XCB_EVENT_MASK_STRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_RESIZE_REDIRECT
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-		                         | XCB_EVENT_MASK_FOCUS_CHANGE
-		                         //| XCB_EVENT_MASK_PROPERTY_CHANGE
-		                         //| XCB_EVENT_MASK_COLOR_MAP_CHANGE
-		                         //| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
-	,	.do_not_propogate_mask = XCB_EVENT_MASK_NO_EVENT
-	,	.colormap              = XCB_COPY_FROM_PARENT
-	,	.cursor                = 0
-	};
-
-	xcb_void_cookie_t cookie =
-		xcb_create_window_aux_checked(this->connection
-			, this->screen->root_depth      // depth
-			, window_id                     // requested id
-			, this->screen->root            // parent window id
-			, 0, 0                          // location x,y
-			, 1, 1                          // size width,height
-			, 0                             // border width
-			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
-			, this->screen->root_visual     // visual
-			, value_mask
-			, &value_list
-			);
-
-	xcb_generic_error_t generic_error;
-
-	if(requestCheckHasError(cookie, generic_error))
+	if(error)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
 		return nullptr;
 	}
 
-	xcb_atom_t atom	= atomCreateDeleteWindow(window_id
-		, generic_error
+	Window* window = createWindow(window_id
+		, atom
+		, SizeUnit::Millimeter
+		, size, {1, 1}, {1, 1}
 		);
 
-	if(atom == XCB_ATOM_NONE)
-	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
-		return nullptr;
-	}
-
-	{
-		std::lock_guard<std::mutex> lock(window_size_mutex);
-
-		window_size_map[window_id] =
-		{	.mm      = size
-		,	.percent = { 1, 1 }
-		,	.pixel   = { 1, 1 }
-		,	.unit    = SizeUnit::Millimeter
-		};
-	}
-
-	// --- All data has been created --- //
-	// ---  Now populate structures  --- //
-
-	window_delete_map[window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = atom
-	};
-
-	WindowData window_data =
-	{	.xenium    = this
-	,	.window_id = window_id
-	};
-	Window* window = new Window(&window_data);
-
-	this->window_map[window_id] = window;
-
-	// --- Wait for an expose event --- //
-	waitForExposeEvent(window_id);
+	waitForWindowReady(window_id);
 
 	return window;
 }
@@ -3298,132 +3283,47 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The w
 	, std::error_code&                                      error ///< The error state
 	) noexcept
 {
-	error = ZAKERO_XENIUM__ERROR(Error_None);
+	return windowCreate(size, Default_Value_Mask, Default_Value_List, error);
+}
 
-	WindowId window_id = xcb_generate_id(this->connection);
 
-	uint32_t value_mask = 0
-		//| XCB_CW_BACK_PIXMAP       // Not Used
-		| XCB_CW_BACK_PIXEL        // Not Used
-		//| XCB_CW_BORDER_PIXMAP     // Not Used
-		//| XCB_CW_BORDER_PIXEL      // Not Used
-		| XCB_CW_BIT_GRAVITY
-		| XCB_CW_WIN_GRAVITY
-		| XCB_CW_BACKING_STORE
-		//| XCB_CW_BACKING_PLANES    // Not Used
-		//| XCB_CW_BACKING_PIXEL     // Not Used
-		//| XCB_CW_OVERRIDE_REDIRECT // Future?
-		| XCB_CW_SAVE_UNDER
-		| XCB_CW_EVENT_MASK
-		//| XCB_CW_DONT_PROPAGATE    // Future?
-		| XCB_CW_COLORMAP
-		//| XCB_CW_CURSOR            // Future?
-		;
+/**
+ * \brief Create a window.
+ *
+ * Create a new Window with the specified \p size and values.  The \p 
+ * value_mask and \p value_list work together.  The \p value_list is a 
+ * collection of values that will be applied to the Window.  The \p value_mask 
+ * bit field determines which values will be used in the \p value_list.
+ *
+ * The \p error parameter will be set to Error_None if the window was 
+ * successfully created or it will be set to an appropriate error code.
+ *
+ * \note The size of a window __must__ be greater than `0`.
+ *
+ * \return A pointer to the new Window or `nullptr` on error.
+ */
+Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size       ///< The window size
+	, const uint32_t                                        value_mask ///< The value mask
+	, xcb_create_window_value_list_t&                       value_list ///< The value list
+	, std::error_code&                                      error      ///< The error state
+	) noexcept
+{
+	WindowId   window_id;
+	xcb_atom_t atom;
+	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
 
-	xcb_create_window_value_list_t value_list =
-	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
-	,	.background_pixel      = 0
-	,	.border_pixmap         = XCB_BACK_PIXMAP_NONE
-	,	.border_pixel          = 0
-	,	.bit_gravity           = XCB_GRAVITY_CENTER
-	,	.win_gravity           = XCB_GRAVITY_NORTH_EAST
-	,	.backing_store         = XCB_BACKING_STORE_NOT_USEFUL
-	,	.backing_planes        = 0
-	,	.backing_pixel         = 0
-	,	.override_redirect     = 0
-	,	.save_under            = 0
-	,	.event_mask            = 0
-		                         | XCB_EVENT_MASK_KEY_PRESS
-		                         | XCB_EVENT_MASK_KEY_RELEASE
-		                         | XCB_EVENT_MASK_BUTTON_PRESS
-		                         | XCB_EVENT_MASK_BUTTON_RELEASE
-		                         | XCB_EVENT_MASK_ENTER_WINDOW
-		                         | XCB_EVENT_MASK_LEAVE_WINDOW
-		                         | XCB_EVENT_MASK_POINTER_MOTION
-		                         //| XCB_EVENT_MASK_POINTER_MOTION_HINT
-		                         //| XCB_EVENT_MASK_BUTTON_1_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_2_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_3_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_4_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_5_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_MOTION
-		                         //| XCB_EVENT_MASK_KEYMAP_STATE
-		                         | XCB_EVENT_MASK_EXPOSURE
-		                         | XCB_EVENT_MASK_VISIBILITY_CHANGE
-		                         | XCB_EVENT_MASK_STRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_RESIZE_REDIRECT
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-		                         | XCB_EVENT_MASK_FOCUS_CHANGE
-		                         //| XCB_EVENT_MASK_PROPERTY_CHANGE
-		                         //| XCB_EVENT_MASK_COLOR_MAP_CHANGE
-		                         //| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
-	,	.do_not_propogate_mask = XCB_EVENT_MASK_NO_EVENT
-	,	.colormap              = XCB_COPY_FROM_PARENT
-	,	.cursor                = 0
-	};
-
-	xcb_void_cookie_t cookie =
-		xcb_create_window_aux_checked(this->connection
-			, this->screen->root_depth      // depth
-			, window_id                     // requested id
-			, this->screen->root            // parent window id
-			, 0, 0                          // location x,y
-			, 1, 1                          // size width,height
-			, 0                             // border width
-			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
-			, this->screen->root_visual     // visual
-			, value_mask
-			, &value_list
-			);
-
-	xcb_generic_error_t generic_error;
-
-	if(requestCheckHasError(cookie, generic_error))
+	if(error)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
 		return nullptr;
 	}
 
-	xcb_atom_t atom	= atomCreateDeleteWindow(window_id
-		, generic_error
+	Window* window = createWindow(window_id
+		, atom
+		, SizeUnit::Percent
+		, {1, 1}, size, {1, 1}
 		);
 
-	if(atom == XCB_ATOM_NONE)
-	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
-		return nullptr;
-	}
-
-	{
-		std::lock_guard<std::mutex> lock(window_size_mutex);
-
-		window_size_map[window_id] =
-		{	.mm      = { 1, 1 }
-		,	.percent = size
-		,	.pixel   = { 1, 1 }
-		,	.unit    = SizeUnit::Percent
-		};
-	}
-
-	// --- All data has been created --- //
-	// ---  Now populate structures  --- //
-
-	window_delete_map[window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = atom
-	};
-
-	WindowData window_data =
-	{	.xenium    = this
-	,	.window_id = window_id
-	};
-	Window* window = new Window(&window_data);
-
-	this->window_map[window_id] = window;
-
-	// --- Wait for an expose event --- //
-	waitForExposeEvent(window_id);
+	waitForWindowReady(window_id);
 
 	return window;
 }
@@ -3446,132 +3346,47 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
 	, std::error_code&                                    error ///< The error state
 	) noexcept
 {
-	error = ZAKERO_XENIUM__ERROR(Error_None);
+	return windowCreate(size, Default_Value_Mask, Default_Value_List, error);
+}
 
-	WindowId window_id = xcb_generate_id(this->connection);
 
-	uint32_t value_mask = 0
-		//| XCB_CW_BACK_PIXMAP       // Not Used
-		//| XCB_CW_BACK_PIXEL        // Not Used
-		//| XCB_CW_BORDER_PIXMAP     // Not Used
-		//| XCB_CW_BORDER_PIXEL      // Not Used
-		| XCB_CW_BIT_GRAVITY
-		| XCB_CW_WIN_GRAVITY
-		| XCB_CW_BACKING_STORE
-		//| XCB_CW_BACKING_PLANES    // Not Used
-		//| XCB_CW_BACKING_PIXEL     // Not Used
-		//| XCB_CW_OVERRIDE_REDIRECT // Future?
-		| XCB_CW_SAVE_UNDER
-		| XCB_CW_EVENT_MASK
-		//| XCB_CW_DONT_PROPAGATE    // Future?
-		| XCB_CW_COLORMAP
-		//| XCB_CW_CURSOR            // Future?
-		;
+/**
+ * \brief Create a window.
+ *
+ * Create a new Window with the specified \p size and values.  The \p 
+ * value_mask and \p value_list work together.  The \p value_list is a 
+ * collection of values that will be applied to the Window.  The \p value_mask 
+ * bit field determines which values will be used in the \p value_list.
+ *
+ * The \p error parameter will be set to Error_None if the window was 
+ * successfully created or it will be set to an appropriate error code.
+ *
+ * \note The size of a window __must__ be greater than `0`.
+ *
+ * \return A pointer to the new Window or `nullptr` on error.
+ */
+Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size       ///< The window size
+	, const uint32_t                                      value_mask ///< The value mask
+	, xcb_create_window_value_list_t&                     value_list ///< The value list
+	, std::error_code&                                    error      ///< The error state
+	) noexcept
+{
+	WindowId   window_id;
+	xcb_atom_t atom;
+	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
 
-	xcb_create_window_value_list_t value_list =
-	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
-	,	.background_pixel      = 0
-	,	.border_pixmap         = XCB_BACK_PIXMAP_NONE
-	,	.border_pixel          = 0
-	,	.bit_gravity           = XCB_GRAVITY_CENTER
-	,	.win_gravity           = XCB_GRAVITY_NORTH_EAST
-	,	.backing_store         = XCB_BACKING_STORE_NOT_USEFUL
-	,	.backing_planes        = 0
-	,	.backing_pixel         = 0
-	,	.override_redirect     = 0
-	,	.save_under            = 0
-	,	.event_mask            = 0
-		                         | XCB_EVENT_MASK_KEY_PRESS
-		                         | XCB_EVENT_MASK_KEY_RELEASE
-		                         | XCB_EVENT_MASK_BUTTON_PRESS
-		                         | XCB_EVENT_MASK_BUTTON_RELEASE
-		                         | XCB_EVENT_MASK_ENTER_WINDOW
-		                         | XCB_EVENT_MASK_LEAVE_WINDOW
-		                         | XCB_EVENT_MASK_POINTER_MOTION
-		                         //| XCB_EVENT_MASK_POINTER_MOTION_HINT
-		                         //| XCB_EVENT_MASK_BUTTON_1_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_2_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_3_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_4_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_5_MOTION
-		                         //| XCB_EVENT_MASK_BUTTON_MOTION
-		                         //| XCB_EVENT_MASK_KEYMAP_STATE
-		                         | XCB_EVENT_MASK_EXPOSURE
-		                         | XCB_EVENT_MASK_VISIBILITY_CHANGE
-		                         | XCB_EVENT_MASK_STRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_RESIZE_REDIRECT
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-		                         //| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-		                         | XCB_EVENT_MASK_FOCUS_CHANGE
-		                         //| XCB_EVENT_MASK_PROPERTY_CHANGE
-		                         //| XCB_EVENT_MASK_COLOR_MAP_CHANGE
-		                         //| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
-	,	.do_not_propogate_mask = XCB_EVENT_MASK_NO_EVENT
-	,	.colormap              = XCB_COPY_FROM_PARENT
-	,	.cursor                = 0
-	};
-
-	xcb_void_cookie_t cookie =
-		xcb_create_window_aux_checked(this->connection
-			, this->screen->root_depth      // depth
-			, window_id                     // requested id
-			, this->screen->root            // parent window id
-			, 0, 0                          // location x,y
-			, size.width, size.height       // size width,height
-			, 0                             // border width
-			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
-			, this->screen->root_visual     // visual
-			, value_mask
-			, &value_list
-			);
-
-	xcb_generic_error_t generic_error;
-
-	if(requestCheckHasError(cookie, generic_error))
+	if(error)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
 		return nullptr;
 	}
 
-	xcb_atom_t atom	= atomCreateDeleteWindow(window_id
-		, generic_error
+	Window* window = createWindow(window_id
+		, atom
+		, SizeUnit::Pixel
+		, {1, 1}, {1, 1}, size
 		);
 
-	if(atom == XCB_ATOM_NONE)
-	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
-		return nullptr;
-	}
-
-	{
-		std::lock_guard<std::mutex> lock(window_size_mutex);
-
-		window_size_map[window_id] =
-		{	.mm      = { 1, 1 }
-		,	.percent = { 1, 1 }
-		,	.pixel   = size
-		,	.unit    = SizeUnit::Pixel
-		};
-	}
-
-	// --- All data has been created --- //
-	// ---  Now populate structures  --- //
-
-	window_delete_map[window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = atom
-	};
-
-	WindowData window_data =
-	{	.xenium    = this
-	,	.window_id = window_id
-	};
-	Window* window = new Window(&window_data);
-
-	this->window_map[window_id] = window;
-
-	// --- Wait for an expose event --- //
-	waitForExposeEvent(window_id);
+	waitForWindowReady(window_id);
 
 	return window;
 }
@@ -4898,6 +4713,7 @@ std::cout << "Configue Notify: " << *event << '\n';
 			&& pixel.second == window_size.pixel.height
 			)
 		{
+			setWindowReady(event->window);
 			return;
 		}
 
@@ -4921,6 +4737,7 @@ std::cout << "Configue Notify: " << *event << '\n';
 			&& pixel.second == window_size.pixel.height
 			)
 		{
+			setWindowReady(event->window);
 			return;
 		}
 
@@ -4935,6 +4752,14 @@ std::cout << "Configue Notify: " << *event << '\n';
 	}
 	else
 	{
+		if(event->width == window_size.pixel.width
+			&& event->height == window_size.pixel.height
+			)
+		{
+			setWindowReady(event->window);
+			return;
+		}
+
 		auto mm = convertPixelToMm(output
 			, window_size.pixel.width
 			, window_size.pixel.height
@@ -4948,8 +4773,6 @@ std::cout << "Configue Notify: " << *event << '\n';
 			);
 
 		window_size.percent = {percent.first, percent.second};
-
-		return;
 	}
 
 	windowSizeSet(event->window, window_size.pixel);
@@ -4960,13 +4783,6 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
 std::cout << "Expose:          " << *event << '\n';
-	auto iter = expose_map.find(event->window);
-	if(iter == std::end(expose_map))
-	{
-		return;
-	}
-
-	iter->second = true;
 }
 
 
@@ -4974,6 +4790,53 @@ void Xenium::xcbEvent(const xcb_map_notify_event_t* event
 	) noexcept
 {
 std::cout << "Map Notify:      " << *event << '\n';
+}
+
+
+std::error_code Xenium::xcbWindowCreate(const uint32_t value_mask ///< The value mask
+	, xcb_create_window_value_list_t&              value_list ///< The value list
+	, WindowId&                                    window_id
+	, xcb_atom_t&                                  atom
+	) noexcept
+{
+	window_id = xcb_generate_id(this->connection);
+
+	xcb_void_cookie_t cookie =
+		xcb_create_window_aux_checked(this->connection
+			, this->screen->root_depth      // depth
+			, window_id                     // requested id
+			, this->screen->root            // parent window id
+			, 0, 0                          // location x,y
+			, 1, 1                          // size width,height
+			, 0                             // border width
+			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
+			, this->screen->root_visual     // visual
+			, value_mask
+			, &value_list
+			);
+
+	xcb_generic_error_t generic_error;
+
+	if(requestCheckHasError(cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	atom = atomCreateDeleteWindow(window_id
+		, generic_error
+		);
+
+	if(atom == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+
 }
 
 // }}}
@@ -5439,20 +5302,67 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
 }
 
 
-void Xenium::waitForExposeEvent(const WindowId window_id
+Xenium::Window* Xenium::createWindow(WindowId window_id
+	, xcb_atom_t&                         atom
+	, const Xenium::SizeUnit              size_unit
+	, const SizeMm&                       size_mm
+	, const SizePercent&                  size_percent
+	, const SizePixel&                    size_pixel
 	) noexcept
 {
-	expose_map[window_id] = false;
+	std::lock_guard<std::mutex> lock(window_size_mutex);
+
+	window_size_map[window_id] =
+	{	.mm      = size_mm
+	,	.percent = size_percent
+	,	.pixel   = size_pixel
+	,	.unit    = size_unit
+	};
+
+	window_delete_map[window_id] =
+	{	.close_request_lambda = Lambda_DoNothing
+	,	.atom                 = atom
+	};
+
+	WindowData window_data =
+	{	.xenium    = this
+	,	.window_id = window_id
+	};
+	Window* window = new Window(&window_data);
+
+	this->window_map[window_id] = window;
+
+	return window;
+}
+
+
+void Xenium::setWindowReady(const WindowId window_id
+	) noexcept
+{
+	auto iter = window_ready_map.find(window_id);
+	if(iter == std::end(window_ready_map))
+	{
+		return;
+	}
+
+	iter->second = true;
+}
+
+
+void Xenium::waitForWindowReady(const WindowId window_id
+	) noexcept
+{
+	window_ready_map[window_id] = false;
 
 	xcb_map_window(this->connection, window_id);
 	xcb_flush(this->connection);
 
-	while(expose_map[window_id] == false)
+	while(window_ready_map[window_id] == false)
 	{
 		usleep(42);
 	}
 
-	expose_map.erase(window_id);
+	window_ready_map.erase(window_id);
 }
 
 // }}}

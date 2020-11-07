@@ -156,6 +156,13 @@
  * ,	{ "version",     "1.0.0"                      }
  * ,	{ "intent",      "=Locate Allocation Delays=" }
  * });
+ * // --- Or --- //
+ * std::filesystem::path myapp_profile = logging_path / "issue_42.profile";
+ * ZAKERO_PROFILER_INIT(myapp_profile,
+ * {	{ "application", "MyApp"                      }
+ * ,	{ "version",     "1.0.0"                      }
+ * ,	{ "intent",      "=Locate Allocation Delays=" }
+ * });
  * ~~~
  *
  * __Step 3__
@@ -207,6 +214,7 @@
  * __0.9.1__
  * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
  * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
+ * - Improved ZAKERO_PROFILER_INIT() to use std::filesystem instead of strings.
  *
  * __0.9.0__
  * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
@@ -234,7 +242,6 @@
  * \author Andrew "Zakero" Moore
  * 	- Original Author
  *
- * \todo Add support for std::filesystem
  * \todo Add error handling
  * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
@@ -245,6 +252,7 @@
  */
 
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -535,7 +543,7 @@ namespace zakero
 			~Profiler() noexcept;
 
 			static void init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
-			static void init(std::string, zakero::Profiler::MetaData = {}) noexcept;
+			static void init(const std::filesystem::path, zakero::Profiler::MetaData = {}) noexcept;
 
 			static void activate() noexcept;
 			static void deactivate() noexcept;
@@ -679,23 +687,36 @@ Profiler::~Profiler() noexcept
 /**
  * \brief Initialize the Profiler.
  *
- * An output stream will be created using the provided \p file_name.  The 
- * Profiler will maintain the life-time of the output stream.
+ * An output stream will be created using the provided \p path.  The Profiler 
+ * will maintain the life-time of the output stream.
  *
  * Any information in the \p meta_data will be immediately written to the 
  * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
  * for information on keys that will be over-written.
  */
-void zakero::Profiler::init(std::string file_name ///< The file name
-	, zakero::Profiler::MetaData    meta_data ///< Extra meta data
+void zakero::Profiler::init(const std::filesystem::path path      ///< The file path
+	, zakero::Profiler::MetaData                    meta_data ///< Extra meta data
 	) noexcept
 {
 	if(zakero_profiler.stream != nullptr)
 	{
+		printf("Already have an open stream\n");
 		return;
 	}
 
-	zakero_profiler.file_output.open(file_name);
+	if(path.has_filename() == false)
+	{
+		printf("Path does not have a filename\n");
+		return;
+	}
+
+	zakero_profiler.file_output.open(path);
+
+	if(zakero_profiler.file_output.is_open() == false)
+	{
+		printf("Can't open stream\n");
+		return;
+	}
 
 	init(zakero_profiler.file_output, meta_data);
 }
@@ -718,6 +739,13 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 
 	if(zakero_profiler.stream != nullptr)
 	{
+		printf("Already have an open stream\n");
+		return;
+	}
+
+	if(output_stream.good() == false)
+	{
+		printf("Stream is not in a good state\n");
 		return;
 	}
 

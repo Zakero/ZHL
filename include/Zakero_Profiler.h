@@ -213,8 +213,10 @@
  * \parversion{zakero_profiler}
  * __0.9.1__
  * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
- * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
  * - Improved ZAKERO_PROFILER_INIT() to use std::filesystem instead of strings.
+ * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
+ * - Added MetaData support to ZAKERO_PROFILER_DURATION()
+ * - Added MetaData support to ZAKERO_PROFILER_INSTANT()
  *
  * __0.9.0__
  * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 

@@ -26,6 +26,7 @@
  * - Added ZAKERO_DELETE()
  * - Added ZAKERO_FREE()
  * - Added ZAKERO_UNUSED()
+ * - Added ZAKERO_PID
  *
  * __v0.9.1__
  * - Added macro ZAKERO_STEADY_TIME_NOW()
@@ -158,13 +159,23 @@
  * \def ZAKERO_PID
  *
  * \brief Get the Process Id.
+ *
+ * Get the ID of the current process.
+ *
+ * \parcode
+ * std::cout << "My PID is " << std::to_string(ZAKERO_PID) << '\n';
+ * \endparcode
+ *
+ * \return The Process Id (`pid_t`)
+ *
+ * \note POSIX.1-2008
  */
 #ifdef __linux__
-#include <sys/types.h>
-#include <unistd.h>
-#define ZAKERO_PID getpid()
+#	include <sys/types.h>
+#	include <unistd.h>
+#	define ZAKERO_PID getpid()
 #else
-#define ZAKERO_PID -1
+#	define ZAKERO_PID (pid_t)-1
 #endif
 
 /**

@@ -1,5 +1,5 @@
 /*
-g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-randr -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
+g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-icccm -lxcb-randr -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
  */
 
 /*
@@ -54,16 +54,27 @@ int main()
 	/*
 	zakero::Xenium::SizeMm size{40, 40};
 	zakero::Xenium::SizePercent size{0.5, 0.5};
-	zakero::Xenium::SizePixel size{400, 400};
-	*/
 	zakero::Xenium::SizeMm size{16.0 * 15, 9.0 * 15};
+	zakero::Xenium::SizePixel size{450, 450};
+	*/
+	zakero::Xenium::SizePixel size{450, 450};
 	auto* window = xenium->windowCreate(size, error);
 	if(error)
 	{
 		std::cout << error << '\n';
 	}
-	window->setClass("Xenium : Manual_Window");
-	window->setTitle("Xenium");
+	window->classSet("Xenium : Manual_Window");
+	window->titleSet("Xenium Test");
+	/*
+	window->sizeSet(zakero::Xenium::SizePixel{100, 100});
+	window->sizeSetMinMax(
+		zakero::Xenium::SizePixel{400, 400}, zakero::Xenium::SizePixel{500, 500}
+		zakero::Xenium::SizeMm{30, 30}, zakero::Xenium::SizeMm{50, 50}
+		);
+	*/
+	window->sizeSetMinMax(
+		zakero::Xenium::SizePixel{400, 400}, zakero::Xenium::SizePixel{500, 500}
+		);
 
 	bool time_to_die = false;
 	window->onCloseRequest([&]()

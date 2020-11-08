@@ -119,7 +119,7 @@
  * 		return 1;
  * 	}
  * 
- * 	window->setTitle("Xenium");
+ * 	window->titleSet("Xenium");
  * 
  * 	bool time_to_die = false;
  * 	window->onCloseRequest([&]()
@@ -168,6 +168,7 @@
 
 // X11/XCB
 #include <xcb/xcb.h>
+#include <xcb/xcb_icccm.h>
 #include <xcb/randr.h>
 
 // Zakero
@@ -214,8 +215,8 @@
 	X(Error_RandR_Output_Info_Not_Found            , 13 , "XCB RandR Output Information was not found"                       ) \
 	X(Error_RandR_CRTC_Info_Not_Found              , 14 , "XCB RandR CRTC Information was not found"                         ) \
 	X(Error_RandR_Output_Info_Is_Incomplete        , 15 , "XCB RandR Output Information does not have enough data"           ) \
-	X(Error_Minimum_Size_Greater_Than_Maximum_Size , 92 , "The minimum window size is larger than the maximum window size."  ) \
-	X(Error_Window_Size_Too_Small                  , 99 , "The window size was too small."                                   ) \
+	X(Error_Window_Size_Too_Small                  , 16 , "The window size was too small."                                   ) \
+	X(Error_Minimum_Size_Greater_Than_Maximum_Size , 17 , "The minimum window size is larger than the maximum window size."  ) \
 
 	/* --- To Be Deleted --- */
 	/*
@@ -242,6 +243,8 @@ namespace zakero
 			static constexpr int name_ = val_;
 			ZAKERO_XENIUM__ERROR_DATA
 #undef X
+
+			static constexpr int32_t Window_Size_Minimum = 100;
 
 			virtual ~Xenium() noexcept;
 
@@ -484,17 +487,23 @@ namespace zakero
 
 					// {{{ Configuration
 
-					void                 setClass(const std::string&) noexcept;
-					void                 setTitle(const std::string&) noexcept;
-					std::error_code      setDecorations(const Xenium::WindowDecorations) noexcept;
-					std::error_code      setSize(const Xenium::SizeMm&) noexcept;
-					std::error_code      setSize(const Xenium::SizePercent&) noexcept;
-					std::error_code      setSize(const Xenium::SizePixel&) noexcept;
-					std::error_code      setSizeMinMax(const Xenium::SizeMm&, const Xenium::SizeMm&) noexcept;
-					std::error_code      setSizeMinMax(const Xenium::SizePercent&, const Xenium::SizePercent&) noexcept;
-					std::error_code      setSizeMinMax(const Xenium::SizePixel&, const Xenium::SizePixel&) noexcept;
-
+					void                 classSet(const std::string&) noexcept;
+					void                 titleSet(const std::string&) noexcept;
+					std::error_code      decorationsSet(const Xenium::WindowDecorations) noexcept;
 					uint8_t              bytesPerPixel() const noexcept;
+
+					// }}}
+					// {{{ Size
+
+					std::error_code      sizeSet(const Xenium::SizeMm&) noexcept;
+					std::error_code      sizeSet(const Xenium::SizePercent&) noexcept;
+					std::error_code      sizeSet(const Xenium::SizePixel&) noexcept;
+					std::error_code      sizeSetMinMax(const Xenium::SizeMm&, const Xenium::SizeMm&) noexcept;
+					std::error_code      sizeSetMinMax(const Xenium::SizePercent&, const Xenium::SizePercent&) noexcept;
+					std::error_code      sizeSetMinMax(const Xenium::SizePixel&, const Xenium::SizePixel&) noexcept;
+					void                 sizeOnChange(Xenium::LambdaSizeMm) noexcept;
+					void                 sizeOnChange(Xenium::LambdaSizePercent) noexcept;
+					void                 sizeOnChange(Xenium::LambdaSizePixel) noexcept;
 
 					// }}}
 					// {{{ Window Mode
@@ -560,9 +569,6 @@ namespace zakero
 					void                 onCloseRequest(Xenium::Lambda) noexcept;
 					void                 onDecorationsChange(Xenium::LambdaWindowDecorations) noexcept;
 					void                 onFocusChange(Xenium::LambdaBool) noexcept;
-					void                 onSizeChange(Xenium::LambdaSizeMm) noexcept;
-					void                 onSizeChange(Xenium::LambdaSizePercent) noexcept;
-					void                 onSizeChange(Xenium::LambdaSizePixel) noexcept;
 
 					// }}}
 
@@ -657,7 +663,7 @@ namespace zakero
 			void xcbEvent(const xcb_expose_event_t*) noexcept;
 			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
 
-			std::error_code xcbWindowCreate(const uint32_t, xcb_create_window_value_list_t&, WindowId&, xcb_atom_t&) noexcept;
+			std::error_code xcbWindowCreate(const SizePixel&, const uint32_t, xcb_create_window_value_list_t&, WindowId&, xcb_atom_t&) noexcept;
 
 			// }}}
 			// {{{ XCB : Atom
@@ -745,8 +751,10 @@ namespace zakero
 			void windowDestroy(WindowId) noexcept;
 			bool windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
 			bool windowPropertySet(WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
-
-			// }}}
+			void windowResizeTo(const Output&, WindowSize&, const xcb_configure_notify_event_t*) noexcept;
+			        
+			std::error_code windowSizeSetMinMax(const WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
+                                
 			// {{{ Utility
 
 			std::pair<float, float>     convertPixelToMm(const Xenium::Output&, int32_t, int32_t) const noexcept;
@@ -754,7 +762,7 @@ namespace zakero
 			std::pair<int32_t, int32_t> convertMmToPixel(const Xenium::Output&, float, float) const noexcept;
 			std::pair<int32_t, int32_t> convertPercentToPixel(const Xenium::Output&, float, float) const noexcept;
 
-			Window* createWindow(WindowId, xcb_atom_t&, const SizeUnit, const SizeMm&, const SizePercent&, const SizePixel&) noexcept;
+			Window* createWindow(WindowId, xcb_atom_t&, const Xenium::OutputId, const SizeUnit, const SizeMm&, const SizePercent&, const SizePixel&) noexcept;
 
 			using WindowReadyMap = std::unordered_map<WindowId, bool>;
 			WindowReadyMap window_ready_map = {};
@@ -1633,7 +1641,6 @@ namespace
 	 *
 	 * \return An error_code.
 	 *
-	 * \todo The check if \p min is > 0 may be unneeded.
 	 * \todo Constraints would be nice, but not required.
 	 */
 	template<class Type ///< A Size* type
@@ -1651,16 +1658,14 @@ namespace
 			return ZAKERO_XENIUM__ERROR(Xenium::Error_Window_Size_Too_Small);
 		}
 
-		if((min.width > 0)
-			&& (max.width > 0)
+		if((max.width > 0)
 			&& (min.width > max.width)
 			)
 		{
 			return ZAKERO_XENIUM__ERROR(Xenium::Error_Minimum_Size_Greater_Than_Maximum_Size);
 		}
 
-		if((min.height > 0)
-			&& (max.height > 0)
+		if((max.height > 0)
 			&& (min.height > max.height)
 			)
 		{
@@ -3239,15 +3244,39 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
-Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size       ///< The window size
+Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The window size
 	, const uint32_t                                   value_mask ///< The value mask
 	, xcb_create_window_value_list_t&                  value_list ///< The value list
 	, std::error_code&                                 error      ///< The error state
 	) noexcept
 {
+	OutputId    output_id;
+	SizePercent size_percent;
+	SizePixel   size_pixel;
+
+	{
+		std::lock_guard<std::mutex> od_lock(output_data.mutex);
+
+		output_id      = output_data.map.begin()->first;
+		Output& output = output_data.map.begin()->second;
+
+		auto pixel = convertMmToPixel(output
+			, size_mm.width
+			, size_mm.height
+			);
+		size_pixel = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, size_pixel.width
+			, size_pixel.height
+			);
+		size_percent = {percent.first, percent.second};
+	}
+
 	WindowId   window_id;
 	xcb_atom_t atom;
-	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
+
+	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
 
 	if(error)
 	{
@@ -3256,8 +3285,11 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size       ///< The w
 
 	Window* window = createWindow(window_id
 		, atom
+		, output_id
 		, SizeUnit::Millimeter
-		, size, {1, 1}, {1, 1}
+		, size_mm
+		, size_percent
+		, size_pixel
 		);
 
 	waitForWindowReady(window_id);
@@ -3302,15 +3334,39 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The w
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
-Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size       ///< The window size
-	, const uint32_t                                        value_mask ///< The value mask
-	, xcb_create_window_value_list_t&                       value_list ///< The value list
-	, std::error_code&                                      error      ///< The error state
+Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///< The window size
+	, const uint32_t                                        value_mask   ///< The value mask
+	, xcb_create_window_value_list_t&                       value_list   ///< The value list
+	, std::error_code&                                      error        ///< The error state
 	) noexcept
 {
+	OutputId  output_id;
+	SizeMm    size_mm;
+	SizePixel size_pixel;
+
+	{
+		std::lock_guard<std::mutex> od_lock(output_data.mutex);
+
+		output_id      = output_data.map.begin()->first;
+		Output& output = output_data.map.begin()->second;
+
+		auto pixel = convertPercentToPixel(output
+			, size_percent.width
+			, size_percent.height
+			);
+		size_pixel = {pixel.first, pixel.second};
+
+		auto mm = convertPixelToMm(output
+			, size_pixel.width
+			, size_pixel.height
+			);
+		size_mm = {mm.first, mm.second};
+	}
+
 	WindowId   window_id;
 	xcb_atom_t atom;
-	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
+
+	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
 
 	if(error)
 	{
@@ -3319,8 +3375,11 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size       ///< 
 
 	Window* window = createWindow(window_id
 		, atom
+		, output_id
 		, SizeUnit::Percent
-		, {1, 1}, size, {1, 1}
+		, size_mm
+		, size_percent
+		, size_pixel
 		);
 
 	waitForWindowReady(window_id);
@@ -3365,15 +3424,39 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
-Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size       ///< The window size
+Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< The window size
 	, const uint32_t                                      value_mask ///< The value mask
 	, xcb_create_window_value_list_t&                     value_list ///< The value list
 	, std::error_code&                                    error      ///< The error state
 	) noexcept
 {
+	OutputId    output_id;
+	SizeMm      size_mm;
+	SizePercent size_percent;
+
+	{
+		std::lock_guard<std::mutex> od_lock(output_data.mutex);
+
+		output_id      = output_data.map.begin()->first;
+		Output& output = output_data.map.begin()->second;
+
+		auto mm = convertPixelToMm(output
+			, size_pixel.width
+			, size_pixel.height
+			);
+		size_mm = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, size_pixel.width
+			, size_pixel.height
+			);
+		size_percent = {percent.first, percent.second};
+	}
+
 	WindowId   window_id;
 	xcb_atom_t atom;
-	error = xcbWindowCreate(value_mask, value_list, window_id, atom);
+
+	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
 
 	if(error)
 	{
@@ -3382,8 +3465,11 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size       ///< Th
 
 	Window* window = createWindow(window_id
 		, atom
+		, output_id
 		, SizeUnit::Pixel
-		, {1, 1}, {1, 1}, size
+		, size_mm
+		, size_percent
+		, size_pixel
 		);
 
 	waitForWindowReady(window_id);
@@ -3605,7 +3691,7 @@ Xenium::Window::~Window()
  * \note See http://standards.freedesktop.org/desktop-entry-spec for more 
  * details.
  */
-void Xenium::Window::setClass(const std::string& class_name ///< The class name
+void Xenium::Window::classSet(const std::string& class_name ///< The class name
 	) noexcept
 {
 	bool                success;
@@ -3630,7 +3716,7 @@ void Xenium::Window::setClass(const std::string& class_name ///< The class name
  * The window's title can be changed by using this method.  Changing the title 
  * does not change the window's name.
  */
-void Xenium::Window::setTitle(const std::string& title ///< The window title
+void Xenium::Window::titleSet(const std::string& title ///< The window title
 	) noexcept
 {
 	bool                success;
@@ -3668,7 +3754,7 @@ void Xenium::Window::setTitle(const std::string& title ///< The window title
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Xenium::Window::setDecorations(const Xenium::WindowDecorations decorations ///< The requested decorations
+std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations decorations ///< The requested decorations
 	) noexcept
 {
 	if(decorations == WindowDecorations::Client_Side)
@@ -3732,6 +3818,8 @@ void Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The
 	return;
 }
 
+// }}}
+// {{{ Window : Size
 
 /**
  * \brief Set the window size.
@@ -3749,57 +3837,7 @@ void Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Xenium::Window::setSize(const Xenium::SizeMm& size ///< The %Window size
-	) noexcept
-{
-	ZAKERO_UNUSED(size);
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Set the window size.
- *
- * The window will be resized to the requested \p size.
- * 
- * Changing the size in this manner ignores the %Window's minimum and maximum 
- * size settings.  This can result in strange behavior when a user then 
- * attempts to manually resize the %Window.
- *
- * \note The size of a window __must__ be greater than `0`.
- *
- * \note This method does __not__ trigger the Resize Event.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- */
-std::error_code Xenium::Window::setSize(const Xenium::SizePercent& size ///< The %Window size
-	) noexcept
-{
-	ZAKERO_UNUSED(size);
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Set the window size.
- *
- * The window will be resized to the requested \p size.
- * 
- * Changing the size in this manner ignores the %Window's minimum and maximum 
- * size settings.  This can result in strange behavior when a user then 
- * attempts to manually resize the %Window.
- *
- * \note The size of a window __must__ be greater than `0`.
- *
- * \note This method does __not__ trigger the Resize Event.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- */
-std::error_code Xenium::Window::setSize(const Xenium::SizePixel& size ///< The %Window size
+std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
 	) noexcept
 {
 	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
@@ -3808,7 +3846,155 @@ std::error_code Xenium::Window::setSize(const Xenium::SizePixel& size ///< The %
 
 	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
+	// --- Convert to a size in pixels and validate --- //
+
 	WindowSize& window_size = xenium->window_size_map[window_id];
+	window_size.unit = SizeUnit::Millimeter;
+
+	auto pixel = xenium->convertMmToPixel(output
+		, size.width
+		, size.height
+		);
+
+	if(pixel.first < Window_Size_Minimum
+		|| pixel.second < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	// --- Update the Window Size --- //
+
+	window_size.mm = size;
+
+	if(pixel.first == window_size.pixel.width
+		&& pixel.second == window_size.pixel.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	window_size.pixel = {pixel.first, pixel.second};
+
+	auto percent = xenium->convertPixelToMm(output
+		, window_size.pixel.width
+		, window_size.pixel.height
+		);
+	window_size.percent = {percent.first, percent.second};
+
+	// --- Resize the Window --- //
+
+	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the window size.
+ *
+ * The window will be resized to the requested \p size.
+ * 
+ * Changing the size in this manner ignores the %Window's minimum and maximum 
+ * size settings.  This can result in strange behavior when a user then 
+ * attempts to manually resize the %Window.
+ *
+ * \note The size of a window __must__ be greater than `0`.
+ *
+ * \note This method does __not__ trigger the Resize Event.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ */
+std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
+	) noexcept
+{
+	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+
+	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
+
+	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+
+	// --- Convert to a size in pixels and validate --- //
+
+	WindowSize& window_size = xenium->window_size_map[window_id];
+	window_size.unit = SizeUnit::Percent;
+
+	auto pixel = xenium->convertPercentToPixel(output
+		, size.width
+		, size.height
+		);
+
+	if(pixel.first < Window_Size_Minimum
+		|| pixel.second < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	// --- Update the Window Size --- //
+
+	window_size.percent = size;
+
+	if(pixel.first == window_size.pixel.width
+		&& pixel.second == window_size.pixel.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	window_size.pixel = {pixel.first, pixel.second};
+
+	auto mm = xenium->convertPixelToMm(output
+		, window_size.pixel.width
+		, window_size.pixel.height
+		);
+	window_size.mm = {mm.first, mm.second};
+
+	// --- Resize the Window --- //
+
+	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the window size.
+ *
+ * The window will be resized to the requested \p size.
+ * 
+ * Changing the size in this manner ignores the %Window's minimum and maximum 
+ * size settings.  This can result in strange behavior when a user then 
+ * attempts to manually resize the %Window.
+ *
+ * \note The size of a window __must__ be greater than `0`.
+ *
+ * \note This method does __not__ trigger the Resize Event.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ */
+std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %Window size
+	) noexcept
+{
+	if(size.width < Window_Size_Minimum
+		|| size.height < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+
+	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
+
+	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+
+	// --- Update the Window Size --- //
+
+	WindowSize& window_size = xenium->window_size_map[window_id];
+	window_size.unit = Xenium::SizeUnit::Pixel;
 
 	if(window_size.pixel.width == size.width
 		&& window_size.pixel.height == size.height
@@ -3819,13 +4005,21 @@ std::error_code Xenium::Window::setSize(const Xenium::SizePixel& size ///< The %
 
 	window_size.pixel = size;
 
-	auto mm = xenium->convertPixelToMm(output, size.width, size.height);
+	auto mm = xenium->convertPixelToMm(output
+		, size.width
+		, size.height
+		);
 	window_size.mm = {mm.first, mm.second};
 
-	auto percent = xenium->convertPixelToPercent(output, size.width, size.height);
+	auto percent = xenium->convertPixelToPercent(output
+		, size.width
+		, size.height
+		);
 	window_size.percent = {percent.first, percent.second};
 
-	std::error_code error = xenium->windowSizeSet(window_id, size);
+	// --- Resize the Window --- //
+
+	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
 
 	return error;
 }
@@ -3842,14 +4036,54 @@ std::error_code Xenium::Window::setSize(const Xenium::SizePixel& size ///< The %
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Xenium::Window::setSizeMinMax(const Xenium::SizeMm& size_min ///< The minimum size
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///< The minimum size
 	, const Xenium::SizeMm&                                     size_max ///< The maximum size
 	) noexcept
 {
-	ZAKERO_UNUSED(size_min);
-	ZAKERO_UNUSED(size_max);
+	std::error_code error;
 
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	error = validateMinMax<Xenium::SizeMm>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	{
+		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+
+		WindowSize& window_size = xenium->window_size_map[window_id];
+		window_size.unit = Xenium::SizeUnit::Millimeter;
+	}
+
+	SizePixel minimum;
+	SizePixel maximum;
+
+	{
+		std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+
+		Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
+
+		auto min = xenium->convertMmToPixel(output
+			, size_min.width
+			, size_min.height
+			);
+		minimum = {min.first, min.second};
+
+		auto max = xenium->convertMmToPixel(output
+			, size_max.width
+			, size_max.height
+			);
+		maximum = {max.first, max.second};
+	}
+
+	error = xenium->windowSizeSetMinMax(window_id
+		, minimum.width
+		, minimum.height
+		, maximum.width
+		, maximum.height
+		);
+
+	return error;
 }
 
 
@@ -3864,14 +4098,54 @@ std::error_code Xenium::Window::setSizeMinMax(const Xenium::SizeMm& size_min ///
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
  */
-std::error_code Xenium::Window::setSizeMinMax(const Xenium::SizePercent& size_min ///< The minimum size
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_min ///< The minimum size
 	, const Xenium::SizePercent&                                     size_max ///< The maximum size
 	) noexcept
 {
-	ZAKERO_UNUSED(size_min);
-	ZAKERO_UNUSED(size_max);
+	std::error_code error;
 
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	error = validateMinMax<Xenium::SizePercent>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	{
+		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+
+		WindowSize& window_size = xenium->window_size_map[window_id];
+		window_size.unit = Xenium::SizeUnit::Percent;
+	}
+
+	SizePixel minimum;
+	SizePixel maximum;
+
+	{
+		std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+
+		Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
+
+		auto min = xenium->convertPercentToPixel(output
+			, size_min.width
+			, size_min.height
+			);
+		minimum = {min.first, min.second};
+
+		auto max = xenium->convertPercentToPixel(output
+			, size_max.width
+			, size_max.height
+			);
+		maximum = {max.first, max.second};
+	}
+
+	error = xenium->windowSizeSetMinMax(window_id
+		, minimum.width
+		, minimum.height
+		, maximum.width
+		, maximum.height
+		);
+
+	return error;
 }
 
 
@@ -3886,14 +4160,174 @@ std::error_code Xenium::Window::setSizeMinMax(const Xenium::SizePercent& size_mi
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
  */
-std::error_code Xenium::Window::setSizeMinMax(const Xenium::SizePixel& size_min ///< The minimum size
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min ///< The minimum size
 	, const Xenium::SizePixel&                                     size_max ///< The maximum size
 	) noexcept
 {
-	ZAKERO_UNUSED(size_min);
-	ZAKERO_UNUSED(size_max);
+	std::error_code error;
+
+	error = validateMinMax<Xenium::SizePixel>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	{
+		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+
+		WindowSize& window_size = xenium->window_size_map[window_id];
+		window_size.unit = Xenium::SizeUnit::Pixel;
+	}
+
+	error = xenium->windowSizeSetMinMax(window_id
+		, size_min.width
+		, size_min.height
+		, size_max.width
+		, size_max.height
+		);
+
+	return error;
+}
+
+
+std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id
+	, const int32_t                                    min_width
+	, const int32_t                                    min_height
+	, const int32_t                                    max_width
+	, const int32_t                                    max_height
+	) noexcept
+{
+	xcb_get_property_cookie_t property_cookie =
+		xcb_get_property(this->connection
+			, 0                        // delete
+			, window_id                // window
+			, XCB_ATOM_WM_NORMAL_HINTS // property
+			, XCB_ATOM_WM_SIZE_HINTS   // type
+			, 0                        // offset to data (32-bit)
+			, 18                       // number of 32-bit values
+			);
+
+	xcb_generic_error_t* error_ptr = nullptr;
+	xcb_get_property_reply_t* property_reply =
+		xcb_get_property_reply(this->connection
+			, property_cookie
+			, &error_ptr
+			);
+	if(error_ptr)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << *error_ptr << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	xcb_size_hints_t* size_hints =
+		(xcb_size_hints_t*)xcb_get_property_value(property_reply);
+
+	if(min_width == 0 && min_height == 0)
+	{
+		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MIN_SIZE);
+	}
+	else
+	{
+		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MIN_SIZE;
+	}
+
+	size_hints->min_width  = min_width;
+	size_hints->min_height = min_height;
+
+	if(max_width == 0 && max_height == 0)
+	{
+		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MAX_SIZE);
+	}
+	else
+	{
+		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MAX_SIZE;
+	}
+
+	size_hints->max_width  = max_width;
+	size_hints->max_height = max_height;
+
+	xcb_void_cookie_t cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE
+			, window_id
+			, XCB_ATOM_WM_NORMAL_HINTS
+			, XCB_ATOM_WM_SIZE_HINTS
+			, 32 // 32-bit values
+			, 18 // 18 values
+			, size_hints
+			);
+
+	xcb_generic_error_t generic_error;
+
+	if(requestCheckHasError(cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
 }
 
 // }}}
@@ -4250,66 +4684,6 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
 
 
 /**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::onSizeChange(Xenium::LambdaSizeMm lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
-
-
-/**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::onSizeChange(Xenium::LambdaSizePercent lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
-
-
-/**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::onSizeChange(Xenium::LambdaSizePixel lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
-
-
-/**
  * \brief Respond to "Pointer Button" events.
  *
  * When the user clicks on a _mouse button_ or some other pointer device, it 
@@ -4631,6 +5005,133 @@ std::error_code Xenium::windowSizeSet(const WindowId window_id
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
+
+void Xenium::windowResizeTo(const Output&     output
+	, WindowSize&                         window_size
+	, const xcb_configure_notify_event_t* event ///! XCB Event
+	) noexcept
+{
+	bool update_size = false;
+	//bool update_min_max = false;
+
+	//SizePixel size_min = {0, 0};
+	//SizePixel size_max = {0, 0};
+
+	if(window_size.unit == SizeUnit::Millimeter)
+	{
+		auto pixel = convertMmToPixel(output
+			, window_size.mm.width
+			, window_size.mm.height
+			);
+
+		if(pixel.first != window_size.pixel.width
+			|| pixel.second != window_size.pixel.height
+			)
+		{
+			update_size = true;
+		}
+
+		window_size.pixel = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, pixel.first
+			, pixel.second
+			);
+		window_size.percent = {percent.first, percent.second};
+
+	//	if(window_size.mm_minimum.width > 0
+	//		|| window_size.mm_minimum.height > 0
+	//		)
+	//	{
+	//		update_min_max = true;
+
+	//		pixel = convertMmToPixel(output
+	//			, window_size.mm_minimum.width
+	//			, window_size.mm_minimum.height
+	//			);
+	//		size_min = {pixel.first, pixel.second};
+	//	}
+
+	//	if(window_size.mm_maximum.width > 0
+	//		|| window_size.mm_maximum.height > 0
+	//		)
+	//	{
+	//		update_min_max = true;
+
+	//		pixel = convertMmToPixel(output
+	//			, window_size.mm_maximum.width
+	//			, window_size.mm_maximum.height
+	//			);
+	//		size_max = {pixel.first, pixel.second};
+	//	}
+	}
+	else if(window_size.unit == SizeUnit::Percent)
+	{
+		auto pixel = convertPercentToPixel(output
+			, window_size.percent.width
+			, window_size.percent.height
+			);
+
+		if(pixel.first == window_size.pixel.width
+			&& pixel.second == window_size.pixel.height
+			)
+		{
+			update_size = false;
+		}
+
+		window_size.pixel = {pixel.first, pixel.second};
+
+		auto mm = convertPixelToMm(output
+			, pixel.first
+			, pixel.second
+			);
+
+		window_size.mm = {mm.first, mm.second};
+
+			//pixel = convertPercentToPixel(output
+			//	, window_size.percent_minimum.width
+			//	, window_size.percent_minimum.height
+			//	);
+			//size_min = {pixel.first, pixel.second};
+
+			//pixel = convertPercentToPixel(output
+			//	, window_size.mm_maximum.width
+			//	, window_size.mm_maximum.height
+			//	);
+			//size_max = {pixel.first, pixel.second};
+	}
+	else
+	{
+		if(event->width == window_size.pixel.width
+			&& event->height == window_size.pixel.height
+			)
+		{
+			update_size = false;
+		}
+
+		window_size.pixel = {event->width, event->height};
+
+		auto mm = convertPixelToMm(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+
+		window_size.mm = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+
+		window_size.percent = {percent.first, percent.second};
+	}
+
+	if(update_size)
+	{
+		windowSizeSet(event->window, window_size.pixel);
+	}
+}
+
 // }}}
 // {{{ XCB
 
@@ -4647,7 +5148,6 @@ std::cout << "Client Message:  " << *event << '\n';
 			windowDestroy(event->window);
 		}
 	}
-
 }
 
 
@@ -4686,14 +5186,11 @@ std::cout << "Configue Notify: " << *event << '\n';
 
 	std::lock_guard<std::mutex> od_lock(output_data.mutex);
 
-	OutputId output_id;
-	const Output& output = this->output(event->x, event->y, output_id);
-
-	window_output_map[event->window] = output_id;
-
 	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
 
-	auto iter = window_size_map.find(event->window);
+	const WindowId window_id = event->window;
+
+	auto iter = window_size_map.find(window_id);
 
 	if(iter == std::end(window_size_map))
 	{
@@ -4702,80 +5199,31 @@ std::cout << "Configue Notify: " << *event << '\n';
 
 	WindowSize& window_size = iter->second;
 
-	if(window_size.unit == SizeUnit::Millimeter)
+	OutputId output_id;
+	const Output& output = this->output(event->x, event->y, output_id);
+
+	setWindowReady(window_id);
+
+	if(window_output_map[window_id] != output_id)
 	{
-		auto pixel = convertMmToPixel(output
-			, window_size.mm.width
-			, window_size.mm.height
-			);
+		window_output_map[window_id] = output_id;
 
-		if(pixel.first == window_size.pixel.width
-			&& pixel.second == window_size.pixel.height
-			)
-		{
-			setWindowReady(event->window);
-			return;
-		}
+		windowResizeTo(output, window_size, event);
 
-		window_size.pixel = {pixel.first, pixel.second};
-
-		auto percent = convertPixelToPercent(output
-			, pixel.first
-			, pixel.second
-			);
-
-		window_size.percent = {percent.first, percent.second};
-	}
-	else if(window_size.unit == SizeUnit::Percent)
-	{
-		auto pixel = convertPercentToPixel(output
-			, window_size.percent.width
-			, window_size.percent.height
-			);
-
-		if(pixel.first == window_size.pixel.width
-			&& pixel.second == window_size.pixel.height
-			)
-		{
-			setWindowReady(event->window);
-			return;
-		}
-
-		window_size.pixel = {pixel.first, pixel.second};
-
-		auto mm = convertPixelToMm(output
-			, pixel.first
-			, pixel.second
-			);
-
-		window_size.mm = {mm.first, mm.second};
-	}
-	else
-	{
-		if(event->width == window_size.pixel.width
-			&& event->height == window_size.pixel.height
-			)
-		{
-			setWindowReady(event->window);
-			return;
-		}
-
-		auto mm = convertPixelToMm(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-
-		window_size.mm = {mm.first, mm.second};
-
-		auto percent = convertPixelToPercent(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-
-		window_size.percent = {percent.first, percent.second};
+		return;
 	}
 
-	windowSizeSet(event->window, window_size.pixel);
+	auto mm = convertPixelToMm(output
+		, window_size.pixel.width
+		, window_size.pixel.height
+		);
+	window_size.mm = {mm.first, mm.second};
+
+	auto percent = convertPixelToPercent(output
+		, window_size.pixel.width
+		, window_size.pixel.height
+		);
+	window_size.percent = {percent.first, percent.second};
 }
 
 
@@ -4793,10 +5241,11 @@ std::cout << "Map Notify:      " << *event << '\n';
 }
 
 
-std::error_code Xenium::xcbWindowCreate(const uint32_t value_mask ///< The value mask
-	, xcb_create_window_value_list_t&              value_list ///< The value list
-	, WindowId&                                    window_id
-	, xcb_atom_t&                                  atom
+std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window size
+	, const uint32_t                                 value_mask ///< The value mask
+	, xcb_create_window_value_list_t&                value_list ///< The value list
+	, WindowId&                                      window_id
+	, xcb_atom_t&                                    atom
 	) noexcept
 {
 	window_id = xcb_generate_id(this->connection);
@@ -4807,7 +5256,7 @@ std::error_code Xenium::xcbWindowCreate(const uint32_t value_mask ///< The value
 			, window_id                     // requested id
 			, this->screen->root            // parent window id
 			, 0, 0                          // location x,y
-			, 1, 1                          // size width,height
+			, size.width, size.height       // size width,height
 			, 0                             // border width
 			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
 			, this->screen->root_visual     // visual
@@ -4829,6 +5278,27 @@ std::error_code Xenium::xcbWindowCreate(const uint32_t value_mask ///< The value
 		);
 
 	if(atom == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+
+		xcb_destroy_window(this->connection, window_id);
+		window_id = 0;
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	xcb_size_hints_t size_hints = { 0 };
+	xcb_change_property_checked(this->connection
+		, XCB_PROP_MODE_REPLACE
+		, window_id
+		, XCB_ATOM_WM_NORMAL_HINTS
+		, XCB_ATOM_WM_SIZE_HINTS
+		, 32 // 32-bit values
+		, 18 // 18 values
+		, &size_hints
+		);
+
+	if(requestCheckHasError(cookie, generic_error))
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
 
@@ -5304,6 +5774,7 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
 
 Xenium::Window* Xenium::createWindow(WindowId window_id
 	, xcb_atom_t&                         atom
+	, const Xenium::OutputId              output_id
 	, const Xenium::SizeUnit              size_unit
 	, const SizeMm&                       size_mm
 	, const SizePercent&                  size_percent
@@ -5318,6 +5789,8 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 	,	.pixel   = size_pixel
 	,	.unit    = size_unit
 	};
+
+	window_output_map[window_id] = output_id;
 
 	window_delete_map[window_id] =
 	{	.close_request_lambda = Lambda_DoNothing

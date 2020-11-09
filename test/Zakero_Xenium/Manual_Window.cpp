@@ -57,7 +57,7 @@ int main()
 	zakero::Xenium::SizeMm size{16.0 * 15, 9.0 * 15};
 	zakero::Xenium::SizePixel size{450, 450};
 	*/
-	zakero::Xenium::SizePixel size{450, 450};
+	zakero::Xenium::SizeMm size{40, 40};
 	auto* window = xenium->windowCreate(size, error);
 	if(error)
 	{
@@ -73,7 +73,7 @@ int main()
 		);
 	*/
 	window->sizeSetMinMax(
-		zakero::Xenium::SizePixel{400, 400}, zakero::Xenium::SizePixel{500, 500}
+		zakero::Xenium::SizeMm{30, 30}, zakero::Xenium::SizeMm{50, 50}
 		);
 
 	bool time_to_die = false;

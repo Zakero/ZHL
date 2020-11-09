@@ -726,10 +726,16 @@ namespace zakero
 
 			struct WindowSize
 			{
-				Xenium::SizeMm      mm      = {};
-				Xenium::SizePercent percent = {};
-				Xenium::SizePixel   pixel   = {};
-				Xenium::SizeUnit    unit    = SizeUnit::Pixel;
+				Xenium::SizeMm      mm              = {};
+				Xenium::SizeMm      mm_minimum      = {};
+				Xenium::SizeMm      mm_maximum      = {};
+				Xenium::SizePercent percent         = {};
+				Xenium::SizePercent percent_minimum = {};
+				Xenium::SizePercent percent_maximum = {};
+				Xenium::SizePixel   pixel           = {};
+				Xenium::SizePixel   pixel_minimum   = {};
+				Xenium::SizePixel   pixel_maximum   = {};
+				Xenium::SizeUnit    unit            = SizeUnit::Pixel;
 			};
 
 			using WindowMap       = std::unordered_map<WindowId, Window*>;
@@ -754,6 +760,7 @@ namespace zakero
 			void windowResizeTo(const Output&, WindowSize&, const xcb_configure_notify_event_t*) noexcept;
 			        
 			std::error_code windowSizeSetMinMax(const WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
+			std::error_code windowSizeSetMinMax(const Xenium::Output&, const Xenium::WindowId, Xenium::WindowSize&) noexcept;
                                 
 			// {{{ Utility
 
@@ -4048,40 +4055,18 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
 		return error;
 	}
 
-	{
-		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
-		WindowSize& window_size = xenium->window_size_map[window_id];
-		window_size.unit = Xenium::SizeUnit::Millimeter;
-	}
+	WindowSize& window_size = xenium->window_size_map[window_id];
 
-	SizePixel minimum;
-	SizePixel maximum;
+	window_size.unit       = Xenium::SizeUnit::Millimeter;
+	window_size.mm_minimum = size_min;
+	window_size.mm_maximum = size_max;
 
-	{
-		std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
-		Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-		auto min = xenium->convertMmToPixel(output
-			, size_min.width
-			, size_min.height
-			);
-		minimum = {min.first, min.second};
-
-		auto max = xenium->convertMmToPixel(output
-			, size_max.width
-			, size_max.height
-			);
-		maximum = {max.first, max.second};
-	}
-
-	error = xenium->windowSizeSetMinMax(window_id
-		, minimum.width
-		, minimum.height
-		, maximum.width
-		, maximum.height
-		);
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
 
 	return error;
 }
@@ -4110,40 +4095,18 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
 		return error;
 	}
 
-	{
-		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
-		WindowSize& window_size = xenium->window_size_map[window_id];
-		window_size.unit = Xenium::SizeUnit::Percent;
-	}
+	WindowSize& window_size = xenium->window_size_map[window_id];
 
-	SizePixel minimum;
-	SizePixel maximum;
+	window_size.unit            = Xenium::SizeUnit::Percent;
+	window_size.percent_minimum = size_min;
+	window_size.percent_maximum = size_max;
 
-	{
-		std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
-		Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-		auto min = xenium->convertPercentToPixel(output
-			, size_min.width
-			, size_min.height
-			);
-		minimum = {min.first, min.second};
-
-		auto max = xenium->convertPercentToPixel(output
-			, size_max.width
-			, size_max.height
-			);
-		maximum = {max.first, max.second};
-	}
-
-	error = xenium->windowSizeSetMinMax(window_id
-		, minimum.width
-		, minimum.height
-		, maximum.width
-		, maximum.height
-		);
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
 
 	return error;
 }
@@ -4172,18 +4135,119 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 		return error;
 	}
 
-	{
-		std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::lock_guard<std::mutex> od_lock(xenium->output_data.mutex);
+	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
-		WindowSize& window_size = xenium->window_size_map[window_id];
-		window_size.unit = Xenium::SizeUnit::Pixel;
+	WindowSize& window_size = xenium->window_size_map[window_id];
+
+	window_size.unit          = Xenium::SizeUnit::Pixel;
+	window_size.pixel_minimum = size_min;
+	window_size.pixel_maximum = size_max;
+
+	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
+
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+	return error;
+}
+
+
+std::error_code Xenium::windowSizeSetMinMax(const Xenium::Output& output      ///< The output device
+	, const Xenium::WindowId                                  window_id
+	, Xenium::WindowSize&                                     window_size ///< The window size
+	) noexcept
+{
+	if(window_size.unit == SizeUnit::Millimeter)
+	{
+		// --- Window Minimum Size --- //
+		auto pixel = convertMmToPixel(output
+			, window_size.mm_minimum.width
+			, window_size.mm_minimum.height
+			);
+		window_size.pixel_minimum = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_size.pixel_minimum.width
+			, window_size.pixel_minimum.height
+			);
+		window_size.percent_minimum = {percent.first, percent.second};
+
+		// --- Window Maximum Size --- //
+		pixel = convertMmToPixel(output
+			, window_size.mm_maximum.width
+			, window_size.mm_maximum.height
+			);
+		window_size.pixel_maximum = {pixel.first, pixel.second};
+
+		percent = convertPixelToPercent(output
+			, window_size.pixel_maximum.width
+			, window_size.pixel_maximum.height
+			);
+		window_size.percent_maximum = {percent.first, percent.second};
+	}
+	else if(window_size.unit == SizeUnit::Percent)
+	{
+		// --- Window Minimum Size --- //
+		auto pixel = convertPercentToPixel(output
+			, window_size.percent_minimum.width
+			, window_size.percent_minimum.height
+			);
+		window_size.pixel_minimum = {pixel.first, pixel.second};
+
+		auto mm = convertPixelToMm(output
+			, window_size.pixel_minimum.width
+			, window_size.pixel_minimum.height
+			);
+		window_size.mm_minimum = {mm.first, mm.second};
+
+		// --- Window Maximum Size --- //
+		pixel = convertPercentToPixel(output
+			, window_size.percent_maximum.width
+			, window_size.percent_maximum.height
+			);
+		window_size.pixel_maximum = {pixel.first, pixel.second};
+
+		mm = convertPixelToMm(output
+			, window_size.pixel_maximum.width
+			, window_size.pixel_maximum.height
+			);
+		window_size.mm_maximum = {mm.first, mm.second};
+	}
+	else
+	{
+		// --- Window Minimum Size --- //
+		auto mm = convertPixelToMm(output
+			, window_size.pixel_minimum.width
+			, window_size.pixel_minimum.height
+			);
+		window_size.mm_minimum = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_size.pixel_minimum.width
+			, window_size.pixel_minimum.height
+			);
+		window_size.percent_minimum = {percent.first, percent.second};
+
+		// --- Window Maximum Size --- //
+		mm = convertPixelToMm(output
+			, window_size.pixel_maximum.width
+			, window_size.pixel_maximum.height
+			);
+		window_size.mm_maximum = {mm.first, mm.second};
+
+		percent = convertPixelToPercent(output
+			, window_size.pixel_maximum.width
+			, window_size.pixel_maximum.height
+			);
+		window_size.percent_maximum = {percent.first, percent.second};
 	}
 
-	error = xenium->windowSizeSetMinMax(window_id
-		, size_min.width
-		, size_min.height
-		, size_max.width
-		, size_max.height
+	// --- Set Window Min/Max Size --- //
+	std::error_code error;
+
+	error = windowSizeSetMinMax(window_id
+		, window_size.pixel_minimum.width, window_size.pixel_minimum.height
+		, window_size.pixel_maximum.width, window_size.pixel_maximum.height
 		);
 
 	return error;
@@ -5012,10 +5076,6 @@ void Xenium::windowResizeTo(const Output&     output
 	) noexcept
 {
 	bool update_size = false;
-	//bool update_min_max = false;
-
-	//SizePixel size_min = {0, 0};
-	//SizePixel size_max = {0, 0};
 
 	if(window_size.unit == SizeUnit::Millimeter)
 	{
@@ -5034,36 +5094,10 @@ void Xenium::windowResizeTo(const Output&     output
 		window_size.pixel = {pixel.first, pixel.second};
 
 		auto percent = convertPixelToPercent(output
-			, pixel.first
-			, pixel.second
+			, window_size.pixel.width
+			, window_size.pixel.height
 			);
 		window_size.percent = {percent.first, percent.second};
-
-	//	if(window_size.mm_minimum.width > 0
-	//		|| window_size.mm_minimum.height > 0
-	//		)
-	//	{
-	//		update_min_max = true;
-
-	//		pixel = convertMmToPixel(output
-	//			, window_size.mm_minimum.width
-	//			, window_size.mm_minimum.height
-	//			);
-	//		size_min = {pixel.first, pixel.second};
-	//	}
-
-	//	if(window_size.mm_maximum.width > 0
-	//		|| window_size.mm_maximum.height > 0
-	//		)
-	//	{
-	//		update_min_max = true;
-
-	//		pixel = convertMmToPixel(output
-	//			, window_size.mm_maximum.width
-	//			, window_size.mm_maximum.height
-	//			);
-	//		size_max = {pixel.first, pixel.second};
-	//	}
 	}
 	else if(window_size.unit == SizeUnit::Percent)
 	{
@@ -5072,41 +5106,28 @@ void Xenium::windowResizeTo(const Output&     output
 			, window_size.percent.height
 			);
 
-		if(pixel.first == window_size.pixel.width
-			&& pixel.second == window_size.pixel.height
+		if(pixel.first != window_size.pixel.width
+			|| pixel.second != window_size.pixel.height
 			)
 		{
-			update_size = false;
+			update_size = true;
+			window_size.pixel = {pixel.first, pixel.second};
 		}
 
-		window_size.pixel = {pixel.first, pixel.second};
-
 		auto mm = convertPixelToMm(output
-			, pixel.first
-			, pixel.second
+			, window_size.pixel.width
+			, window_size.pixel.height
 			);
 
 		window_size.mm = {mm.first, mm.second};
-
-			//pixel = convertPercentToPixel(output
-			//	, window_size.percent_minimum.width
-			//	, window_size.percent_minimum.height
-			//	);
-			//size_min = {pixel.first, pixel.second};
-
-			//pixel = convertPercentToPixel(output
-			//	, window_size.mm_maximum.width
-			//	, window_size.mm_maximum.height
-			//	);
-			//size_max = {pixel.first, pixel.second};
 	}
 	else
 	{
-		if(event->width == window_size.pixel.width
-			&& event->height == window_size.pixel.height
+		if(event->width != window_size.pixel.width
+			|| event->height != window_size.pixel.height
 			)
 		{
-			update_size = false;
+			update_size = true;
 		}
 
 		window_size.pixel = {event->width, event->height};
@@ -5115,16 +5136,16 @@ void Xenium::windowResizeTo(const Output&     output
 			, window_size.pixel.width
 			, window_size.pixel.height
 			);
-
 		window_size.mm = {mm.first, mm.second};
 
 		auto percent = convertPixelToPercent(output
 			, window_size.pixel.width
 			, window_size.pixel.height
 			);
-
 		window_size.percent = {percent.first, percent.second};
 	}
+
+	windowSizeSetMinMax(output, event->window, window_size);
 
 	if(update_size)
 	{
@@ -5185,7 +5206,6 @@ std::cout << "Configue Notify: " << *event << '\n';
 	}
 
 	std::lock_guard<std::mutex> od_lock(output_data.mutex);
-
 	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
 
 	const WindowId window_id = event->window;
@@ -5212,6 +5232,8 @@ std::cout << "Configue Notify: " << *event << '\n';
 
 		return;
 	}
+
+	window_size.pixel = {event->width, event->height};
 
 	auto mm = convertPixelToMm(output
 		, window_size.pixel.width

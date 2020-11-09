@@ -89,6 +89,19 @@ int main()
 	window->setSize(zakero::Xenium::SizePixel{500,300});
 	*/
 
+	window->sizeOnChange([](const zakero::Xenium::SizeMm& size)
+	{
+		printf("--- SizeMm: %fx%f\n", size.width, size.height);
+	});
+	window->sizeOnChange([](const zakero::Xenium::SizePercent& size)
+	{
+		printf("--- SizePercent: %fx%f\n", size.width, size.height);
+	});
+	window->sizeOnChange([](const zakero::Xenium::SizePixel& size)
+	{
+		printf("--- SizePixel: %dx%d\n", size.width, size.height);
+	});
+
 	while(!time_to_die)
 	{
 		usleep(10);

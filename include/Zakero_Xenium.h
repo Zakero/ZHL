@@ -691,6 +691,7 @@ namespace zakero
 
 			std::error_code          atomInit() noexcept;
 			xcb_atom_t               atomCreateDeleteWindow(const WindowId, xcb_generic_error_t&) noexcept;
+			std::string              atomName(const xcb_atom_t) noexcept;
 			std::vector<xcb_atom_t>  atomValueAtom(const WindowId, const xcb_atom_t, xcb_generic_error_t&) noexcept;
 			xcb_atom_t               internAtom(const std::string&, const bool, xcb_generic_error_t&) noexcept;
 			xcb_intern_atom_cookie_t internAtomRequest(const std::string&, const bool = true) noexcept;
@@ -5504,7 +5505,7 @@ void Xenium::windowResizeTo(const Output&     output
 void Xenium::xcbEvent(const xcb_client_message_event_t* event
 	) noexcept
 {
-//std::cout << "Client Message:  " << *event << '\n';
+std::cout << "Client Message:  " << *event << '\n';
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDelete& window_delete = window_delete_map[event->window];
@@ -5543,7 +5544,7 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 	) noexcept
 {
-//std::cout << "Configue Notify: " << *event << '\n';
+std::cout << "Configue Notify: " << *event << '\n';
 	if((event->response_type & 0x80) == 0)
 	{
 		// Only care about events with the "synthetic bit" set
@@ -5606,7 +5607,7 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
-//std::cout << "Expose:          " << *event << '\n';
+std::cout << "Expose:          " << *event << '\n';
 	setWindowReady(event->window);
 }
 
@@ -5614,30 +5615,50 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Gravity Notify:  " << *event << '\n';
+std::cout << "Gravity Notify:  " << *event << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_map_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Map Notify:      " << *event << '\n';
+std::cout << "Map Notify:      " << *event << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Property Notify:      " << *event << '\n';
+std::cout << "Property Notify:      " << *event << '\n';
+std::cout << "--- atom_wm_change_state:             " << atom_wm_change_state << '\n';
+std::cout << "--- atom_wm_delete_window:            " << atom_wm_delete_window << '\n';
+std::cout << "--- atom_wm_protocols:                " << atom_wm_protocols << '\n';
+std::cout << "--- atom_net_wm_state:                " << atom_net_wm_state << '\n';
+std::cout << "--- atom_net_wm_state_fullscreen:     " << atom_net_wm_state_fullscreen << '\n';
+std::cout << "--- atom_net_wm_state_hidden:         " << atom_net_wm_state_hidden << '\n';
+std::cout << "--- atom_net_wm_state_maximized_horz: " << atom_net_wm_state_maximized_horz << '\n';
+std::cout << "--- atom_net_wm_state_maximized_vert: " << atom_net_wm_state_maximized_vert << '\n';
+
+xcb_generic_error_t generic_error = {0};
+auto value = atomValueAtom(event->window, event->atom, generic_error);
+printf("--- - Atom: %d '%s'\n", event->atom, atomName(event->atom).c_str());
+std::cout << "--- - Value: " << value << '\n';
+printf("--- - Value: ");
+for(const auto& atom : value)
+{
+	printf("'%s' ", atomName(atom).c_str());
+}
+printf("\n");
 
 	if(event->atom == atom_net_wm_state)
 	{
-		//std::cout << "--- NET_WM_STATE\n";
+		std::cout << "--- NET_WM_STATE\n";
 
 		WindowMode new_window_mode = WindowMode::Normal;
 
 		xcb_generic_error_t generic_error = {0};
 		auto value = atomValueAtom(event->window, event->atom, generic_error);
+		//std::cout << "--- - Value: " << value << '\n';
 
 		if(zakero::vectorContains(value, atom_net_wm_state_maximized_horz)
 			&& zakero::vectorContains(value, atom_net_wm_state_maximized_vert)
@@ -5674,14 +5695,14 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Reparent Notify: " << *event << '\n';
+std::cout << "Reparent Notify: " << *event << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Unmap Notify:    " << *event << '\n';
+std::cout << "Unmap Notify:    " << *event << '\n';
 }
 
 
@@ -5932,6 +5953,42 @@ xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
 	}
 
 	return atom_wm_delete_window;
+}
+
+
+std::string Xenium::atomName(const xcb_atom_t atom
+	) noexcept
+{
+	if(atom == XCB_ATOM_NONE)
+	{
+		return "";
+	}
+
+	xcb_get_atom_name_cookie_t cookie =
+		xcb_get_atom_name(this->connection, atom);
+
+	xcb_generic_error_t* error = nullptr;
+
+	xcb_get_atom_name_reply_t* reply =
+		xcb_get_atom_name_reply(this->connection
+			, cookie
+			, &error
+			);
+
+	if(reply == nullptr)
+	{
+		//ZAKERO_XENIUM__DEBUG_VAR(*generic_error);
+		//ZAKERO_XENIUM__DEBUG_VAR(*error);
+		return "";
+	}
+
+	char* name = xcb_get_atom_name_name(reply);
+
+	std::string atom_name(name);
+
+	free(reply);
+
+	return atom_name;
 }
 
 

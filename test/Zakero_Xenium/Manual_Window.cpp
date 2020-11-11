@@ -99,6 +99,10 @@ int main()
 		printf("--- SizePixel: %dx%d\n", size.width, size.height);
 	});
 
+	window->windowModeOnChange([](const zakero::Xenium::WindowMode& window_mode)
+	{
+		printf(">>> WindowMode: %s\n", zakero::to_string(window_mode).c_str());
+	});
 	/*
 	sleep(3);
 	printf("--- Full Screen\n");

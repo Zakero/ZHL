@@ -522,7 +522,7 @@ namespace zakero
 					void                 minimize() noexcept;
 
 					// }}}
-					// {{{ Rendering
+					// {{{ Rendering : TODO
 
 					std::error_code      imageNext(uint8_t*&, Xenium::SizePixel&) noexcept;
 					void                 imagePresent() noexcept;
@@ -542,17 +542,17 @@ namespace zakero
 					Xenium::SizePixel    convertToPixel(const Xenium::SizePercent&) const noexcept;
 
 					// }}}
-					// {{{ Cursor
+					// {{{ Cursor : TODO
 
 					// }}}
-					// {{{ Keyboard
+					// {{{ Keyboard : TODO
 
 					void                 keyboardOnEnter(Xenium::Lambda) noexcept;
 					void                 keyboardOnLeave(Xenium::Lambda) noexcept;
 					void                 keyboardOnKey(Xenium::LambdaKey) noexcept;
 
 					// }}}
-					// {{{ Pointer
+					// {{{ Pointer : TODO
 
 					void                 pointerOnEnter(Xenium::LambdaPointMm) noexcept;
 					void                 pointerOnEnter(Xenium::LambdaPointPercent) noexcept;
@@ -671,12 +671,14 @@ namespace zakero
 			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_property_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_reparent_notify_event_t*) noexcept;
+			void xcbEvent(const xcb_unmap_notify_event_t*) noexcept;
 
 			std::error_code xcbWindowCreate(const SizePixel&, const uint32_t, xcb_create_window_value_list_t&, WindowId&, xcb_atom_t&) noexcept;
 
 			// }}}
 			// {{{ XCB : Atom
 
+			xcb_atom_t atom_wm_change_state             = XCB_ATOM_NONE;
 			xcb_atom_t atom_wm_delete_window            = XCB_ATOM_NONE;
 			xcb_atom_t atom_wm_protocols                = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state                = XCB_ATOM_NONE;
@@ -798,6 +800,7 @@ namespace zakero
 			std::error_code windowSizeSetMinMax(const Xenium::Output&, const Xenium::WindowId, Xenium::WindowSize&) noexcept;
 
 			std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode, const Xenium::WindowMode) noexcept;
+			std::error_code windowMinimize(const Xenium::WindowId) noexcept;
                                 
 			// }}}
 			// {{{ Utility
@@ -1330,6 +1333,33 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use
 		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
 			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
 			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_unmap_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&  stream  ///< The stream to use
+	, const xcb_unmap_notify_event_t& event ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "  << uint32_t(event.response_type)
+		<< ", \"pad0\": "           << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "       << uint32_t(event.sequence)
+		<< ", \"event\": "          << uint32_t(event.event)
+		<< ", \"window\": "         << uint32_t(event.window)
+		<< ", \"from_configure\": " << uint32_t(event.from_configure)
+		<< ", \"pad1\": [ 0x"       << std::hex << uint32_t(event.pad1[0]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< ", 0x"           << std::hex << uint32_t(event.pad1[2]) << std::dec
 			<< " ]"
 		<< " }";
 
@@ -2590,6 +2620,12 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 				case XCB_REPARENT_NOTIFY:
 					xenium->xcbEvent(
 						(xcb_reparent_notify_event_t*)event
+						);
+					break;
+
+				case XCB_UNMAP_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_unmap_notify_event_t*)event
 						);
 					break;
 
@@ -4774,6 +4810,7 @@ uint8_t Xenium::Window::bytesPerPixel() const noexcept
  */
 void Xenium::Window::minimize() noexcept
 {
+	xenium->windowMinimize(window_id);
 }
 
 // }}}
@@ -5641,6 +5678,14 @@ void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event
 }
 
 
+void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
+	) noexcept
+{
+//std::cout << "Unmap Notify:    " << *event << '\n';
+}
+
+
+
 
 std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window size
 	, const uint32_t                                 value_mask ///< The value mask
@@ -5705,6 +5750,32 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window si
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id
+	) noexcept
+{
+	xcb_client_message_event_t event =
+	{	.response_type = XCB_CLIENT_MESSAGE
+	,	.format        = 32
+	,	.sequence      = 0
+	,	.window        = window_id
+	,	.type          = atom_wm_change_state
+	,	.data          = { 0 }
+	};
+	event.data.data32[0] = XCB_ICCCM_WM_STATE_ICONIC;
+
+	xcb_send_event(this->connection
+		, 0 // do not propagate
+		, this->screen->root
+		, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+		, (const char*)&event
+		);
+
+	xcb_flush(this->connection);
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -5788,6 +5859,7 @@ std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
 
 std::error_code Xenium::atomInit() noexcept
 {
+	auto cookie_wm_change_state             = internAtomRequest("WM_CHANGE_STATE");
 	auto cookie_wm_delete_window            = internAtomRequest("WM_DELETE_WINDOW");
 	auto cookie_wm_protocols                = internAtomRequest("WM_PROTOCOLS");
 	auto cookie_net_wm_state                = internAtomRequest("_NET_WM_STATE");
@@ -5798,6 +5870,7 @@ std::error_code Xenium::atomInit() noexcept
 
 	xcb_generic_error_t generic_error;
 
+	atom_wm_change_state             = internAtomReply(cookie_wm_change_state, generic_error);
 	atom_wm_delete_window            = internAtomReply(cookie_wm_delete_window, generic_error);
 	atom_wm_protocols                = internAtomReply(cookie_wm_protocols, generic_error);
 	atom_net_wm_state                = internAtomReply(cookie_net_wm_state, generic_error);

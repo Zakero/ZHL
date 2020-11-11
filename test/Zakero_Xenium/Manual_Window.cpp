@@ -117,6 +117,8 @@ int main()
 	printf("--- Normal\n");
 	window->windowModeSet(zakero::Xenium::WindowMode::Normal);
 	*/
+	sleep(3);
+	window->minimize();
 
 	printf("--- Looping\n");
 	while(!time_to_die)

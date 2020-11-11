@@ -72,9 +72,6 @@ int main()
 		zakero::Xenium::SizeMm{30, 30}, zakero::Xenium::SizeMm{50, 50}
 		);
 	*/
-	window->sizeSetMinMax(
-		zakero::Xenium::SizeMm{30, 30}, zakero::Xenium::SizeMm{50, 50}
-		);
 
 	bool time_to_die = false;
 	window->onCloseRequest([&]()
@@ -102,6 +99,22 @@ int main()
 		printf("--- SizePixel: %dx%d\n", size.width, size.height);
 	});
 
+	/*
+	sleep(3);
+	printf("--- Full Screen\n");
+	window->windowModeSet(zakero::Xenium::WindowMode::Fullscreen);
+	sleep(3);
+	printf("--- Normal\n");
+	window->windowModeSet(zakero::Xenium::WindowMode::Normal);
+	sleep(3);
+	printf("--- Maximized\n");
+	window->windowModeSet(zakero::Xenium::WindowMode::Maximized);
+	sleep(3);
+	printf("--- Normal\n");
+	window->windowModeSet(zakero::Xenium::WindowMode::Normal);
+	*/
+
+	printf("--- Looping\n");
 	while(!time_to_die)
 	{
 		usleep(10);

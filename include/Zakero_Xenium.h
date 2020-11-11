@@ -222,6 +222,7 @@
 	X(Error_Xcb_Maximized_Window_Not_Available     , 20 , "The XCB Window Manager does not support maximized windows."       ) \
 	X(Error_Xcb_WM_Delete_Window_Not_Available     , 21 , "The XCB Window Manager does not support the delete protocol."     ) \
 	X(Error_Xcb_WM_Protocols_Not_Available         , 22 , "The XCB Window Manager protocols are not available."              ) \
+	X(Error_Xcb_Hidden_Not_Available               , 23 , "The XCB Window Manager does not support hiding windows."          ) \
 
 	/* --- To Be Deleted --- */
 	/*
@@ -580,7 +581,6 @@ namespace zakero
 				private:
 					Xenium*            xenium;
 					Xenium::WindowId   window_id;
-					Xenium::WindowMode window_mode;
 
 					Window(const Window&) = delete;
 					Window& operator=(const Window&) = delete;
@@ -667,8 +667,10 @@ namespace zakero
 			void xcbEvent(const xcb_client_message_event_t*) noexcept;
 			void xcbEvent(const xcb_configure_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_expose_event_t*) noexcept;
+			void xcbEvent(const xcb_gravity_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_property_notify_event_t*) noexcept;
+			void xcbEvent(const xcb_reparent_notify_event_t*) noexcept;
 
 			std::error_code xcbWindowCreate(const SizePixel&, const uint32_t, xcb_create_window_value_list_t&, WindowId&, xcb_atom_t&) noexcept;
 
@@ -679,6 +681,7 @@ namespace zakero
 			xcb_atom_t atom_wm_protocols                = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state                = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_fullscreen     = XCB_ATOM_NONE;
+			xcb_atom_t atom_net_wm_state_hidden         = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_maximized_horz = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_maximized_vert = XCB_ATOM_NONE;
 
@@ -761,15 +764,22 @@ namespace zakero
 				Xenium::SizeUnit          unit            = SizeUnit::Pixel;
 			};
 
+			struct WindowModeData
+			{
+				Xenium::WindowMode       window_mode = {};
+				Xenium::LambdaWindowMode lambda      = {};
+			};
+
 			using WindowMap       = std::unordered_map<WindowId, Window*>;
 			using WindowDeleteMap = std::unordered_map<WindowId, WindowDelete>;
 			using WindowOutputMap = std::unordered_map<WindowId, OutputId>;
 			using WindowSizeMap   = std::unordered_map<WindowId, WindowSize>;
-			using WindowModeMap   = std::unordered_map<WindowId, WindowMode>;
+			using WindowModeMap   = std::unordered_map<WindowId, WindowModeData>;
 
 			WindowMap          window_map        = {};
 			WindowDeleteMap    window_delete_map = {};
 			WindowModeMap      window_mode_map   = {};
+			mutable std::mutex window_mode_mutex = {};
 			WindowOutputMap    window_output_map = {};
 			WindowSizeMap      window_size_map   = {};
 			mutable std::mutex window_size_mutex = {};
@@ -787,7 +797,7 @@ namespace zakero
 			std::error_code windowSizeSetMinMax(const WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
 			std::error_code windowSizeSetMinMax(const Xenium::Output&, const Xenium::WindowId, Xenium::WindowSize&) noexcept;
 
-			std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode) noexcept;
+			std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode, const Xenium::WindowMode) noexcept;
                                 
 			// }}}
 			// {{{ Utility
@@ -1219,6 +1229,30 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
 
 
 /**
+ * \brief Insert an xcb_gravity_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&      stream ///< The stream to use
+	, const xcb_gravity_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "     << uint32_t(event.response_type)
+		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "          << uint32_t(event.sequence)
+		<< ", \"event\": "             << uint32_t(event.event)
+		<< ", \"window\": "            << uint32_t(event.window)
+		<< ", \"x\": "                 << uint32_t(event.x)
+		<< ", \"y\": "                 << uint32_t(event.y)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
  * \brief Insert an xcb_map_notify_event_t into an output stream.
  *
  * \return The \p stream.
@@ -1263,6 +1297,36 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use
 		<< ", \"atom\": "              << uint32_t(event.atom)
 		<< ", \"time\": "              << uint32_t(event.time)
 		<< ", \"state\": "             << uint32_t(event.state)
+		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
+			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_reparent_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&       stream ///< The stream to use
+	, const xcb_reparent_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "     << uint32_t(event.response_type)
+		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "          << uint32_t(event.sequence)
+		<< ", \"event\": "             << uint32_t(event.event)
+		<< ", \"window\": "            << uint32_t(event.window)
+		<< ", \"parent\": "            << uint32_t(event.parent)
+		<< ", \"x\": "                 << uint32_t(event.x)
+		<< ", \"y\": "                 << uint32_t(event.y)
+		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
 		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
 			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
 			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
@@ -2511,9 +2575,21 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 						);
 					break;
 
+				case XCB_GRAVITY_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_gravity_notify_event_t*)event
+						);
+					break;
+
 				case XCB_MAP_NOTIFY:
 					xenium->xcbEvent(
 						(xcb_map_notify_event_t*)event
+						);
+					break;
+
+				case XCB_REPARENT_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_reparent_notify_event_t*)event
 						);
 					break;
 
@@ -3794,7 +3870,6 @@ Xenium::Window::Window(void* data
 	)
 	: xenium(((WindowData*)data)->xenium)
 	, window_id(((WindowData*)data)->window_id)
-	, window_mode(WindowMode::Normal)
 {
 }
 
@@ -4526,7 +4601,7 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
  */
 Xenium::WindowMode Xenium::Window::windowMode() noexcept
 {
-	return window_mode;
+	return xenium->window_mode_map[window_id].window_mode;
 }
 
 
@@ -4541,7 +4616,7 @@ Xenium::WindowMode Xenium::Window::windowMode() noexcept
 bool Xenium::Window::windowModeIs(const Xenium::WindowMode window_mode ///< The WindowMode
 	) noexcept
 {
-	return (window_mode == this->window_mode);
+	return (window_mode == this->windowMode());
 }
 
 
@@ -4556,14 +4631,19 @@ bool Xenium::Window::windowModeIs(const Xenium::WindowMode window_mode ///< The 
 void Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The WindowMode
 	) noexcept
 {
-	if(window_mode == this->window_mode)
+	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
+
+	if(data.window_mode == window_mode)
 	{
 		return;
 	}
 
-	xenium->windowModeSet(window_id, window_mode);
+	xenium->windowModeSet(window_id
+		, data.window_mode // current window mode
+		, window_mode      // new window mode
+		);
 
-	this->window_mode = window_mode;
+	data.window_mode = window_mode;
 
 	return;
 }
@@ -4578,7 +4658,16 @@ void Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The
 void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		data.lambda = LambdaWindowMode_DoNothing;
+	}
+	else
+	{
+		data.lambda = lambda;
+	}
 }
 
 // }}}
@@ -5378,7 +5467,7 @@ void Xenium::windowResizeTo(const Output&     output
 void Xenium::xcbEvent(const xcb_client_message_event_t* event
 	) noexcept
 {
-std::cout << "Client Message:  " << *event << '\n';
+//std::cout << "Client Message:  " << *event << '\n';
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDelete& window_delete = window_delete_map[event->window];
@@ -5417,7 +5506,7 @@ std::cout << "Client Message:  " << *event << '\n';
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 	) noexcept
 {
-std::cout << "Configue Notify: " << *event << '\n';
+//std::cout << "Configue Notify: " << *event << '\n';
 	if((event->response_type & 0x80) == 0)
 	{
 		// Only care about events with the "synthetic bit" set
@@ -5480,26 +5569,33 @@ std::cout << "Configue Notify: " << *event << '\n';
 void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
-std::cout << "Expose:          " << *event << '\n';
+//std::cout << "Expose:          " << *event << '\n';
 	setWindowReady(event->window);
+}
+
+
+void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
+	) noexcept
+{
+//std::cout << "Gravity Notify:  " << *event << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_map_notify_event_t* event
 	) noexcept
 {
-std::cout << "Map Notify:      " << *event << '\n';
+//std::cout << "Map Notify:      " << *event << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	) noexcept
 {
-std::cout << "Property Notify:      " << *event << '\n';
+//std::cout << "Property Notify:      " << *event << '\n';
 
 	if(event->atom == atom_net_wm_state)
 	{
-		std::cout << "--- NET_WM_STATE\n";
+		//std::cout << "--- NET_WM_STATE\n";
 
 		WindowMode new_window_mode = WindowMode::Normal;
 
@@ -5517,17 +5613,33 @@ std::cout << "Property Notify:      " << *event << '\n';
 			new_window_mode = WindowMode::Fullscreen;
 		}
 
+		//std::cout << "--- - WindowMode: " << zakero::to_string(new_window_mode) << '\n';
+
 		if(window_mode_map.contains(event->window))
 		{
-			WindowMode& window_mode = window_mode_map[event->window];
-			if(window_mode != new_window_mode)
+			window_mode_mutex.lock();
+
+			WindowModeData& data = window_mode_map[event->window];
+			LambdaWindowMode lambda = LambdaWindowMode_DoNothing;
+			if(data.window_mode != new_window_mode)
 			{
-				window_mode = new_window_mode;
-				printf("\tWindowMode: %d\n", (int)new_window_mode);
+				data.window_mode = new_window_mode;
+				lambda = data.lambda;
 			}
+
+			window_mode_mutex.unlock();
+
+			lambda(new_window_mode);
 		}
 	}
 }
+
+void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event
+	) noexcept
+{
+//std::cout << "Reparent Notify: " << *event << '\n';
+}
+
 
 
 std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window size
@@ -5599,11 +5711,10 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window si
 
 
 std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
-	, const Xenium::WindowMode                           window_mode
+	, const Xenium::WindowMode                           current_mode
+	, const Xenium::WindowMode                           new_mode
 	) noexcept
 {
-	xcb_generic_error_t generic_error;
-
 	xcb_client_message_event_t event =
 	{	.response_type = XCB_CLIENT_MESSAGE
 	,	.format        = 32
@@ -5613,133 +5724,61 @@ std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
 	,	.data          = { 0 }
 	};
 
-	if(window_mode == Xenium::WindowMode::Normal)
+	if(current_mode == Xenium::WindowMode::Normal)
 	{
-		event.data.data32[0] = _NET_WM_STATE_REMOVE;
-		event.data.data32[1] = atom_net_wm_state_fullscreen;
-		event.data.data32[2] = 0;
-
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		event.data.data32[0] = _NET_WM_STATE_REMOVE;
-		event.data.data32[1] = atom_net_wm_state_maximized_horz;
-		event.data.data32[2] = atom_net_wm_state_maximized_vert;
-
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		windowPropertySet(window_id
-			, atom_net_wm_state
-			, XCB_ATOM_NONE
-			, generic_error
-			);
-
-		event.data.data32[1] = atom_net_wm_state_maximized_horz;
-
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		bool property_was_set = windowPropertySet(window_id
-			, atom_net_wm_state
-			//, XCB_ATOM_NONE
-			, atom_net_wm_state_maximized_horz
-			, generic_error
-			);
-
-		if(property_was_set == false)
-		{
-			ZAKERO_XENIUM__DEBUG_VAR(generic_error);
-
-			return ZAKERO_XENIUM__ERROR(Error_Unknown);
-		}
+		// Do nothing
 	}
-	else if(window_mode == Xenium::WindowMode::Fullscreen)
+	else
 	{
 		event.data.data32[0] = _NET_WM_STATE_REMOVE;
-		event.data.data32[1] = atom_net_wm_state_maximized_horz;
-		event.data.data32[2] = atom_net_wm_state_maximized_vert;
+
+		if(current_mode == Xenium::WindowMode::Fullscreen)
+		{
+			event.data.data32[1] = atom_net_wm_state_fullscreen;
+			event.data.data32[2] = 0;
+		}
+		else // if(current_mode == Xenium::WindowMode::Maximized)
+		{
+			event.data.data32[1] = atom_net_wm_state_maximized_horz;
+			event.data.data32[2] = atom_net_wm_state_maximized_vert;
+		}
 
 		xcb_send_event(this->connection
-			, 0 // propagate
+			, 0 // do not propagate
 			, this->screen->root
 			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
 			, (const char*)&event
 			);
+	}
 
+	if(new_mode == Xenium::WindowMode::Normal)
+	{
+		// Do nothing
+	}
+	else
+	{
 		event.data.data32[0] = _NET_WM_STATE_ADD;
-		event.data.data32[1] = atom_net_wm_state_fullscreen;
-		event.data.data32[2] = 0;
 
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		bool property_was_set = windowPropertySet(window_id
-			, atom_net_wm_state
-			, XCB_ATOM_NONE
-			, generic_error
-			);
-
-		if(property_was_set == false)
+		if(new_mode == Xenium::WindowMode::Fullscreen)
 		{
-			ZAKERO_XENIUM__DEBUG_VAR(generic_error);
-
-			return ZAKERO_XENIUM__ERROR(Error_Unknown);
+			event.data.data32[1] = atom_net_wm_state_fullscreen;
+			event.data.data32[2] = 0;
 		}
-	}
-	else if(window_mode == Xenium::WindowMode::Maximized)
-	{
-		event.data.data32[0] = _NET_WM_STATE_REMOVE;
-		event.data.data32[1] = atom_net_wm_state_fullscreen;
-		event.data.data32[2] = 0;
-
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		event.data.data32[0] = _NET_WM_STATE_ADD;
-		event.data.data32[1] = atom_net_wm_state_maximized_horz;
-		event.data.data32[2] = atom_net_wm_state_maximized_vert;
-
-		xcb_send_event(this->connection
-			, 0 // propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-
-		bool property_was_set = windowPropertySet(window_id
-			, atom_net_wm_state
-			, XCB_ATOM_NONE
-			, generic_error
-			);
-
-		if(property_was_set == false)
+		else // if(current_mode == Xenium::WindowMode::Maximized)
 		{
-			ZAKERO_XENIUM__DEBUG_VAR(generic_error);
-
-			return ZAKERO_XENIUM__ERROR(Error_Unknown);
+			event.data.data32[1] = atom_net_wm_state_maximized_horz;
+			event.data.data32[2] = atom_net_wm_state_maximized_vert;
 		}
+
+		xcb_send_event(this->connection
+			, 0 // do not propagate
+			, this->screen->root
+			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+			, (const char*)&event
+			);
 	}
+
+	xcb_flush(this->connection);
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -5753,6 +5792,7 @@ std::error_code Xenium::atomInit() noexcept
 	auto cookie_wm_protocols                = internAtomRequest("WM_PROTOCOLS");
 	auto cookie_net_wm_state                = internAtomRequest("_NET_WM_STATE");
 	auto cookie_net_wm_state_fullscreen     = internAtomRequest("_NET_WM_STATE_FULLSCREEN");
+	auto cookie_net_wm_state_hidden         = internAtomRequest("_NET_WM_STATE_HIDDEN");
 	auto cookie_net_wm_state_maximized_horz = internAtomRequest("_NET_WM_STATE_MAXIMIZED_HORZ");
 	auto cookie_net_wm_state_maximized_vert = internAtomRequest("_NET_WM_STATE_MAXIMIZED_VERT");
 
@@ -5762,6 +5802,7 @@ std::error_code Xenium::atomInit() noexcept
 	atom_wm_protocols                = internAtomReply(cookie_wm_protocols, generic_error);
 	atom_net_wm_state                = internAtomReply(cookie_net_wm_state, generic_error);
 	atom_net_wm_state_fullscreen     = internAtomReply(cookie_net_wm_state_fullscreen, generic_error);
+	atom_net_wm_state_hidden         = internAtomReply(cookie_net_wm_state_hidden, generic_error);
 	atom_net_wm_state_maximized_horz = internAtomReply(cookie_net_wm_state_maximized_horz, generic_error);
 	atom_net_wm_state_maximized_vert = internAtomReply(cookie_net_wm_state_maximized_vert, generic_error);
 
@@ -5783,6 +5824,11 @@ std::error_code Xenium::atomInit() noexcept
 	if(atom_net_wm_state_fullscreen == XCB_ATOM_NONE)
 	{
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_Fullscreen_Not_Available);
+	}
+
+	if(atom_net_wm_state_hidden == XCB_ATOM_NONE)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Xcb_Hidden_Not_Available);
 	}
 
 	if((atom_net_wm_state_maximized_horz == XCB_ATOM_NONE)
@@ -6364,7 +6410,13 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 	,	.unit            = size_unit
 	};
 
-	window_mode_map[window_id] = WindowMode::Normal;
+	{	std::lock_guard<std::mutex> wm_lock(window_mode_mutex);
+
+		window_mode_map[window_id] = 
+		{	.window_mode = WindowMode::Normal
+		,	.lambda      = LambdaWindowMode_DoNothing
+		};
+	}
 
 	window_output_map[window_id] = output_id;
 

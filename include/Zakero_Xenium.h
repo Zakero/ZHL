@@ -157,8 +157,10 @@
  * Includes
  */
 
+// C++
 #include <iostream>
 #include <thread>
+#include <array>
 
 // POSIX
 #include <poll.h>
@@ -496,6 +498,7 @@ namespace zakero
 					void                 classSet(const std::string&) noexcept;
 					void                 titleSet(const std::string&) noexcept;
 					std::error_code      decorationsSet(const Xenium::WindowDecorations) noexcept;
+					void                 decorationsOnChange(Xenium::LambdaWindowDecorations) noexcept;
 					uint8_t              bytesPerPixel() const noexcept;
 
 					// }}}
@@ -573,7 +576,6 @@ namespace zakero
 					// {{{ Events
 
 					void                 onCloseRequest(Xenium::Lambda) noexcept;
-					void                 onDecorationsChange(Xenium::LambdaWindowDecorations) noexcept;
 					void                 onFocusChange(Xenium::LambdaBool) noexcept;
 
 					// }}}
@@ -681,6 +683,7 @@ namespace zakero
 			xcb_atom_t atom_wm_change_state             = XCB_ATOM_NONE;
 			xcb_atom_t atom_wm_delete_window            = XCB_ATOM_NONE;
 			xcb_atom_t atom_wm_protocols                = XCB_ATOM_NONE;
+			xcb_atom_t atom_net_frame_extents           = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state                = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_fullscreen     = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_hidden         = XCB_ATOM_NONE;
@@ -692,7 +695,10 @@ namespace zakero
 			std::error_code          atomInit() noexcept;
 			xcb_atom_t               atomCreateDeleteWindow(const WindowId, xcb_generic_error_t&) noexcept;
 			std::string              atomName(const xcb_atom_t) noexcept;
+			std::vector<xcb_atom_t>  atomValueAtom(const WindowId, const xcb_atom_t) noexcept;
 			std::vector<xcb_atom_t>  atomValueAtom(const WindowId, const xcb_atom_t, xcb_generic_error_t&) noexcept;
+			std::vector<int32_t>     atomValueData(const WindowId, const xcb_atom_t, const xcb_atom_t, const size_t) noexcept;
+			std::vector<int32_t>     atomValueData(const WindowId, const xcb_atom_t, const xcb_atom_t, const size_t, xcb_generic_error_t&) noexcept;
 			xcb_atom_t               internAtom(const std::string&, const bool, xcb_generic_error_t&) noexcept;
 			xcb_intern_atom_cookie_t internAtomRequest(const std::string&, const bool = true) noexcept;
 			xcb_atom_t               internAtomReply(const xcb_intern_atom_cookie_t, xcb_generic_error_t&) noexcept;
@@ -773,33 +779,39 @@ namespace zakero
 				Xenium::LambdaWindowMode lambda      = {};
 			};
 
-			using WindowMap       = std::unordered_map<WindowId, Window*>;
-			using WindowDeleteMap = std::unordered_map<WindowId, WindowDelete>;
-			using WindowOutputMap = std::unordered_map<WindowId, OutputId>;
-			using WindowSizeMap   = std::unordered_map<WindowId, WindowSize>;
-			using WindowModeMap   = std::unordered_map<WindowId, WindowModeData>;
+			struct WindowDecorationsData
+			{
+				Xenium::WindowDecorations       window_decorations = {};
+				Xenium::LambdaWindowDecorations lambda             = {};
+			};
 
-			WindowMap          window_map        = {};
-			WindowDeleteMap    window_delete_map = {};
-			WindowModeMap      window_mode_map   = {};
-			mutable std::mutex window_mode_mutex = {};
-			WindowOutputMap    window_output_map = {};
-			WindowSizeMap      window_size_map   = {};
-			mutable std::mutex window_size_mutex = {};
+			using WindowMap            = std::unordered_map<WindowId, Window*>;
+			using WindowDecorationsMap = std::unordered_map<WindowId, WindowDecorationsData>;
+			using WindowDeleteMap      = std::unordered_map<WindowId, WindowDelete>;
+			using WindowOutputMap      = std::unordered_map<WindowId, OutputId>;
+			using WindowSizeMap        = std::unordered_map<WindowId, WindowSize>;
+			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
+
+			WindowMap            window_map             = {};
+			WindowDecorationsMap window_decorations_map = {};
+			WindowDeleteMap      window_delete_map      = {};
+			WindowModeMap        window_mode_map        = {};
+			mutable std::mutex   window_mode_mutex      = {};
+			WindowOutputMap      window_output_map      = {};
+			WindowSizeMap        window_size_map        = {};
+			mutable std::mutex   window_size_mutex      = {};
 
 			// -------------------------------------------------- //
 
 			std::error_code windowBorder(const WindowId, const bool) noexcept;
 			std::error_code windowSizeSet(const WindowId, const SizePixel&) noexcept;
 			std::error_code windowLocationSet(const WindowId, const PointPixel&) noexcept;
-			void windowDestroy(WindowId) noexcept;
-			bool windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
-			bool windowPropertySet(WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
-			void windowResizeTo(const Output&, WindowSize&, const xcb_configure_notify_event_t*) noexcept;
-			        
+			void            windowDestroy(WindowId) noexcept;
+			bool            windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
+			bool            windowPropertySet(WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
+			void            windowResizeTo(const Output&, WindowSize&, const xcb_configure_notify_event_t*) noexcept;
 			std::error_code windowSizeSetMinMax(const WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
 			std::error_code windowSizeSetMinMax(const Xenium::Output&, const Xenium::WindowId, Xenium::WindowSize&) noexcept;
-
 			std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode, const Xenium::WindowMode) noexcept;
 			std::error_code windowMinimize(const Xenium::WindowId) noexcept;
                                 
@@ -1067,7 +1079,7 @@ std::ostream& operator<<(std::ostream&  stream ///< The stream to use
  */
 [[nodiscard]]
 std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_generic_error_t&          error  ///< The value in insert into the stream
+	, const xcb_generic_error_t&   error  ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1107,8 +1119,8 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
  * \return The \p stream.
  */
 [[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_client_message_event_t&   event  ///< The value in insert into the stream
+std::ostream& operator<<(std::ostream&      stream ///< The stream to use
+	, const xcb_client_message_event_t& event  ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1210,7 +1222,7 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
  */
 [[nodiscard]]
 std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_generic_event_t&          event  ///< The value in insert into the stream
+	, const xcb_generic_event_t&   event  ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1243,13 +1255,13 @@ std::ostream& operator<<(std::ostream&      stream ///< The stream to use
 	) noexcept
 {
 	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"event\": "             << uint32_t(event.event)
-		<< ", \"window\": "            << uint32_t(event.window)
-		<< ", \"x\": "                 << uint32_t(event.x)
-		<< ", \"y\": "                 << uint32_t(event.y)
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"event\": "         << uint32_t(event.event)
+		<< ", \"window\": "        << uint32_t(event.window)
+		<< ", \"x\": "             << uint32_t(event.x)
+		<< ", \"y\": "             << uint32_t(event.y)
 		<< " }";
 
 	return stream;
@@ -1294,16 +1306,16 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use
 	) noexcept
 {
 	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"window\": "            << uint32_t(event.window)
-		<< ", \"atom\": "              << uint32_t(event.atom)
-		<< ", \"time\": "              << uint32_t(event.time)
-		<< ", \"state\": "             << uint32_t(event.state)
-		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"window\": "        << uint32_t(event.window)
+		<< ", \"atom\": "          << uint32_t(event.atom)
+		<< ", \"time\": "          << uint32_t(event.time)
+		<< ", \"state\": "         << uint32_t(event.state)
+		<< ", \"pad1\": [ 0x"      << std::hex << uint32_t(event.pad1[0]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad1[2]) << std::dec
 			<< " ]"
 		<< " }";
 
@@ -1375,7 +1387,7 @@ std::ostream& operator<<(std::ostream&  stream  ///< The stream to use
  */
 [[nodiscard]]
 std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_format_t&                 format ///< The value in insert into the stream
+	, const xcb_format_t&          format ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1401,7 +1413,7 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
  */
 [[nodiscard]]
 std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_screen_t&                 screen ///< The value in insert into the stream
+	, const xcb_screen_t&          screen ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1448,6 +1460,27 @@ std::ostream& operator<<(std::ostream&   stream ///< The stream to use
 }
 
 
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const std::vector<int32_t>&  vector ///< The value in insert into the stream
+	) noexcept
+{
+	std::string delim = "";
+
+	stream << "[";
+	for(const int32_t& value : vector)
+	{
+		stream << delim << ' ' << std::to_string(value);
+
+		delim = ",";
+	}
+
+	stream << " ]";
+
+	return stream;
+}
+
+
 /**
  * \brief Insert an xcb_setup_t into an output stream.
  *
@@ -1455,7 +1488,7 @@ std::ostream& operator<<(std::ostream&   stream ///< The stream to use
  */
 [[nodiscard]]
 std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_setup_t&                  setup  ///< The value in insert into the stream
+	, const xcb_setup_t&           setup  ///< The value in insert into the stream
 	) noexcept
 {
 	stream
@@ -1949,6 +1982,12 @@ namespace
  *
  * If a struct contains a mutex, that mutex should be locked before interacting 
  * with the contents of the struct.
+ *
+ * \bug When setting the size of the window, the Window Manager's Frame Extents 
+ * must be taken into account.  (Window Size - Frame Extents = content size)
+ * See _NET_FRAME_EXTENTS usage for hints on how to get this data.  _Also, when 
+ * the window borders are removed, the window content is resized to fill the 
+ * space used by the window border._
  *
  * \todo Convert all the `Error_Unknown` to actual errors.
  *
@@ -3739,6 +3778,7 @@ void Xenium::windowDestroy(WindowId window_id
 
 	window_output_map.erase(window_id);
 	window_delete_map.erase(window_id);
+	window_decorations_map.erase(window_id);
 	window_map.erase(window_id);
 
 	xcb_destroy_window(this->connection, window_id);
@@ -4022,6 +4062,31 @@ std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations d
 	}
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Respond to "Decoration Change" events.
+ *
+ * For the Wayland Compositors that support Server-Side Decorations, the 
+ * Desktop Environment can notify a %Window whether or not it should render its 
+ * own decorations.  An example of this would be a user requesting for a 
+ * %Window to be border-less.  This lambda will be called when that event 
+ * happens.
+ */
+void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda ///< The lambda
+	) noexcept
+{
+	WindowDecorationsData& window_decorations = xenium->window_decorations_map[window_id];
+
+	if(lambda)
+	{
+		window_decorations.lambda = lambda;
+	}
+	else
+	{
+		window_decorations.lambda = LambdaWindowDecorations_DoNothing;
+	}
 }
 
 // }}}
@@ -5016,22 +5081,6 @@ void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
 
 
 /**
- * \brief Respond to "Decoration Change" events.
- *
- * For the Wayland Compositors that support Server-Side Decorations, the 
- * Desktop Environment can notify a %Window whether or not it should render its 
- * own decorations.  An example of this would be a user requesting for a 
- * %Window to be border-less.  This lambda will be called when that event 
- * happens.
- */
-void Xenium::Window::onDecorationsChange(Xenium::LambdaWindowDecorations lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
-
-
-/**
  * \brief Respond to "Active" change events.
  *
  * When a window becomes active (gains focus) or becomes inactive (loses 
@@ -5630,35 +5679,78 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	) noexcept
 {
 std::cout << "Property Notify:      " << *event << '\n';
-std::cout << "--- atom_wm_change_state:             " << atom_wm_change_state << '\n';
-std::cout << "--- atom_wm_delete_window:            " << atom_wm_delete_window << '\n';
-std::cout << "--- atom_wm_protocols:                " << atom_wm_protocols << '\n';
-std::cout << "--- atom_net_wm_state:                " << atom_net_wm_state << '\n';
-std::cout << "--- atom_net_wm_state_fullscreen:     " << atom_net_wm_state_fullscreen << '\n';
-std::cout << "--- atom_net_wm_state_hidden:         " << atom_net_wm_state_hidden << '\n';
-std::cout << "--- atom_net_wm_state_maximized_horz: " << atom_net_wm_state_maximized_horz << '\n';
-std::cout << "--- atom_net_wm_state_maximized_vert: " << atom_net_wm_state_maximized_vert << '\n';
 
-xcb_generic_error_t generic_error = {0};
-auto value = atomValueAtom(event->window, event->atom, generic_error);
+	xcb_generic_error_t generic_error = {0};
 printf("--- - Atom: %d '%s'\n", event->atom, atomName(event->atom).c_str());
-std::cout << "--- - Value: " << value << '\n';
-printf("--- - Value: ");
-for(const auto& atom : value)
-{
-	printf("'%s' ", atomName(atom).c_str());
-}
-printf("\n");
+
+	if(event->atom == atom_net_frame_extents)
+	{
+		std::cout << ">>> NET_FRAME_EXTENTS\n";
+
+		std::vector<int32_t> atom_data = Xenium::atomValueData(event->window
+			, atom_net_frame_extents
+			, XCB_ATOM_CARDINAL
+			, 4
+			, generic_error
+			);
+		std::cout << "--- - Value: " << atom_data << '\n';
+
+		struct
+		{
+			int32_t left;
+			int32_t right;
+			int32_t top;
+			int32_t bottom;
+		}
+		frame_extents =
+		{	.left   = atom_data[0]
+		,	.right  = atom_data[1]
+		,	.top    = atom_data[2]
+		,	.bottom = atom_data[3]
+		};
+
+		WindowDecorationsData& window = window_decorations_map[event->window];
+
+		WindowDecorations window_decorations = window.window_decorations;
+
+		if(frame_extents.left == 0
+			&& frame_extents.right == 0
+			&& frame_extents.top == 0
+			&& frame_extents.bottom == 0
+			)
+		{
+			window.window_decorations = WindowDecorations::Client_Side;
+		}
+		else
+		{
+			window.window_decorations = WindowDecorations::Server_Side;
+		}
+
+		if(window.window_decorations != window_decorations)
+		{
+			window.lambda(window.window_decorations);
+		}
+
+		return;
+	}
 
 	if(event->atom == atom_net_wm_state)
 	{
-		std::cout << "--- NET_WM_STATE\n";
+		std::cout << ">>> NET_WM_STATE\n";
+
+		std::vector<xcb_atom_t> value =
+			atomValueAtom(event->window, event->atom, generic_error);
+
+		std::cout << "--- - Value Count: " << value.size() << '\n';
+		std::cout << "--- - Value: " << value << '\n';
+		printf("--- - Value: ");
+		for(const auto& atom : value)
+		{
+			printf("'%s' ", atomName(atom).c_str());
+		}
+		printf("\n");
 
 		WindowMode new_window_mode = WindowMode::Normal;
-
-		xcb_generic_error_t generic_error = {0};
-		auto value = atomValueAtom(event->window, event->atom, generic_error);
-		//std::cout << "--- - Value: " << value << '\n';
 
 		if(zakero::vectorContains(value, atom_net_wm_state_maximized_horz)
 			&& zakero::vectorContains(value, atom_net_wm_state_maximized_vert)
@@ -5670,8 +5762,6 @@ printf("\n");
 		{
 			new_window_mode = WindowMode::Fullscreen;
 		}
-
-		//std::cout << "--- - WindowMode: " << zakero::to_string(new_window_mode) << '\n';
 
 		if(window_mode_map.contains(event->window))
 		{
@@ -5689,6 +5779,8 @@ printf("\n");
 
 			lambda(new_window_mode);
 		}
+
+		return;
 	}
 }
 
@@ -5883,6 +5975,7 @@ std::error_code Xenium::atomInit() noexcept
 	auto cookie_wm_change_state             = internAtomRequest("WM_CHANGE_STATE");
 	auto cookie_wm_delete_window            = internAtomRequest("WM_DELETE_WINDOW");
 	auto cookie_wm_protocols                = internAtomRequest("WM_PROTOCOLS");
+	auto cookie_net_frame_extents           = internAtomRequest("_NET_FRAME_EXTENTS");
 	auto cookie_net_wm_state                = internAtomRequest("_NET_WM_STATE");
 	auto cookie_net_wm_state_fullscreen     = internAtomRequest("_NET_WM_STATE_FULLSCREEN");
 	auto cookie_net_wm_state_hidden         = internAtomRequest("_NET_WM_STATE_HIDDEN");
@@ -5894,6 +5987,7 @@ std::error_code Xenium::atomInit() noexcept
 	atom_wm_change_state             = internAtomReply(cookie_wm_change_state, generic_error);
 	atom_wm_delete_window            = internAtomReply(cookie_wm_delete_window, generic_error);
 	atom_wm_protocols                = internAtomReply(cookie_wm_protocols, generic_error);
+	atom_net_frame_extents           = internAtomReply(cookie_net_frame_extents, generic_error);
 	atom_net_wm_state                = internAtomReply(cookie_net_wm_state, generic_error);
 	atom_net_wm_state_fullscreen     = internAtomReply(cookie_net_wm_state_fullscreen, generic_error);
 	atom_net_wm_state_hidden         = internAtomReply(cookie_net_wm_state_hidden, generic_error);
@@ -5994,6 +6088,16 @@ std::string Xenium::atomName(const xcb_atom_t atom
 
 std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
 	, const xcb_atom_t                                   atom
+	) noexcept
+{
+	xcb_generic_error_t generic_error = { 0 };
+
+	return atomValueAtom(window_id, atom, generic_error);
+}
+
+
+std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
+	, const xcb_atom_t                                   atom
 	, xcb_generic_error_t&                               generic_error
 	) noexcept
 {
@@ -6015,18 +6119,77 @@ std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
 			, &error
 			);
 	
-	int value_count = xcb_get_property_value_length(property);
+	int count = xcb_get_property_value_length(property) / 4;
 
-	std::vector<xcb_atom_t> vector(value_count);
+	std::vector<xcb_atom_t> retval(count);
 
 	xcb_atom_t* value = (xcb_atom_t*)xcb_get_property_value(property);
 
-	for(int i = 0; i < value_count; i++)
+	for(int i = 0; i < count; i++)
+	{
+		retval[i] = value[i];
+	}
+
+	free(property);
+
+	return retval;
+}
+
+
+std::vector<int32_t> Xenium::atomValueData(const WindowId window_id
+	, const xcb_atom_t                                  property
+	, const xcb_atom_t                                  type
+	, const size_t                                      count
+	) noexcept
+{
+	xcb_generic_error_t generic_error;
+
+	return atomValueData(window_id, property, type, count, generic_error);
+}
+
+
+std::vector<int32_t> Xenium::atomValueData(const WindowId window_id
+	, const xcb_atom_t                                  property
+	, const xcb_atom_t                                  type
+	, const size_t                                      count
+	, xcb_generic_error_t&                              generic_error
+	) noexcept
+{
+	xcb_get_property_cookie_t property_cookie =
+		xcb_get_property(this->connection
+			, 0 // Don't Delete
+			, window_id
+			, property
+			, type
+			, 0 // Data
+			, count // Number of 32-bit values
+			);
+
+	xcb_generic_error_t* error = &generic_error;
+
+	xcb_get_property_reply_t* property_reply =
+		xcb_get_property_reply(this->connection
+			, property_cookie
+			, &error
+			);
+
+	if(property_reply == nullptr)
+	{
+		return {};
+	}
+	
+	int length = xcb_get_property_value_length(property_reply) / 4;
+
+	std::vector<int32_t> vector(length);
+
+	int32_t* value = (int32_t*)xcb_get_property_value(property_reply);
+
+	for(int i = 0; i < length; i++)
 	{
 		vector[i] = value[i];
 	}
 
-	free(property);
+	free(property_reply);
 
 	return vector;
 }
@@ -6550,6 +6713,11 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 
 	window_output_map[window_id] = output_id;
 
+	window_decorations_map[window_id] =
+	{	.window_decorations = WindowDecorations::Server_Side
+	,	.lambda             = LambdaWindowDecorations_DoNothing
+	};
+
 	window_delete_map[window_id] =
 	{	.close_request_lambda = Lambda_DoNothing
 	,	.atom                 = atom
@@ -6768,6 +6936,25 @@ std::string to_string(const Xenium::PointerButtonState button_state ///< The val
 	{
 		case Xenium::PointerButtonState::Pressed:  return "Pressed";
 		case Xenium::PointerButtonState::Released: return "Released";
+		default: return "";
+	}
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p window_decorations will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::WindowDecorations window_decorations ///< The value
+	) noexcept
+{
+	switch(window_decorations)
+	{
+		case Xenium::WindowDecorations::Client_Side: return "Client Side";
+		case Xenium::WindowDecorations::Server_Side: return "Server Side";
 		default: return "";
 	}
 }

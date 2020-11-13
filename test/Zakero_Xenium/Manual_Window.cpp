@@ -123,6 +123,11 @@ int main()
 		printf(">>> WindowDecorations: %s\n", zakero::to_string(deco).c_str());
 	});
 
+	window->onFocusChange([](const bool has_focus)
+	{
+		printf(">>> Focus: %s\n", has_focus ? "true" : "false");
+	});
+
 	printf("--- Looping\n");
 	while(!time_to_die)
 	{

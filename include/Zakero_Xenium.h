@@ -497,9 +497,12 @@ namespace zakero
 
 					void                 classSet(const std::string&) noexcept;
 					void                 titleSet(const std::string&) noexcept;
+
+					// }}}
+					// {{{ Decorations
+
 					std::error_code      decorationsSet(const Xenium::WindowDecorations) noexcept;
 					void                 decorationsOnChange(Xenium::LambdaWindowDecorations) noexcept;
-					uint8_t              bytesPerPixel() const noexcept;
 
 					// }}}
 					// {{{ Size
@@ -530,6 +533,7 @@ namespace zakero
 					std::error_code      imageNext(uint8_t*&, Xenium::SizePixel&) noexcept;
 					void                 imagePresent() noexcept;
 					uint32_t             time() const noexcept;
+					uint8_t              bytesPerPixel() const noexcept;
 
 					// }}}
 					// {{{ Conversion
@@ -669,6 +673,7 @@ namespace zakero
 			void xcbEvent(const xcb_client_message_event_t*) noexcept;
 			void xcbEvent(const xcb_configure_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_expose_event_t*) noexcept;
+			void xcbEvent(const xcb_focus_in_event_t*) noexcept;
 			void xcbEvent(const xcb_gravity_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_map_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_property_notify_event_t*) noexcept;
@@ -788,6 +793,7 @@ namespace zakero
 			using WindowMap            = std::unordered_map<WindowId, Window*>;
 			using WindowDecorationsMap = std::unordered_map<WindowId, WindowDecorationsData>;
 			using WindowDeleteMap      = std::unordered_map<WindowId, WindowDelete>;
+			using WindowFocusMap       = std::unordered_map<WindowId, LambdaBool>;
 			using WindowOutputMap      = std::unordered_map<WindowId, OutputId>;
 			using WindowSizeMap        = std::unordered_map<WindowId, WindowSize>;
 			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
@@ -795,6 +801,7 @@ namespace zakero
 			WindowMap            window_map             = {};
 			WindowDecorationsMap window_decorations_map = {};
 			WindowDeleteMap      window_delete_map      = {};
+			WindowFocusMap       window_focus_map       = {};
 			WindowModeMap        window_mode_map        = {};
 			mutable std::mutex   window_mode_mutex      = {};
 			WindowOutputMap      window_output_map      = {};
@@ -1208,6 +1215,32 @@ std::ostream& operator<<(std::ostream& stream ///< The stream to use
 		<< ", \"count\": "         << uint32_t(event.count)
 		<< ", \"pad1\": [ 0x"      << std::hex << uint32_t(event.pad1[0]) << std::dec
 			<< ", 0x"          << std::hex << uint32_t(event.pad1[1]) << std::dec
+			<< " ]"
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_focus_in_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream& stream ///< The stream to use
+	, const xcb_focus_in_event_t&  event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": " << uint32_t(event.response_type)
+		<< ", \"detail\": "        << uint32_t(event.detail)
+		<< ", \"sequence\": "      << uint32_t(event.sequence)
+		<< ", \"event\": "         << uint32_t(event.event)
+		<< ", \"mode\": "          << uint32_t(event.mode)
+		<< ", \"pad0\": [ 0x"      << std::hex << uint32_t(event.pad0[0]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad0[1]) << std::dec
+			<< ", 0x"          << std::hex << uint32_t(event.pad0[2]) << std::dec
 			<< " ]"
 		<< " }";
 
@@ -1726,7 +1759,7 @@ namespace
 		                         ////| XCB_EVENT_MASK_RESIZE_REDIRECT
 		                         ////| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
 		                         ////| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-		                         //| XCB_EVENT_MASK_FOCUS_CHANGE
+		                         | XCB_EVENT_MASK_FOCUS_CHANGE
 		                         | XCB_EVENT_MASK_PROPERTY_CHANGE
 		                         ////| XCB_EVENT_MASK_COLOR_MAP_CHANGE
 		                         ////| XCB_EVENT_MASK_OWNER_GRAB_BUTTON
@@ -2622,6 +2655,13 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 					break;
 
 				// --- XCB_EVENT_MASK_FOCUS_CHANGE --- //
+				case XCB_FOCUS_IN:	[[fallthrough]];
+				case XCB_FOCUS_OUT:
+					xenium->xcbEvent(
+						(xcb_focus_in_event_t*)event
+						);
+					break;
+
 				// --- XCB_EVENT_MASK_KEYMAP_STATE --- //
 				// --- XCB_EVENT_MASK_KEY_PRESS --- //
 				// --- XCB_EVENT_MASK_KEY_RELEASE --- //
@@ -3777,6 +3817,7 @@ void Xenium::windowDestroy(WindowId window_id
 	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
 
 	window_output_map.erase(window_id);
+	window_focus_map.erase(window_id);
 	window_delete_map.erase(window_id);
 	window_decorations_map.erase(window_id);
 	window_map.erase(window_id);
@@ -5096,7 +5137,14 @@ void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
 void Xenium::Window::onFocusChange(Xenium::LambdaBool lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	if(lambda == nullptr)
+	{
+		xenium->window_focus_map[window_id] = LambdaBool_DoNothing;
+	}
+	else
+	{
+		xenium->window_focus_map[window_id] = lambda;
+	}
 }
 
 
@@ -5661,6 +5709,24 @@ std::cout << "Expose:          " << *event << '\n';
 }
 
 
+void Xenium::xcbEvent(const xcb_focus_in_event_t* event
+	) noexcept
+{
+std::cout << "Focus:           " << *event << '\n';
+
+	const WindowId window_id = event->event;
+
+	if(window_focus_map.contains(window_id) == false)
+	{
+		return;
+	}
+
+	bool has_focus = (event->response_type == XCB_FOCUS_IN);
+
+	window_focus_map[window_id](has_focus);
+}
+
+
 void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 	) noexcept
 {
@@ -5678,7 +5744,7 @@ std::cout << "Map Notify:      " << *event << '\n';
 void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	) noexcept
 {
-std::cout << "Property Notify:      " << *event << '\n';
+std::cout << "Property Notify: " << *event << '\n';
 
 	xcb_generic_error_t generic_error = {0};
 printf("--- - Atom: %d '%s'\n", event->atom, atomName(event->atom).c_str());
@@ -6717,6 +6783,8 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 	{	.window_decorations = WindowDecorations::Server_Side
 	,	.lambda             = LambdaWindowDecorations_DoNothing
 	};
+
+	window_focus_map[window_id] = LambdaBool_DoNothing;
 
 	window_delete_map[window_id] =
 	{	.close_request_lambda = Lambda_DoNothing

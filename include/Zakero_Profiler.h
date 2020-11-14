@@ -217,6 +217,7 @@
  * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
  * - Added MetaData support to ZAKERO_PROFILER_DURATION()
  * - Added MetaData support to ZAKERO_PROFILER_INSTANT()
+ * - Added error support
  *
  * __0.9.0__
  * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
@@ -244,7 +245,6 @@
  * \author Andrew "Zakero" Moore
  * 	- Original Author
  *
- * \todo Add error handling
  * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
@@ -544,8 +544,8 @@ namespace zakero
 			Profiler() noexcept;
 			~Profiler() noexcept;
 
-			static void init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
-			static void init(const std::filesystem::path, zakero::Profiler::MetaData = {}) noexcept;
+			static std::error_code init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
+			static std::error_code init(const std::filesystem::path, zakero::Profiler::MetaData = {}) noexcept;
 
 			static void activate() noexcept;
 			static void deactivate() noexcept;
@@ -567,6 +567,36 @@ namespace zakero
 #ifdef ZAKERO_PROFILER_IMPLEMENTATION
 
 // {{{ Macros
+
+/**
+ * \internal
+ *
+ * \brief _Error_Table_
+ *
+ * An X-Macro table of error codes. The columns are:
+ * -# __ErrorName__<br>
+ * -# __ErrorValue__<br>
+ * -# __ErrorMessage__<br>
+ */
+#define ZAKERO_PROFILER__ERROR_DATA \
+	X(Error_None                ,  0 , "No Error"                                       ) \
+	X(Error_Stream_Already_Open ,  1 , "The profiler is already using an output stream" ) \
+	X(Error_No_Filename         ,  2 , "No filename was provided"                       ) \
+	X(Error_Cant_Open_Stream    ,  3 , "Unable to open the output stream"               ) \
+	X(Error_Bad_Stream          ,  4 , "The stream is not in a good state"              ) \
+
+/**
+ * \internal
+ *
+ * \brief Make generating Error Conditions less verbose.
+ *
+ * All this Macro Function does is expand into code that creates an 
+ * std::error_code.
+ *
+ * \param err_ The error code
+ */
+#define ZAKERO_PROFILER__ERROR(err_) std::error_code(err_, ProfilerErrorCategory)
+
 // {{{ Macros : Doxygen
 
 #ifdef ZAKERO__DOXYGEN_DEFINE_DOCS
@@ -609,6 +639,47 @@ namespace zakero
 
 namespace
 {
+	/**
+	 * \brief Error Categories.
+	 *
+	 * This class implements the std::error_category interface to provide 
+	 * consistent access to error code values and messages.
+	 *
+	 * See https://en.cppreference.com/w/cpp/error/error_category for 
+	 * details.
+	 */
+	class ProfilerErrorCategory_
+		: public std::error_category
+	{
+		public:
+			constexpr ProfilerErrorCategory_() noexcept
+			{
+			}
+
+			const char* name() const noexcept override
+			{
+				return "zakero.Profiler";
+			}
+
+			std::string message(int condition) const override
+			{
+				switch(condition)
+				{
+#define X(name_, val_, mesg_) \
+					case val_: return mesg_;
+					ZAKERO_PROFILER__ERROR_DATA
+#undef X
+				}
+
+				return "Unknown error condition";
+			}
+	} ProfilerErrorCategory;
+
+#define X(name_, val_, mesg_) \
+	static constexpr int name_ = val_;
+	ZAKERO_PROFILER__ERROR_DATA
+#undef X
+
 	zakero::Profiler zakero_profiler;
 
 	// std::format performance testing
@@ -696,31 +767,32 @@ Profiler::~Profiler() noexcept
  * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
  * for information on keys that will be over-written.
  */
-void zakero::Profiler::init(const std::filesystem::path path      ///< The file path
-	, zakero::Profiler::MetaData                    meta_data ///< Extra meta data
+std::error_code zakero::Profiler::init(const std::filesystem::path path      ///< The file path
+	, zakero::Profiler::MetaData                               meta_data ///< Extra meta data
 	) noexcept
 {
 	if(zakero_profiler.stream != nullptr)
 	{
-		printf("Already have an open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Stream_Already_Open);
 	}
 
 	if(path.has_filename() == false)
 	{
-		printf("Path does not have a filename\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_No_Filename);
 	}
 
 	zakero_profiler.file_output.open(path);
 
 	if(zakero_profiler.file_output.is_open() == false)
 	{
-		printf("Can't open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Cant_Open_Stream);
 	}
 
-	init(zakero_profiler.file_output, meta_data);
+	std::error_code error;
+
+	error = init(zakero_profiler.file_output, meta_data);
+
+	return error;
 }
 
 
@@ -733,7 +805,7 @@ void zakero::Profiler::init(const std::filesystem::path path      ///< The file 
  * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
  * for information on keys that will be over-written.
  */
-void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
+std::error_code zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	, zakero::Profiler::MetaData      meta_data     ///< Extra meta data
 	) noexcept
 {
@@ -741,14 +813,12 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 
 	if(zakero_profiler.stream != nullptr)
 	{
-		printf("Already have an open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Stream_Already_Open);
 	}
 
 	if(output_stream.good() == false)
 	{
-		printf("Stream is not in a good state\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Bad_Stream);
 	}
 
 	zakero_profiler.stream = &output_stream;
@@ -781,6 +851,8 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	}
 
 	(*zakero_profiler.stream) << "\"traceEvents\":[{}\n";
+
+	return ZAKERO_PROFILER__ERROR(Error_None);
 }
 
 

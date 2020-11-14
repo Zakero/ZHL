@@ -116,7 +116,6 @@ int main()
 	sleep(3);
 	printf("--- Normal\n");
 	window->windowModeSet(zakero::Xenium::WindowMode::Normal);
-	*/
 
 	window->decorationsOnChange([](const zakero::Xenium::WindowDecorations deco)
 	{
@@ -126,6 +125,26 @@ int main()
 	window->onFocusChange([](const bool has_focus)
 	{
 		printf(">>> Focus: %s\n", has_focus ? "true" : "false");
+	});
+	*/
+	window->pointerOnEnter([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Enter (mm): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnEnter([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Enter (Percent): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnEnter([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Enter (Pixel): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnLeave([]()
+	{
+		printf(">>> Leave\n");
 	});
 
 	printf("--- Looping\n");

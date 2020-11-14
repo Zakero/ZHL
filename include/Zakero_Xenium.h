@@ -672,6 +672,7 @@ namespace zakero
 
 			void xcbEvent(const xcb_client_message_event_t*) noexcept;
 			void xcbEvent(const xcb_configure_notify_event_t*) noexcept;
+			void xcbEvent(const xcb_enter_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_expose_event_t*) noexcept;
 			void xcbEvent(const xcb_focus_in_event_t*) noexcept;
 			void xcbEvent(const xcb_gravity_notify_event_t*) noexcept;
@@ -790,10 +791,19 @@ namespace zakero
 				Xenium::LambdaWindowDecorations lambda             = {};
 			};
 
+			struct WindowOnEnterData
+			{
+				Xenium::LambdaPointMm      lambda_mm;
+				Xenium::LambdaPointPercent lambda_percent;
+				Xenium::LambdaPointPixel   lambda_pixel;
+			};
+
 			using WindowMap            = std::unordered_map<WindowId, Window*>;
 			using WindowDecorationsMap = std::unordered_map<WindowId, WindowDecorationsData>;
 			using WindowDeleteMap      = std::unordered_map<WindowId, WindowDelete>;
 			using WindowFocusMap       = std::unordered_map<WindowId, LambdaBool>;
+			using WindowOnEnterMap     = std::unordered_map<WindowId, WindowOnEnterData>;
+			using WindowOnLeaveMap     = std::unordered_map<WindowId, Lambda>;
 			using WindowOutputMap      = std::unordered_map<WindowId, OutputId>;
 			using WindowSizeMap        = std::unordered_map<WindowId, WindowSize>;
 			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
@@ -804,6 +814,8 @@ namespace zakero
 			WindowFocusMap       window_focus_map       = {};
 			WindowModeMap        window_mode_map        = {};
 			mutable std::mutex   window_mode_mutex      = {};
+			WindowOnEnterMap     window_on_enter_map    = {};
+			WindowOnLeaveMap     window_on_leave_map    = {};
 			WindowOutputMap      window_output_map      = {};
 			WindowSizeMap        window_size_map        = {};
 			mutable std::mutex   window_size_mutex      = {};
@@ -851,6 +863,9 @@ namespace zakero
 	std::string to_string(const Xenium::KeyModifier&) noexcept;
 	std::string to_string(const Xenium::KeyState) noexcept;
 	std::string to_string(const Xenium::Output&) noexcept;
+	std::string to_string(const Xenium::PointMm) noexcept;
+	std::string to_string(const Xenium::PointPercent) noexcept;
+	std::string to_string(const Xenium::PointPixel) noexcept;
 	std::string to_string(const Xenium::PointerAxisSource) noexcept;
 	std::string to_string(const Xenium::PointerAxisType) noexcept;
 	std::string to_string(const Xenium::PointerButtonState) noexcept;
@@ -1187,6 +1202,36 @@ std::ostream& operator<<(std::ostream&        stream ///< The stream to use
 		<< ", \"border_width\": "      << uint32_t(event.border_width)
 		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
 		<< ", \"pad1\": "              << uint32_t(event.pad1)
+		<< " }";
+
+	return stream;
+}
+
+
+/**
+ * \brief Insert an xcb_enter_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+[[nodiscard]]
+std::ostream& operator<<(std::ostream&        stream ///< The stream to use
+	, const xcb_enter_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	stream
+		<< "{ \"response_type\": "     << uint32_t(event.response_type)
+		<< ", \"detail\": "            << uint32_t(event.detail)
+		<< ", \"sequence\": "          << uint32_t(event.sequence)
+		<< ", \"time\": "              << uint32_t(event.time)
+		<< ", \"root\": "              << uint32_t(event.root)
+		<< ", \"event\": "             << uint32_t(event.event)
+		<< ", \"root_x\": "            << int16_t(event.root_x)
+		<< ", \"root_y\": "            << int16_t(event.root_y)
+		<< ", \"event_x\": "           << int16_t(event.event_x)
+		<< ", \"event_y\": "           << int16_t(event.event_y)
+		<< ", \"state\": "             << uint32_t(event.state)
+		<< ", \"mode\": "              << uint32_t(event.mode)
+		<< ", \"same_screen_focus\": " << uint32_t(event.same_screen_focus)
 		<< " }";
 
 	return stream;
@@ -1742,8 +1787,8 @@ namespace
 		                         //| XCB_EVENT_MASK_KEY_RELEASE
 		                         //| XCB_EVENT_MASK_BUTTON_PRESS
 		                         //| XCB_EVENT_MASK_BUTTON_RELEASE
-		                         //| XCB_EVENT_MASK_ENTER_WINDOW
-		                         //| XCB_EVENT_MASK_LEAVE_WINDOW
+		                         | XCB_EVENT_MASK_ENTER_WINDOW
+		                         | XCB_EVENT_MASK_LEAVE_WINDOW
 		                         //| XCB_EVENT_MASK_POINTER_MOTION
 		                         ////| XCB_EVENT_MASK_POINTER_MOTION_HINT
 		                         ////| XCB_EVENT_MASK_BUTTON_1_MOTION
@@ -2645,7 +2690,13 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 				// --- XCB_EVENT_MASK_BUTTON_PRESS --- //
 				// --- XCB_EVENT_MASK_BUTTON_RELEASE --- //
 				// --- XCB_EVENT_MASK_COLOR_MAP_CHANGE --- //
-				// --- XCB_EVENT_MASK_ENTER_WINDOW --- //
+				// --- XCB_EVENT_MASK_ENTER_WINDOW & XCB_EVENT_MASK_LEAVE_WINDOW --- //
+				case XCB_ENTER_NOTIFY: [[fallthrough]];
+				case XCB_LEAVE_NOTIFY:
+					xenium->xcbEvent(
+						(xcb_enter_notify_event_t*)event
+						);
+					break;
 
 				// --- XCB_EVENT_MASK_EXPOSURE --- //
 				case XCB_EXPOSE:
@@ -2665,7 +2716,6 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 				// --- XCB_EVENT_MASK_KEYMAP_STATE --- //
 				// --- XCB_EVENT_MASK_KEY_PRESS --- //
 				// --- XCB_EVENT_MASK_KEY_RELEASE --- //
-				// --- XCB_EVENT_MASK_LEAVE_WINDOW --- //
 				// --- XCB_EVENT_MASK_OWNER_GRAB_BUTTON --- //
 				// --- XCB_EVENT_MASK_POINTER_MOTION --- //
 				// --- XCB_EVENT_MASK_POINTER_MOTION_HINT --- //
@@ -3817,6 +3867,8 @@ void Xenium::windowDestroy(WindowId window_id
 	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
 
 	window_output_map.erase(window_id);
+	window_on_leave_map.erase(window_id);
+	window_on_enter_map.erase(window_id);
 	window_focus_map.erase(window_id);
 	window_delete_map.erase(window_id);
 	window_decorations_map.erase(window_id);
@@ -5241,7 +5293,16 @@ void Xenium::Window::pointerOnButton(Xenium::LambdaButtonPixel lambda ///< The l
 void Xenium::Window::pointerOnEnter(Xenium::LambdaPointMm lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_mm = LambdaPointMm_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_mm = lambda;
+	}
 }
 
 
@@ -5258,7 +5319,16 @@ void Xenium::Window::pointerOnEnter(Xenium::LambdaPointMm lambda ///< The lambda
 void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPercent lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_percent = LambdaPointPercent_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_percent = lambda;
+	}
 }
 
 
@@ -5275,7 +5345,16 @@ void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPercent lambda ///< The l
 void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPixel lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_pixel = LambdaPointPixel_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_pixel = lambda;
+	}
 }
 
 
@@ -5289,7 +5368,14 @@ void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPixel lambda ///< The lam
 void Xenium::Window::pointerOnLeave(Xenium::Lambda lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	if(lambda == nullptr)
+	{
+		xenium->window_on_leave_map[window_id] = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_on_leave_map[window_id] = lambda;
+	}
 }
 
 
@@ -5648,6 +5734,10 @@ std::cout << "Configue Notify: " << *event << '\n';
 		return;
 	}
 
+	/**
+	 * \bug This is broken, Output and WindowSize are locked when the 
+	 * lambdas are called later.
+	 */
 	std::lock_guard<std::mutex> od_lock(output_data.mutex);
 	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
 
@@ -5698,6 +5788,59 @@ std::cout << "Configue Notify: " << *event << '\n';
 	window_size.pixel_lambda(window_size.pixel);
 	window_size.percent_lambda(window_size.percent);
 	window_size.mm_lambda(window_size.mm);
+}
+
+
+void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
+	) noexcept
+{
+std::cout << "Enter Notify:    " << *event << '\n';
+
+	/**
+	 * \bug This is broken, Output and WindowSize are locked when the 
+	 * lambdas are called later.
+	 */
+	std::lock_guard<std::mutex> od_lock(output_data.mutex);
+	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
+
+	const WindowId window_id = event->event;
+
+	if(event->response_type == XCB_LEAVE_NOTIFY)
+	{
+		window_on_leave_map[window_id]();
+		return;
+	}
+
+
+	OutputId output_id = window_output_map[window_id];
+	Output output = output_data.map.at(output_id);
+
+	PointPixel point_pixel = {0, event->event_x, event->event_y};
+
+	auto mm = convertPixelToMm(output
+		, event->event_x
+		, event->event_y
+		);
+	PointMm point_mm = {0, mm.first, mm.second};
+
+	WindowSize& window_size = window_size_map[window_id];
+	PointPercent point_percent =
+	{	0
+	,	(float)event->event_x / (float)window_size.pixel.width
+	,	(float)event->event_y / (float)window_size.pixel.height
+	};
+
+	/**
+	 * \todo Change Locks
+	 *       - output_mutex_map: Control output creation and destruction
+	 *       - window_mutex_map: Control window creation and destruction
+	 */
+
+	KeyModifier key_mod = {};
+
+	window_on_enter_map[window_id].lambda_mm(point_mm, key_mod);
+	window_on_enter_map[window_id].lambda_percent(point_percent, key_mod);
+	window_on_enter_map[window_id].lambda_pixel(point_pixel, key_mod);
 }
 
 
@@ -6779,6 +6922,14 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 
 	window_output_map[window_id] = output_id;
 
+	window_on_leave_map[window_id] = Lambda_DoNothing;
+
+	window_on_enter_map[window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
+
 	window_decorations_map[window_id] =
 	{	.window_decorations = WindowDecorations::Server_Side
 	,	.lambda             = LambdaWindowDecorations_DoNothing
@@ -6945,6 +7096,63 @@ std::string to_string(const Xenium::Output& output ///< The value
 		+ "\n,\tpixels_per_mm_horizontal: " + std::to_string(output.pixels_per_mm_horizontal)
 		+ "\n,\tpixels_per_mm_vertical: "   + std::to_string(output.pixels_per_mm_vertical)
 		+ "\n}";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p source will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::PointMm point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }"
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p source will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::PointPercent point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }"
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p source will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::PointPixel point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }"
+		;
 }
 
 

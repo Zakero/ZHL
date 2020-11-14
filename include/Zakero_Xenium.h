@@ -654,7 +654,6 @@ namespace zakero
 			OutputData         output_data  = {};
 			mutable std::mutex output_mutex = {};
 
-
 			// -------------------------------------------------- //
 
 			const Xenium::Output& output(const int16_t, const int16_t, OutputId&) noexcept;
@@ -2890,7 +2889,8 @@ const Xenium::Output& Xenium::output(const int16_t x
  */
 Xenium::VectorOutputId Xenium::outputVector() const noexcept
 {
-	Xenium::VectorOutputId vector;
+	Xenium::VectorOutputId vector(output_data.map.size());
+	vector.clear();
 
 	std::lock_guard<std::mutex> lock(output_mutex);
 
@@ -3626,6 +3626,8 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window
  * \note The size of a window __must__ be greater than `0`.
  *
  * \return A pointer to the new Window or `nullptr` on error.
+ *
+ * \thread_user
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The window size
 	, const uint32_t                                   value_mask ///< The value mask
@@ -3638,7 +3640,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	SizePixel   size_pixel;
 
 	{
-		std::lock_guard<std::mutex> od_lock(output_mutex);
+		std::lock_guard<std::mutex> lock(output_mutex);
 
 		output_id      = output_data.map.begin()->first;
 		Output& output = output_data.map.begin()->second;
@@ -3716,6 +3718,8 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The w
  * \note The size of a window __must__ be greater than `0`.
  *
  * \return A pointer to the new Window or `nullptr` on error.
+ *
+ * \thread_user
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///< The window size
 	, const uint32_t                                        value_mask   ///< The value mask
@@ -3728,7 +3732,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 	SizePixel size_pixel;
 
 	{
-		std::lock_guard<std::mutex> od_lock(output_mutex);
+		std::lock_guard<std::mutex> lock(output_mutex);
 
 		output_id      = output_data.map.begin()->first;
 		Output& output = output_data.map.begin()->second;
@@ -3806,6 +3810,8 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
  * \note The size of a window __must__ be greater than `0`.
  *
  * \return A pointer to the new Window or `nullptr` on error.
+ *
+ * \thread_user
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< The window size
 	, const uint32_t                                      value_mask ///< The value mask
@@ -3818,7 +3824,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 	SizePercent size_percent;
 
 	{
-		std::lock_guard<std::mutex> od_lock(output_mutex);
+		std::lock_guard<std::mutex> lock(output_mutex);
 
 		output_id      = output_data.map.begin()->first;
 		Output& output = output_data.map.begin()->second;
@@ -3864,8 +3870,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 void Xenium::windowDestroy(WindowId window_id
 	) noexcept
 {
-	std::lock_guard<std::mutex> od_lock(output_mutex);
-	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
+	std::scoped_lock lock(output_mutex, window_size_mutex);
 
 	window_output_map.erase(window_id);
 	window_on_leave_map.erase(window_id);
@@ -4201,15 +4206,15 @@ void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda 
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
 	) noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
 	// --- Convert to a size in pixels and validate --- //
 
@@ -4270,15 +4275,15 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
 	) noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
 	// --- Convert to a size in pixels and validate --- //
 
@@ -4339,6 +4344,8 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %Window size
 	) noexcept
@@ -4350,11 +4357,9 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
 		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
 	}
 
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
 
 	// --- Update the Window Size --- //
 
@@ -4400,6 +4405,8 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///< The minimum size
 	, const Xenium::SizeMm&                                     size_max ///< The maximum size
@@ -4413,8 +4420,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
 		return error;
 	}
 
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4440,6 +4446,8 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
  *
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_min ///< The minimum size
 	, const Xenium::SizePercent&                                     size_max ///< The maximum size
@@ -4453,8 +4461,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
 		return error;
 	}
 
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4480,6 +4487,8 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
  *
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
+ *
+ * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min ///< The minimum size
 	, const Xenium::SizePixel&                                     size_max ///< The maximum size
@@ -4493,8 +4502,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 		return error;
 	}
 
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4983,12 +4991,13 @@ void Xenium::Window::minimize() noexcept
  * The provided \p point will be converted to millimeters.
  *
  * \return The converted point.
+ *
+ * \thread_user
  */
 Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5004,12 +5013,13 @@ Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///<
  * The provided \p point will be converted to a percentage.
  *
  * \return The converted point.
+ *
+ * \thread_user
  */
 Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5025,12 +5035,13 @@ Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& 
  * The provided \p point will be converted to pixels.
  *
  * \return The converted point.
+ *
+ * \thread_user
  */
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point ///< The point to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5046,12 +5057,13 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point /
  * The provided \p point will be converted to pixels.
  *
  * \return The converted point.
+ *
+ * \thread_user
  */
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& point ///< The point to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5068,12 +5080,13 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& po
  * The provided \p size will be converted to millimeters.
  *
  * \return The converted size.
+ *
+ * \thread_user
  */
 Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5089,12 +5102,13 @@ Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< Th
  * The provided \p size will be converted to a percentage.
  *
  * \return The converted size.
+ *
+ * \thread_user
  */
 Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5110,12 +5124,13 @@ Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& si
  * The provided \p size will be converted to pixels.
  *
  * \return The converted size.
+ *
+ * \thread_user
  */
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///< The size to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5131,12 +5146,13 @@ Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///<
  * The provided \p size will be converted to pixels.
  *
  * \return The converted size.
+ *
+ * \thread_user
  */
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size ///< The size to convert
 	) const noexcept
 {
-	std::lock_guard<std::mutex> od_lock(xenium->output_mutex);
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
+	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5725,6 +5741,8 @@ std::cout << "Client Message:  " << *event << '\n';
  * - Metacity
  * - Openbox
  * - Xfwm
+ *
+ * \thread_xenium
  */
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 	) noexcept
@@ -5737,11 +5755,10 @@ std::cout << "Configue Notify: " << *event << '\n';
 	}
 
 	/**
-	 * \bug This is broken, Output and WindowSize are locked when the 
-	 * lambdas are called later.
+	 * \bug This is broken, WindowSize is locked when the lambdas are 
+	 * called later.
 	 */
-	std::lock_guard<std::mutex> od_lock(output_mutex);
-	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
+	std::scoped_lock lock(window_size_mutex);
 
 	const WindowId window_id = event->window;
 
@@ -5802,8 +5819,7 @@ std::cout << "Enter Notify:    " << *event << '\n';
 	 * \bug This is broken, Output and WindowSize are locked when the 
 	 * lambdas are called later.
 	 */
-	std::lock_guard<std::mutex> od_lock(output_mutex);
-	std::lock_guard<std::mutex> ws_lock(window_size_mutex);
+	std::scoped_lock lock(window_size_mutex);
 
 	const WindowId window_id = event->event;
 
@@ -6588,37 +6604,33 @@ void Xenium::randrEvent(const xcb_randr_crtc_change_t* event ///< The event
 //std::cout << "RandR CRTC Chang:" << *event << '\n';
 	OutputId output_id = event->crtc;
 
+	if(this->screen->root != event->window
+		|| output_data.map.contains(output_id) == false
+		)
 	{
-		std::lock_guard<std::mutex> lock(output_mutex);
-
-		if(this->screen->root != event->window
-			|| output_data.map.contains(output_id) == false
-			)
-		{
-			return;
-		}
-
-		Output& output = output_data.map[output_id];
-
-		if(output.x == event->x
-			&& output.y == event->y
-			&& output.width == event->width
-			&& output.height == event->height
-			&& output.transform == event->rotation
-			)
-		{
-			return;
-		}
-
-		output.x         = event->x;
-		output.y         = event->y;
-		output.width     = event->width;
-		output.height    = event->height;
-		output.transform = event->rotation;
-
-		output.pixels_per_mm_horizontal = (float)event->width  / output.physical_width_mm;
-		output.pixels_per_mm_vertical   = (float)event->height / output.physical_height_mm;
+		return;
 	}
+
+	Output& output = output_data.map[output_id];
+
+	if(output.x == event->x
+		&& output.y == event->y
+		&& output.width == event->width
+		&& output.height == event->height
+		&& output.transform == event->rotation
+		)
+	{
+		return;
+	}
+
+	output.x         = event->x;
+	output.y         = event->y;
+	output.width     = event->width;
+	output.height    = event->height;
+	output.transform = event->rotation;
+
+	output.pixels_per_mm_horizontal = (float)event->width  / output.physical_width_mm;
+	output.pixels_per_mm_vertical   = (float)event->height / output.physical_height_mm;
 
 	output_data.on_change(output_id);
 }
@@ -6631,64 +6643,54 @@ void Xenium::randrEvent(const xcb_randr_output_change_t* event ///< The event
 	) noexcept
 {
 //std::cout << "RandR Output Chg:" << *event << '\n';
-	OutputId output_id  = 0;
-	bool call_on_add    = false;
-	bool call_on_change = false;
-	bool call_on_remove = false;
 
+	if(this->screen->root != event->window)
 	{
-		std::lock_guard<std::mutex> lock(output_mutex);
+		return;
+	}
 
-		if(this->screen->root != event->window)
-		{
-			return;
-		}
+	OutputId output_id = event->crtc;
 
-		output_id = event->crtc;
-
+	if(event->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
+	{
 		if(output_data.map.contains(output_id))
 		{
-			Output& output = output_data.map[output_id];
-
-			if(output.subpixel != event->subpixel_order
-				|| output.transform != event->rotation
-				)
-			{
-				call_on_change = true;
-				output.subpixel  = event->subpixel_order;
-				output.transform = event->rotation;
-			}
-
-			if(event->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
-			{
-				call_on_remove = true;
-				output_data.map.erase(output_id);
-			}
+			output_data.on_remove(output_id);
 		}
-		else if(event->connection == XCB_RANDR_CONNECTION_CONNECTED)
+
+		std::lock_guard<std::mutex> lock(output_mutex);
+
+		output_data.map.erase(output_id);
+	}
+	else if((event->connection == XCB_RANDR_CONNECTION_CONNECTED)
+		|| (output_data.map.contains(output_id) == false)
+		)
+	{
+		std::error_code error;
 		{
-			std::error_code error = outputAdd(event->crtc, event->output);
+			std::lock_guard<std::mutex> lock(output_mutex);
 
-			if(!error)
-			{
-				call_on_add = true;
-			}
+			error = outputAdd(event->crtc, event->output);
+		}
+
+		if(!error)
+		{
+			output_data.on_add(output_id);
 		}
 	}
-
-	if(call_on_add)
+	else
 	{
-		output_data.on_add(output_id);
-	}
+		Output& output = output_data.map[output_id];
 
-	if(call_on_change)
-	{
-		output_data.on_change(output_id);
-	}
+		if(output.subpixel != event->subpixel_order
+			|| output.transform != event->rotation
+			)
+		{
+			output.subpixel  = event->subpixel_order;
+			output.transform = event->rotation;
 
-	if(call_on_remove)
-	{
-		output_data.on_remove(output_id);
+			output_data.on_change(output_id);
+		}
 	}
 }
 

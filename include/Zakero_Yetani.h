@@ -2864,6 +2864,12 @@ namespace
  * \todo [Maybe] Add XCursor support.  Might need to do a full source port.
  * - https://www.x.org/releases/X11R7.5/doc/man/man3/Xcursor.3.html
  * - https://www.freedesktop.org/wiki/Specifications/cursor-spec/
+ *
+ * \bug What if Yetani is started with the CapsLock and/or NumLock in the "on" 
+ * state? Will the Key events still be accurate?
+ *
+ * \todo What happens if another key is pressed while the CapsLock key is 
+ * pressed?  Are the "pressed" flags cleared?
  */
 
 /**
@@ -10361,6 +10367,11 @@ std::string to_string(const Yetani::KeyModifier& key_modifier ///< The value
 		{
 			s += delim + "\"Alt\"";
 			delim = ",";
+		}
+
+		if(m & Yetani::KeyModifier_NumLock)
+		{
+			s += delim + "\"NumLock\"";
 		}
 
 		if(m & Yetani::KeyModifier_Meta)

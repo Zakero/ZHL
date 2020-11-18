@@ -215,12 +215,13 @@
  * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
  * - Improved ZAKERO_PROFILER_INIT() to use std::filesystem instead of strings.
  * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
+ * - Added ZAKERO_PROFILER_COMPLETE()
  * - Added MetaData support to ZAKERO_PROFILER_DURATION()
  * - Added MetaData support to ZAKERO_PROFILER_INSTANT()
  * - Added error support
  *
  * __0.9.0__
- * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
+ * - Bug Fix: Use a mutex to prevent multiple threads from writing at the same 
  * time
  * - Bug Fix: Don't write to a _null_ stream in the destructor
  * 
@@ -386,22 +387,6 @@
 	zakero::Profiler::deactivate();
 
 /**
- * \internal
- *
- * \brief Create a unique variable name.
- *
- * Create a unique variable name using the provided \p name_ and append the 
- * current line number.
- *
- * \note An alternative would be to use __COUNTER__ instead of __LINE__, 
- * however __COUNTER__ is not part of the C++ standard even though it is widely 
- * supported.
- *
- * \param name_ The variable name.
- */
-#define ZAKERO_PROFILER_UNIQUE(name_) ZAKERO_CONCAT(name_, __LINE__)
-
-/**
  * \brief Generate profiler data.
  *
  * This macro will generate a "complete" profiler event, meaning that the time 
@@ -453,13 +438,13 @@
  * \param name_      The name of the data
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)                    \
-	zakero::Profiler::Complete ZAKERO_PROFILER_UNIQUE(zakero_profiler_complete_) \
-	( category_                                                                  \
-	, name_                                                                      \
-	, std::experimental::source_location::current()                              \
-	, ##meta_data_                                                               \
-	);                                                                           \
+#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)            \
+	zakero::Profiler::Complete ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                          \
+	, name_                                                              \
+	, std::experimental::source_location::current()                      \
+	, ##meta_data_                                                       \
+	);                                                                   \
 
 
 /**
@@ -512,13 +497,13 @@
  * \param name_      The name of the data
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)                    \
-	zakero::Profiler::Duration ZAKERO_PROFILER_UNIQUE(zakero_profiler_duration_) \
-	( category_                                                                  \
-	, name_                                                                      \
-	, std::experimental::source_location::current()                              \
-	, ##meta_data_                                                               \
-	);                                                                           \
+#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)            \
+	zakero::Profiler::Duration ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                          \
+	, name_                                                              \
+	, std::experimental::source_location::current()                      \
+	, ##meta_data_                                                       \
+	);                                                                   \
 
 /**
  * \brief Generate profiler data.
@@ -540,21 +525,22 @@
  * \param name_      The name of the data
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)                   \
-	{                                                                          \
-	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_instant_) \
-	( category_                                                                \
-	, name_                                                                    \
-	, std::experimental::source_location::current()                            \
-	, ##meta_data_                                                             \
-	);                                                                         \
-	}                                                                          \
+#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)            \
+{                                                                           \
+	zakero::Profiler::Instant ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                         \
+	, name_                                                             \
+	, std::experimental::source_location::current()                     \
+	, ##meta_data_                                                      \
+	);                                                                  \
+}                                                                           \
 
 #else
 
 #define ZAKERO_PROFILER_INIT(output_, meta_data_...)
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
+#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)
 #define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)
 #define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)
 

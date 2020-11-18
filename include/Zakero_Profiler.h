@@ -1150,7 +1150,7 @@ Profiler::Instant::Instant(const std::string&       category  ///< The category
 	, const std::experimental::source_location& location  ///< The location
 	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
 	) noexcept
-	: zakero::Profiler::Data('I', category, name, location, meta_data)
+	: zakero::Profiler::Data('i', category, name, location, meta_data)
 {
 	if(zakero_profiler.is_active)
 	{

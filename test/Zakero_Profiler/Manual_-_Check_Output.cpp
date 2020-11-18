@@ -8,12 +8,12 @@ g++ -std=gnu++20 -o Manual_-_Check_Output Manual_-_Check_Output.cpp
 
 void func1()
 {
-	ZAKERO_PROFILER_DURATION("test", "empty")
+	ZAKERO_PROFILER_COMPLETE("test", "empty")
 }
 
 void func2()
 {
-	ZAKERO_PROFILER_DURATION("test", "work")
+	ZAKERO_PROFILER_COMPLETE("test", "work")
 
 	int total = 0;
 	for(int i = 1; i < 10; i++)
@@ -31,7 +31,7 @@ void func2()
 
 void func3()
 {
-	ZAKERO_PROFILER_DURATION("test", "layer");
+	ZAKERO_PROFILER_COMPLETE("test", "layer");
 
 	//ZAKERO_PROFILER_DEACTIVATE
 
@@ -42,14 +42,14 @@ void func3()
 
 		if(i % 2)
 		{
-			ZAKERO_PROFILER_DURATION("test", "sub",
+			ZAKERO_PROFILER_COMPLETE("test", "sub",
 				{ { "i", std::to_string(i) }
 				})
 			total -= i;
 		}
 		else
 		{
-			ZAKERO_PROFILER_DURATION("test", "add",
+			ZAKERO_PROFILER_COMPLETE("test", "add",
 				{ { "i", std::to_string(i) }
 				})
 			total += i;

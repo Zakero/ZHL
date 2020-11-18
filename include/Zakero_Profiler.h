@@ -244,8 +244,6 @@
  *
  * \author Andrew "Zakero" Moore
  * 	- Original Author
- *
- * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
 
@@ -406,6 +404,67 @@
 /**
  * \brief Generate profiler data.
  *
+ * This macro will generate a "complete" profiler event, meaning that the time 
+ * when the macro was executed is recorded and the time when current code block 
+ * goes out-of-scope is also recorded.  The ZAKERO_PROFILER_DURATION() macro 
+ * provides the same information, however this event generates less data 
+ * resulting in smaller output files.
+ *
+ * The \p category_ can be used to group together related \p name_ data.  For 
+ * example, profiling a C++ class could use the class name for the category and 
+ * the \p name_ would be the part of the class being profiled.
+ *
+ * The \p meta_data_ arg is optional.  The \p meta_data_ is a map of 
+ * _%std::string/%std::string_ key/value pairs.  Any data placed in the \p 
+ * meta_data_ map will appear as "args" when being viewed.  The following keys 
+ * will be over written if used:
+ * - file_name
+ * - function_name
+ * 
+ * \note The file name and function name are automatically recorded and stored 
+ * in the MetaData.
+ *
+ * \parcode
+ * void func()
+ * {
+ *     ZAKERO_PROFILER_COMPLETE("busy", "doing stuff")
+ *     
+ *     // Doing stuff
+ *     
+ *     for(int i = 0; i < max_i; i++)
+ *     {
+ *         ZAKERO_PROFILER_COMPLETE("busy", "gone loopy",
+ *         {    { "i", std::to_string(i) }
+ *         })
+ *         
+ *         // Doing more stuff
+ *         
+ *         if(i % magic)
+ *         {
+ *             ZAKERO_PROFILER_INSTANT("busy", "shhh, it's magic")
+ * 
+ *             // Doing magic stuff
+ *         }
+ *     }
+ * }
+ * \endparcode
+ *
+ * \param category_  The category of the data
+ * \param name_      The name of the data
+ * \param meta_data_ Extra data
+ */
+#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)                    \
+	zakero::Profiler::Complete ZAKERO_PROFILER_UNIQUE(zakero_profiler_complete_) \
+	( category_                                                                  \
+	, name_                                                                      \
+	, std::experimental::source_location::current()                              \
+	, ##meta_data_                                                               \
+	);                                                                           \
+
+
+/**
+ * \brief Generate profiler data.
+ *
  * This macro will generate a "duration" profiler event, meaning that the time 
  * when the macro was executed is recorded and the time when current code block 
  * goes out-of-scope is also recorded.
@@ -518,12 +577,22 @@ namespace zakero
 				std::string                        category;
 				std::string                        name;
 				std::experimental::source_location location;
+				std::chrono::microseconds::rep     duration;
 				std::chrono::microseconds::rep     time_stamp;
 				std::thread::id                    thread_id;
 				pid_t                              process_id;
 				char                               phase;
 
 				Data(const char, const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
+			};
+
+			struct Complete
+				: public zakero::Profiler::Data
+			{
+				bool was_active;
+
+				Complete(const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
+				~Complete() noexcept;
 			};
 
 			struct Duration
@@ -899,6 +968,7 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 	(*zakero_profiler.stream)
 		<< ",{\"ph\":\""   << data.phase << "\""
 		<<  ",\"ts\":"     << data.time_stamp
+		<<  ",\"dur\":"    << data.duration
 		<<  ",\"pid\":"    << data.process_id
 		<<  ",\"tid\":"    << data.thread_id
 		<<  ",\"cat\":\""  << data.category << "\""
@@ -971,6 +1041,7 @@ Profiler::Data::Data(const char                     phase     ///< The phase
 	, category(category)
 	, name(name)
 	, location(location)
+	, duration(0)
 	, time_stamp(ZAKERO_STEADY_TIME_NOW(microseconds))
 	, thread_id(std::this_thread::get_id())
 	, process_id(ZAKERO_PID)
@@ -982,11 +1053,55 @@ Profiler::Data::Data(const char                     phase     ///< The phase
 /**
  * \internal
  *
+ * \struct Profiler::Complete
+ *
+ * \brief Profiling Complete
+ *
+ * Adds data a behavior to Profiler::Data
+ */
+
+/**
+ * \brief Initialize the Profiler Complete.
+ *
+ * Initialize the data using the provided values as well as run-time values.  
+ *
+ * Since this object is a member of Profiler, it has access to Profiler's 
+ * private methods.
+ */
+Profiler::Complete::Complete(const std::string&     category  ///< The category
+	, const std::string&                        name      ///< The name
+	, const std::experimental::source_location& location  ///< The location
+	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
+	) noexcept
+	: zakero::Profiler::Data('X', category, name, location, meta_data)
+	, was_active(zakero_profiler.is_active)
+{
+}
+
+
+/**
+ * \brief Destructor
+ *
+ * Write the collected data.
+ */
+Profiler::Complete::~Complete() noexcept
+{
+	if(was_active || zakero_profiler.is_active)
+	{
+		duration = ZAKERO_STEADY_TIME_NOW(microseconds) - time_stamp;
+		zakero::Profiler::report(*this);
+	}
+}
+
+
+/**
+ * \internal
+ *
  * \struct Profiler::Duration
  *
  * \brief Profiling Duration
  *
- * Adds data a behavour to Profiler::Data
+ * Adds data a behavior to Profiler::Data
  */
 
 /**
@@ -1033,7 +1148,7 @@ Profiler::Duration::~Duration() noexcept
  *
  * \brief Profiling Instant
  *
- * Adds data a behavour to Profiler::Data
+ * Adds data a behavior to Profiler::Data
  */
 
 /**

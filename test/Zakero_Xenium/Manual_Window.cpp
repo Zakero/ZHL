@@ -126,7 +126,7 @@ int main()
 	{
 		printf(">>> Focus: %s\n", has_focus ? "true" : "false");
 	});
-	*/
+
 	window->pointerOnEnter([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
 	{
 		printf(">>> Enter (mm): %s\n", zakero::to_string(point).c_str());
@@ -145,6 +145,62 @@ int main()
 	window->pointerOnLeave([]()
 	{
 		printf(">>> Leave\n");
+	});
+
+	window->pointerOnMotion([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Motion (mm): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnMotion([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Motion (Percent): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnMotion([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Motion (Pixel): %s\n", zakero::to_string(point).c_str());
+	});
+
+	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Button (mm):\n\t%s\n\t%s\n"
+			, zakero::to_string(button).c_str()
+			, zakero::to_string(point).c_str()
+			);
+	});
+
+	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Button (percent):\n\t%s\n\t%s\n"
+			, zakero::to_string(button).c_str()
+			, zakero::to_string(point).c_str()
+			);
+	});
+
+	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Button (pixel): %s %s\n"
+			, zakero::to_string(button).c_str()
+			, zakero::to_string(point).c_str()
+			);
+	});
+
+	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis, const zakero::Xenium::KeyModifier&)
+	{
+		printf(">>> Axis:\n\t%s\n\t%s\n"
+			, zakero::to_string(axis).c_str()
+			, "Key Modifier"
+			);
+	});
+	*/
+
+	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
+	{
+		printf(">>> Key: %s, Mod: %s\n"
+			, zakero::to_string(key).c_str()
+			, zakero::to_string(mod).c_str()
+			);
 	});
 
 	printf("--- Looping\n");

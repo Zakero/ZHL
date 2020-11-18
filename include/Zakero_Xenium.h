@@ -169,15 +169,13 @@
 #include <linux/input-event-codes.h>
 
 // X11/XCB
-#pragma GCC diagnostic push
-#pragma GCC system_header
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/randr.h>
+
 #define explicit explicit_
 #include <xcb/xkb.h>
 #undef explicit
-#pragma GCC diagnostic pop
 
 // Zakero
 #include "Zakero_Base.h"
@@ -402,7 +400,7 @@ namespace zakero
 			// {{{ Cursor : TODO
 
 			// }}}
-			// {{{ Keyboard : TODO
+			// {{{ Keyboard
 
 			int32_t keyRepeatDelay() const noexcept;
 			int32_t keyRepeatRate() const noexcept;
@@ -754,8 +752,19 @@ namespace zakero
 				uint32_t repeat_interval_ms =  50;
 			};
 
-			KeyModifier key_modifier = { 0 };
-			XkbControls xkb_controls = {};
+			struct KeyData
+			{
+				Xenium::Key         key         = { 0 };
+				Xenium::KeyModifier modifier    = { 0 };
+				WindowId            window_id   = { 0 };
+				uint32_t            repeat_time = { 0 };
+			};
+
+			using KeyEventMap = std::unordered_map<uint32_t, KeyData>;
+
+			KeyEventMap key_event_map = {}; // TODO: Change to array?
+			KeyModifier key_modifier  = { 0 };
+			XkbControls xkb_controls  = {};
 			
 			std::error_code xkbInit() noexcept;
 			void            xkbControlsUpdate() noexcept;
@@ -2759,6 +2768,20 @@ std::error_code Xenium::init(xcb_connection_t* connection ///< The XCB Connectio
 // {{{ Cursor
 
 // }}}
+// {{{ Keyboard
+
+int32_t Xenium::keyRepeatDelay() const noexcept
+{
+	return xkb_controls.repeat_delay_ms;
+}
+
+
+int32_t Xenium::keyRepeatRate() const noexcept
+{
+	return xkb_controls.repeat_interval_ms;
+}
+
+// }}}
 // {{{ Utility
 
 // }}}
@@ -2827,6 +2850,43 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			if(event == nullptr)
 			{
+				auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+
+				// No more events.  Check if any key events
+				// need to be sent.
+				for(auto& iter : xenium->key_event_map)
+				{
+					Key& key = iter.second.key;
+
+					if(key.time == 0)
+					{
+						continue;
+					}
+
+					KeyModifier& modifier  = iter.second.modifier;
+					WindowId&    window_id = iter.second.window_id;
+
+					if(key.state == KeyState::Released)
+					{
+						xenium->window_on_key_map[window_id](key, modifier);
+						key.time = 0;
+
+						continue;
+					}
+
+					auto& repeat_time = iter.second.repeat_time;
+
+					if(key.state == KeyState::Repeat
+						&& repeat_time < time_now
+						)
+					{
+						xenium->window_on_key_map[window_id](key, modifier);
+						repeat_time += xenium->xkb_controls.repeat_interval_ms;
+
+						continue;
+					}
+				}
+				// All done.
 				break;
 			}
 
@@ -6249,77 +6309,81 @@ void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 void Xenium::xcbEvent(const xcb_key_press_event_t* event
 	) noexcept
 {
-std::cout << "Key Press:       " << *event << '\n';
+//std::cout << "Key Press:       " << *event << '\n';
 
-	Key key =
-	{	.time  = event->time
-	,	.code  = (uint32_t)event->detail - 8
-	,	.state = KeyState::Repeat
-	};
+	uint32_t key_code  = (uint32_t)event->detail - 8;
 
-	/*
-	if(event->response_type == XCB_KEY_PRESS)
-	{
-		if(key_repeat[key.code].time == event->time)
-		{
-			key_repeat[key.code].response_type = XCB_KEY_REPEAT;
-		}
-		else
-		{
-			key_repeat[key.code] = *event;
-		}
-	}
-	else // if(event->response_type == XCB_KEY_RELEASE)
-	{
-			key_repeat[key.code].response_type = XCB_KEY_RELEASE;
-	}
-	*/
-	if(event->response_type == XCB_KEY_PRESS)
-	{
-		key.state = KeyState::Pressed;
-	}
-	else if(event->response_type == XCB_KEY_RELEASE)
-	{
-		key.state = KeyState::Released;
-	}
+	key_modifier.pressed = 0;
 
-	uint32_t pressed = 0;
-
-	if(key.code == KEY_CAPSLOCK || key.code == KEY_NUMLOCK)
+	if(key_code == KEY_CAPSLOCK || key_code == KEY_NUMLOCK)
 	{
 		xkbIndicatorStateUpdate();
 
-		if(key.code == KEY_CAPSLOCK)
+		if(key_code == KEY_CAPSLOCK)
 		{
-			pressed |= KeyModifier_CapsLock;
+			key_modifier.pressed |= KeyModifier_CapsLock;
 		}
 
-		if(key.code == KEY_NUMLOCK)
+		if(key_code == KEY_NUMLOCK)
 		{
-			pressed |= KeyModifier_NumLock;
+			key_modifier.pressed |= KeyModifier_NumLock;
 		}
 	}
 
 	if(event->state & 0x0001)
 	{
-		pressed |= KeyModifier_Shift;
+		key_modifier.pressed |= KeyModifier_Shift;
 	}
 	if(event->state & 0x0004)
 	{
-		pressed |= KeyModifier_Control;
+		key_modifier.pressed |= KeyModifier_Control;
 	}
 	if(event->state & 0x0008)
 	{
-		pressed |= KeyModifier_Alt;
+		key_modifier.pressed |= KeyModifier_Alt;
 	}
 	if(event->state & 0x0040)
 	{
-		pressed |= KeyModifier_Meta;
+		key_modifier.pressed |= KeyModifier_Meta;
 	}
 
-	key_modifier.pressed = pressed;
+	const WindowId window_id = event->event;
 
-	window_on_key_map[event->event](key, key_modifier);
+	key_event_map[key_code].window_id = window_id;
+
+	Key& key = key_event_map[key_code].key;
+
+	if(event->response_type == XCB_KEY_PRESS)
+	{
+		if(key_event_map[key_code].key.time == event->time)
+		{
+			key.state = KeyState::Repeat;
+			key_event_map[key_code].repeat_time =
+				event->time + xkb_controls.repeat_interval_ms
+				;
+		}
+		else
+		{
+			key =
+			{	.time  = event->time
+			,	.code  = (uint32_t)event->detail - 8
+			,	.state = KeyState::Pressed
+			};
+
+			key_event_map[key_code].repeat_time =
+				event->time + xkb_controls.repeat_delay_ms
+				;
+
+			window_on_key_map[window_id](key, key_modifier);
+		}
+	}
+	else // if(event->response_type == XCB_KEY_RELEASE)
+	{
+		key.time  = event->time;
+		key.state = KeyState::Released;
+
+		key_event_map[key_code].modifier = key_modifier;
+	}
 }
 
 

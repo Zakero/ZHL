@@ -766,6 +766,8 @@ namespace zakero
 			KeyModifier key_modifier  = { 0 };
 			XkbControls xkb_controls  = {};
 			
+			inline void     keyEventMapClear() noexcept;
+			inline void     keyEventMapProcess() noexcept;
 			std::error_code xkbInit() noexcept;
 			void            xkbControlsUpdate() noexcept;
 			void            xkbIndicatorStateUpdate() noexcept;
@@ -2850,43 +2852,8 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			if(event == nullptr)
 			{
-				auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+				xenium->keyEventMapProcess();
 
-				// No more events.  Check if any key events
-				// need to be sent.
-				for(auto& iter : xenium->key_event_map)
-				{
-					Key& key = iter.second.key;
-
-					if(key.time == 0)
-					{
-						continue;
-					}
-
-					KeyModifier& modifier  = iter.second.modifier;
-					WindowId&    window_id = iter.second.window_id;
-
-					if(key.state == KeyState::Released)
-					{
-						xenium->window_on_key_map[window_id](key, modifier);
-						key.time = 0;
-
-						continue;
-					}
-
-					auto& repeat_time = iter.second.repeat_time;
-
-					if(key.state == KeyState::Repeat
-						&& repeat_time < time_now
-						)
-					{
-						xenium->window_on_key_map[window_id](key, modifier);
-						repeat_time += xenium->xkb_controls.repeat_interval_ms;
-
-						continue;
-					}
-				}
-				// All done.
 				break;
 			}
 
@@ -6294,6 +6261,7 @@ void Xenium::xcbEvent(const xcb_focus_in_event_t* event
 	}
 	else
 	{
+		keyEventMapClear();
 		window_focus_map[window_id](false);
 	}
 }
@@ -6315,7 +6283,9 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 
 	key_modifier.pressed = 0;
 
-	if(key_code == KEY_CAPSLOCK || key_code == KEY_NUMLOCK)
+	if(key_code == KEY_CAPSLOCK
+		|| key_code == KEY_NUMLOCK
+		)
 	{
 		xkbIndicatorStateUpdate();
 
@@ -6352,23 +6322,18 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 	key_event_map[key_code].window_id = window_id;
 
 	Key& key = key_event_map[key_code].key;
+	key.code = key_code;
 
 	if(event->response_type == XCB_KEY_PRESS)
 	{
-		if(key_event_map[key_code].key.time == event->time)
+		if(key.time == event->time)
 		{
 			key.state = KeyState::Repeat;
-			key_event_map[key_code].repeat_time =
-				event->time + xkb_controls.repeat_interval_ms
-				;
 		}
 		else
 		{
-			key =
-			{	.time  = event->time
-			,	.code  = (uint32_t)event->detail - 8
-			,	.state = KeyState::Pressed
-			};
+			key.time  = event->time;
+			key.state = KeyState::Pressed;
 
 			key_event_map[key_code].repeat_time =
 				event->time + xkb_controls.repeat_delay_ms
@@ -6377,7 +6342,16 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 			window_on_key_map[window_id](key, key_modifier);
 		}
 	}
-	else // if(event->response_type == XCB_KEY_RELEASE)
+	/* If another window is active and a key is pressed then the cursor is 
+	 * moved into a Xenium window while the key remains pressed, it is 
+	 * possible for the first key event to be recieved is the 
+	 * XCB_KEY_RELEASE.  This event must be ignored because there was no 
+	 * precedding XCB_KEY_PRESS event.  To identify the bad XCB_KEY_RELEASE 
+	 * event from the good event, the key.time value will be `0` if the the 
+	 * pressed event is missing.  A non-`0` key.time value means there was 
+	 * a preceding XCB_KEY_PRESS event.
+	 */
+	else if(key.time != 0) // && (event->response_type == XCB_KEY_RELEASE)
 	{
 		key.time  = event->time;
 		key.state = KeyState::Released;
@@ -7061,6 +7035,72 @@ xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_co
 
 // }}}
 // {{{ XCB : XKB
+
+void Xenium::keyEventMapClear() noexcept
+{
+	const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+
+	for(auto& iter : key_event_map)
+	{
+		Key& key = iter.second.key;
+
+		if(key.time == 0)
+		{
+			continue;
+		}
+
+		key.state = KeyState::Released;
+		key.time  = time_now;
+
+		const KeyModifier& modifier  = iter.second.modifier;
+		const WindowId&    window_id = iter.second.window_id;
+
+		window_on_key_map[window_id](key, modifier);
+
+		key.time = 0;
+	}
+}
+
+
+void Xenium::keyEventMapProcess() noexcept
+{
+	for(auto& iter : key_event_map)
+	{
+		Key& key = iter.second.key;
+
+		if(key.time == 0)
+		{
+			continue;
+		}
+
+		const KeyModifier& modifier  = iter.second.modifier;
+		const WindowId&    window_id = iter.second.window_id;
+
+		if(key.state == KeyState::Released)
+		{
+			window_on_key_map[window_id](key, modifier);
+			key.time = 0;
+
+			continue;
+		}
+
+		auto& repeat_time = iter.second.repeat_time;
+
+		const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+
+		if(key.state == KeyState::Repeat
+			&& repeat_time < time_now
+			)
+		{
+			window_on_key_map[window_id](key, modifier);
+			key.time = repeat_time;
+			repeat_time += xkb_controls.repeat_interval_ms;
+
+			continue;
+		}
+	}
+}
+
 
 std::error_code Xenium::xkbInit() noexcept
 {

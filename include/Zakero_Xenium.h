@@ -557,7 +557,7 @@ namespace zakero
 					// {{{ Cursor : TODO
 
 					// }}}
-					// {{{ Keyboard : TODO
+					// {{{ Keyboard
 
 					// Not supported by XCB/X11
 					//void                 keyboardOnEnter(Xenium::Lambda) noexcept;
@@ -565,8 +565,12 @@ namespace zakero
 					void                 keyboardOnKey(Xenium::LambdaKey) noexcept;
 
 					// }}}
-					// {{{ Pointer : In-Progress
+					// {{{ Pointer
 
+					void                 pointerOnAxis(Xenium::LambdaAxis) noexcept;
+					void                 pointerOnButton(Xenium::LambdaButtonMm) noexcept;
+					void                 pointerOnButton(Xenium::LambdaButtonPercent) noexcept;
+					void                 pointerOnButton(Xenium::LambdaButtonPixel) noexcept;
 					void                 pointerOnEnter(Xenium::LambdaPointMm) noexcept;
 					void                 pointerOnEnter(Xenium::LambdaPointPercent) noexcept;
 					void                 pointerOnEnter(Xenium::LambdaPointPixel) noexcept;
@@ -574,10 +578,6 @@ namespace zakero
 					void                 pointerOnMotion(Xenium::LambdaPointMm) noexcept;
 					void                 pointerOnMotion(Xenium::LambdaPointPercent) noexcept;
 					void                 pointerOnMotion(Xenium::LambdaPointPixel) noexcept;
-					void                 pointerOnButton(Xenium::LambdaButtonMm) noexcept;
-					void                 pointerOnButton(Xenium::LambdaButtonPercent) noexcept;
-					void                 pointerOnButton(Xenium::LambdaButtonPixel) noexcept;
-					void                 pointerOnAxis(Xenium::LambdaAxis) noexcept;
 
 					// Not Used? Or Future?
 					void                 pointerOnAxisSource(Xenium::Lambda) noexcept;
@@ -765,6 +765,7 @@ namespace zakero
 			KeyEventMap key_event_map = {}; // TODO: Change to array?
 			KeyModifier key_modifier  = { 0 };
 			XkbControls xkb_controls  = {};
+			uint16_t    xkb_modifier_pressed = 0;
 			
 			inline void     keyEventMapClear() noexcept;
 			inline void     keyEventMapProcess() noexcept;
@@ -6052,11 +6053,9 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 		 *       - window_mutex_map: Control window creation and destruction
 		 */
 
-		KeyModifier key_mod = {};
-
-		window_on_button_map[window_id].lambda_mm(button, point_mm, key_mod);
-		window_on_button_map[window_id].lambda_percent(button, point_percent, key_mod);
-		window_on_button_map[window_id].lambda_pixel(button, point_pixel, key_mod);
+		window_on_button_map[window_id].lambda_mm(button, point_mm, key_modifier);
+		window_on_button_map[window_id].lambda_percent(button, point_percent, key_modifier);
+		window_on_button_map[window_id].lambda_pixel(button, point_pixel, key_modifier);
 	}
 	else if(event->response_type == XCB_BUTTON_PRESS)
 	{
@@ -6070,9 +6069,7 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 			,	.type     = PointerAxisType::Vertical
 			};
 
-			KeyModifier key_mod = {};
-
-			window_on_axis_map[window_id](pointer_axis, key_mod);
+			window_on_axis_map[window_id](pointer_axis, key_modifier);
 		}
 		else if(button_code == 6 || button_code == 7)
 		{
@@ -6084,9 +6081,7 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 			,	.type     = PointerAxisType::Horizontal
 			};
 
-			KeyModifier key_mod = {};
-
-			window_on_axis_map[window_id](pointer_axis, key_mod);
+			window_on_axis_map[window_id](pointer_axis, key_modifier);
 		}
 	}
 }
@@ -6202,6 +6197,8 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 		return;
 	}
 
+	xkbIndicatorStateUpdate();
+
 	OutputId output_id = window_output_map[window_id];
 	Output output = output_data.map.at(output_id);
 
@@ -6225,11 +6222,9 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	 *       - window_mutex_map: Control window creation and destruction
 	 */
 
-	KeyModifier key_mod = {};
-
-	window_on_enter_map[window_id].lambda_mm(point_mm, key_mod);
-	window_on_enter_map[window_id].lambda_percent(point_percent, key_mod);
-	window_on_enter_map[window_id].lambda_pixel(point_pixel, key_mod);
+	window_on_enter_map[window_id].lambda_mm(point_mm, key_modifier);
+	window_on_enter_map[window_id].lambda_percent(point_percent, key_modifier);
+	window_on_enter_map[window_id].lambda_pixel(point_pixel, key_modifier);
 }
 
 
@@ -6274,6 +6269,33 @@ void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 }
 
 
+/**
+ * \brief XCB Event Handler.
+ *
+ * \par Phantom XCB Key State
+ * \parblock
+ * The `xcb_xkb_press_event_t` field `state` is used by XCB to track the key 
+ * modifiers, however this functionality can not be used.  The problem is that 
+ * the modifier `state` is still set to true even after the modifier key has 
+ * been released.
+ *
+ * From the point of veiw of the event handler, the `state` value is only reset
+ * on the next key press event which results in a _phantom_ `state` between key 
+ * release and press events.
+ *
+ * For key events this `state` behavior is fine but for mouse/pointer input, 
+ * the key modifiers reflect the _phantom_ `state` and not the current state.  
+ * To work around this issue, the key modifiers are tracked manually.
+ *
+ * An example of this problem:
+ * - Press a shift key
+ * - Record the modifier `state` (No Shift key state)
+ * - Move the mouse, get the modifier `state` (No Shift key state)
+ * - Release the shift key
+ * - Record the modifier `state` (Shift key state is `true`)
+ * - Move the mouse, get the modifier `state` (Shift key state is `true`)
+ * \endparblock
+ */
 void Xenium::xcbEvent(const xcb_key_press_event_t* event
 	) noexcept
 {
@@ -6281,40 +6303,142 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 
 	uint32_t key_code  = (uint32_t)event->detail - 8;
 
+	constexpr uint16_t CapsLock      = 0b0000'0010'0000'0000;
+	constexpr uint16_t NumLock       = 0b0000'0001'0000'0000;
+	constexpr uint16_t Alt_Left      = 0b0000'0000'1000'0000;
+	constexpr uint16_t Alt_Right     = 0b0000'0000'0100'0000;
+	constexpr uint16_t Control_Left  = 0b0000'0000'0010'0000;
+	constexpr uint16_t Control_Right = 0b0000'0000'0001'0000;
+	constexpr uint16_t Meta_Left     = 0b0000'0000'0000'1000;
+	constexpr uint16_t Meta_Right    = 0b0000'0000'0000'0100;
+	constexpr uint16_t Shift_Left    = 0b0000'0000'0000'0010;
+	constexpr uint16_t Shift_Right   = 0b0000'0000'0000'0001;
+
+	if(event->response_type == XCB_KEY_PRESS)
+	{
+		switch(key_code)
+		{
+			case KEY_CAPSLOCK:
+				xkbIndicatorStateUpdate();
+				xkb_modifier_pressed |= CapsLock;
+				break;
+
+			case KEY_NUMLOCK:
+				xkbIndicatorStateUpdate();
+				xkb_modifier_pressed |= NumLock;
+				break;
+
+			case KEY_LEFTALT:
+				xkb_modifier_pressed |= Alt_Left;
+				break;
+
+			case KEY_RIGHTALT:
+				xkb_modifier_pressed |= Alt_Right;
+				break;
+
+			case KEY_LEFTCTRL:
+				xkb_modifier_pressed |= Control_Left;
+				break;
+
+			case KEY_RIGHTCTRL:
+				xkb_modifier_pressed |= Control_Right;
+				break;
+
+			case KEY_LEFTMETA:
+				xkb_modifier_pressed |= Meta_Left;
+				break;
+
+			case KEY_RIGHTMETA:
+				xkb_modifier_pressed |= Meta_Right;
+				break;
+
+			case KEY_LEFTSHIFT:
+				xkb_modifier_pressed |= Shift_Left;
+				break;
+
+			case KEY_RIGHTSHIFT:
+				xkb_modifier_pressed |= Shift_Right;
+				break;
+		}
+	}
+	else
+	{
+		switch(key_code)
+		{
+			case KEY_CAPSLOCK:
+				xkbIndicatorStateUpdate();
+				xkb_modifier_pressed &= (~CapsLock);
+				break;
+
+			case KEY_NUMLOCK:
+				xkbIndicatorStateUpdate();
+				xkb_modifier_pressed &= (~NumLock);
+				break;
+
+			case KEY_LEFTALT:
+				xkb_modifier_pressed &= (~Alt_Left);
+				break;
+
+			case KEY_RIGHTALT:
+				xkb_modifier_pressed &= (~Alt_Right);
+				break;
+
+			case KEY_LEFTCTRL:
+				xkb_modifier_pressed &= (~Control_Left);
+				break;
+
+			case KEY_RIGHTCTRL:
+				xkb_modifier_pressed &= (~Control_Right);
+				break;
+
+			case KEY_LEFTMETA:
+				xkb_modifier_pressed &= (~Meta_Left);
+				break;
+
+			case KEY_RIGHTMETA:
+				xkb_modifier_pressed &= (~Meta_Right);
+				break;
+
+			case KEY_LEFTSHIFT:
+				xkb_modifier_pressed &= (~Shift_Left);
+				break;
+
+			case KEY_RIGHTSHIFT:
+				xkb_modifier_pressed &= (~Shift_Right);
+				break;
+		}
+	}
+
 	key_modifier.pressed = 0;
 
-	if(key_code == KEY_CAPSLOCK
-		|| key_code == KEY_NUMLOCK
-		)
+	if(xkb_modifier_pressed & CapsLock)
 	{
-		xkbIndicatorStateUpdate();
-
-		if(key_code == KEY_CAPSLOCK)
-		{
-			key_modifier.pressed |= KeyModifier_CapsLock;
-		}
-
-		if(key_code == KEY_NUMLOCK)
-		{
-			key_modifier.pressed |= KeyModifier_NumLock;
-		}
+		key_modifier.pressed |= KeyModifier_CapsLock;
 	}
 
-	if(event->state & 0x0001)
+	if(xkb_modifier_pressed & NumLock)
 	{
-		key_modifier.pressed |= KeyModifier_Shift;
+		key_modifier.pressed |= KeyModifier_NumLock;
 	}
-	if(event->state & 0x0004)
-	{
-		key_modifier.pressed |= KeyModifier_Control;
-	}
-	if(event->state & 0x0008)
+
+	if(xkb_modifier_pressed & (Alt_Left | Alt_Right))
 	{
 		key_modifier.pressed |= KeyModifier_Alt;
 	}
-	if(event->state & 0x0040)
+
+	if(xkb_modifier_pressed & (Control_Left | Control_Right))
+	{
+		key_modifier.pressed |= KeyModifier_Control;
+	}
+
+	if(xkb_modifier_pressed & (Meta_Left | Meta_Right))
 	{
 		key_modifier.pressed |= KeyModifier_Meta;
+	}
+
+	if(xkb_modifier_pressed & (Shift_Left | Shift_Right))
+	{
+		key_modifier.pressed |= KeyModifier_Shift;
 	}
 
 	const WindowId window_id = event->event;
@@ -6399,11 +6523,9 @@ void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
 	,	(float)event->event_y / (float)window_size.pixel.height
 	};
 
-	KeyModifier key_mod = {};
-
-	window_on_motion_map[window_id].lambda_mm(point_mm, key_mod);
-	window_on_motion_map[window_id].lambda_percent(point_percent, key_mod);
-	window_on_motion_map[window_id].lambda_pixel(point_pixel, key_mod);
+	window_on_motion_map[window_id].lambda_mm(point_mm, key_modifier);
+	window_on_motion_map[window_id].lambda_percent(point_percent, key_modifier);
+	window_on_motion_map[window_id].lambda_pixel(point_pixel, key_modifier);
 }
 
 

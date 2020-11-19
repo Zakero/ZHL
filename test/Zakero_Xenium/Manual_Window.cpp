@@ -86,24 +86,27 @@ int main()
 	window->setSize(zakero::Xenium::SizePixel{500,300});
 	*/
 
-	window->sizeOnChange([](const zakero::Xenium::SizeMm& size)
-	{
-		printf("--- SizeMm: %fx%f\n", size.width, size.height);
-	});
-	window->sizeOnChange([](const zakero::Xenium::SizePercent& size)
-	{
-		printf("--- SizePercent: %fx%f\n", size.width, size.height);
-	});
-	window->sizeOnChange([](const zakero::Xenium::SizePixel& size)
-	{
-		printf("--- SizePixel: %dx%d\n", size.width, size.height);
-	});
+//	window->sizeOnChange([](const zakero::Xenium::SizeMm& size)
+//	{
+//		printf("--- SizeMm: %fx%f\n", size.width, size.height);
+//	});
 
-	window->windowModeOnChange([](const zakero::Xenium::WindowMode& window_mode)
-	{
-		printf(">>> WindowMode: %s\n", zakero::to_string(window_mode).c_str());
-	});
-	/*
+//	window->sizeOnChange([](const zakero::Xenium::SizePercent& size)
+//	{
+//		printf("--- SizePercent: %fx%f\n", size.width, size.height);
+//	});
+
+//	window->sizeOnChange([](const zakero::Xenium::SizePixel& size)
+//	{
+//		printf("--- SizePixel: %dx%d\n", size.width, size.height);
+//	});
+
+//	window->windowModeOnChange([](const zakero::Xenium::WindowMode& window_mode)
+//	{
+//		printf(">>> WindowMode: %s\n", zakero::to_string(window_mode).c_str());
+//	});
+
+/*
 	sleep(3);
 	printf("--- Full Screen\n");
 	window->windowModeSet(zakero::Xenium::WindowMode::Fullscreen);
@@ -116,92 +119,113 @@ int main()
 	sleep(3);
 	printf("--- Normal\n");
 	window->windowModeSet(zakero::Xenium::WindowMode::Normal);
+*/
 
-	window->decorationsOnChange([](const zakero::Xenium::WindowDecorations deco)
-	{
-		printf(">>> WindowDecorations: %s\n", zakero::to_string(deco).c_str());
-	});
+//	window->decorationsOnChange([](const zakero::Xenium::WindowDecorations deco)
+//	{
+//		printf(">>> WindowDecorations: %s\n", zakero::to_string(deco).c_str());
+//	});
 
-	window->onFocusChange([](const bool has_focus)
-	{
-		printf(">>> Focus: %s\n", has_focus ? "true" : "false");
-	});
+//	window->onFocusChange([](const bool has_focus)
+//	{
+//		printf(">>> Focus: %s\n", has_focus ? "true" : "false");
+//	});
 
-	window->pointerOnEnter([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Enter (mm): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnEnter([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Enter (mm): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnEnter([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Enter (Percent): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnEnter([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Enter (Percent): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnEnter([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Enter (Pixel): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnEnter([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Enter (Pixel): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnLeave([]()
-	{
-		printf(">>> Leave\n");
-	});
+//	window->pointerOnLeave([]()
+//	{
+//		printf(">>> Leave\n");
+//	});
 
-	window->pointerOnMotion([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Motion (mm): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnMotion([](const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Motion (mm): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnMotion([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Motion (Percent): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnMotion([](const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Motion (percent): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnMotion([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Motion (Pixel): %s\n", zakero::to_string(point).c_str());
-	});
+//	window->pointerOnMotion([](const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Motion (pixel): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Button (mm):\n\t%s\n\t%s\n"
-			, zakero::to_string(button).c_str()
-			, zakero::to_string(point).c_str()
-			);
-	});
+//	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointMm& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Button (mm): %s %s %s\n"
+//			, zakero::to_string(button).c_str()
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Button (percent):\n\t%s\n\t%s\n"
-			, zakero::to_string(button).c_str()
-			, zakero::to_string(point).c_str()
-			);
-	});
+//	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPercent& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Button (percent): %s %s %s\n"
+//			, zakero::to_string(button).c_str()
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Button (pixel): %s %s\n"
-			, zakero::to_string(button).c_str()
-			, zakero::to_string(point).c_str()
-			);
-	});
+//	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Button (pixel): %s %s %s\n"
+//			, zakero::to_string(button).c_str()
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis, const zakero::Xenium::KeyModifier&)
-	{
-		printf(">>> Axis:\n\t%s\n\t%s\n"
-			, zakero::to_string(axis).c_str()
-			, "Key Modifier"
-			);
-	});
-	*/
+//	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Axis: %s, Mod: %s\n"
+//			, zakero::to_string(axis).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
-	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
-	{
-		printf(">>> Key: %s, Mod: %s\n"
-			, zakero::to_string(key).c_str()
-			, zakero::to_string(mod).c_str()
-			);
-	});
+//	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Key: %s, Mod: %s\n"
+//			, zakero::to_string(key).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
 	printf("--- Looping\n");
 	while(!time_to_die)

@@ -756,19 +756,19 @@ namespace zakero
 			{
 				Xenium::Key         key         = { 0 };
 				Xenium::KeyModifier modifier    = { 0 };
-				WindowId            window_id   = { 0 };
+				Xenium::WindowId    window_id   = { 0 };
 				uint32_t            repeat_time = { 0 };
 			};
 
-			using KeyEventMap = std::unordered_map<uint32_t, KeyData>;
+			using KeyDataArray = std::array<KeyData, 256>;
 
-			KeyEventMap key_event_map = {}; // TODO: Change to array?
-			KeyModifier key_modifier  = { 0 };
-			XkbControls xkb_controls  = {};
-			uint16_t    xkb_modifier_pressed = 0;
+			KeyDataArray key_data_array       = { 0 };
+			KeyModifier  key_modifier         = { 0 };
+			XkbControls  xkb_controls         = {};
+			uint16_t     xkb_modifier_pressed = 0;
 			
-			inline void     keyEventMapClear() noexcept;
-			inline void     keyEventMapProcess() noexcept;
+			inline void     keyDataArrayClear() noexcept;
+			inline void     keyDataArrayProcess() noexcept;
 			std::error_code xkbInit() noexcept;
 			void            xkbControlsUpdate() noexcept;
 			void            xkbIndicatorStateUpdate() noexcept;
@@ -2853,7 +2853,7 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			if(event == nullptr)
 			{
-				xenium->keyEventMapProcess();
+				xenium->keyDataArrayProcess();
 
 				break;
 			}
@@ -6256,7 +6256,7 @@ void Xenium::xcbEvent(const xcb_focus_in_event_t* event
 	}
 	else
 	{
-		keyEventMapClear();
+		keyDataArrayClear();
 		window_focus_map[window_id](false);
 	}
 }
@@ -6443,13 +6443,15 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 
 	const WindowId window_id = event->event;
 
-	key_event_map[key_code].window_id = window_id;
+	key_data_array[key_code].window_id = window_id;
 
-	Key& key = key_event_map[key_code].key;
+	Key& key = key_data_array[key_code].key;
 	key.code = key_code;
 
 	if(event->response_type == XCB_KEY_PRESS)
 	{
+		key_data_array[key_code].modifier = key_modifier;
+
 		if(key.time == event->time)
 		{
 			key.state = KeyState::Repeat;
@@ -6459,7 +6461,7 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 			key.time  = event->time;
 			key.state = KeyState::Pressed;
 
-			key_event_map[key_code].repeat_time =
+			key_data_array[key_code].repeat_time =
 				event->time + xkb_controls.repeat_delay_ms
 				;
 
@@ -6480,7 +6482,7 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 		key.time  = event->time;
 		key.state = KeyState::Released;
 
-		key_event_map[key_code].modifier = key_modifier;
+		key_data_array[key_code].modifier = key_modifier;
 	}
 }
 
@@ -7158,13 +7160,13 @@ xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_co
 // }}}
 // {{{ XCB : XKB
 
-void Xenium::keyEventMapClear() noexcept
+void Xenium::keyDataArrayClear() noexcept
 {
 	const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
 
-	for(auto& iter : key_event_map)
+	for(auto& key_data : key_data_array)
 	{
-		Key& key = iter.second.key;
+		Key& key = key_data.key;
 
 		if(key.time == 0)
 		{
@@ -7174,8 +7176,8 @@ void Xenium::keyEventMapClear() noexcept
 		key.state = KeyState::Released;
 		key.time  = time_now;
 
-		const KeyModifier& modifier  = iter.second.modifier;
-		const WindowId&    window_id = iter.second.window_id;
+		const KeyModifier& modifier  = key_data.modifier;
+		const WindowId&    window_id = key_data.window_id;
 
 		window_on_key_map[window_id](key, modifier);
 
@@ -7184,29 +7186,35 @@ void Xenium::keyEventMapClear() noexcept
 }
 
 
-void Xenium::keyEventMapProcess() noexcept
+void Xenium::keyDataArrayProcess() noexcept
 {
-	for(auto& iter : key_event_map)
+	for(auto& key_data : key_data_array)
 	{
-		Key& key = iter.second.key;
+		Key& key = key_data.key;
 
 		if(key.time == 0)
 		{
 			continue;
 		}
 
-		const KeyModifier& modifier  = iter.second.modifier;
-		const WindowId&    window_id = iter.second.window_id;
+		if(key.state == KeyState::Pressed)
+		{
+			key.state = KeyState::Repeat;
+
+			continue;
+		}
+
+		const WindowId& window_id = key_data.window_id;
 
 		if(key.state == KeyState::Released)
 		{
-			window_on_key_map[window_id](key, modifier);
+			window_on_key_map[window_id](key, key_data.modifier);
 			key.time = 0;
 
 			continue;
 		}
 
-		auto& repeat_time = iter.second.repeat_time;
+		auto& repeat_time = key_data.repeat_time;
 
 		const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
 
@@ -7214,7 +7222,7 @@ void Xenium::keyEventMapProcess() noexcept
 			&& repeat_time < time_now
 			)
 		{
-			window_on_key_map[window_id](key, modifier);
+			window_on_key_map[window_id](key, key_modifier);
 			key.time = repeat_time;
 			repeat_time += xkb_controls.repeat_interval_ms;
 

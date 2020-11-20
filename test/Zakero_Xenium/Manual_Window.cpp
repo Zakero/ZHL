@@ -219,13 +219,13 @@ int main()
 //			);
 //	});
 
-//	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
-//	{
-//		printf(">>> Key: %s, Mod: %s\n"
-//			, zakero::to_string(key).c_str()
-//			, zakero::to_string(mod).c_str()
-//			);
-//	});
+	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
+	{
+		printf(">>> Key: %s, Mod: %s\n"
+			, zakero::to_string(key).c_str()
+			, zakero::to_string(mod).c_str()
+			);
+	});
 
 	printf("--- Looping\n");
 	while(!time_to_die)

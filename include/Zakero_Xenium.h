@@ -169,6 +169,7 @@
 #include <linux/input-event-codes.h>
 
 // X11/XCB
+#include <xcb/dri3.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/randr.h>
@@ -459,8 +460,6 @@ namespace zakero
 			// }}}
 			// {{{ Window
 
-			using WindowId = uint32_t;
-
 			enum struct WindowDecorations
 			{	Client_Side
 			,	Server_Side
@@ -491,6 +490,8 @@ namespace zakero
 			using LambdaSizePixel         = std::function<void(const Xenium::SizePixel&)>;
 
 			// -------------------------------------------------- //
+
+			using WindowId = uint32_t;
 
 			class Window
 			{
@@ -721,6 +722,14 @@ namespace zakero
 			xcb_atom_t               internAtomReply(const xcb_intern_atom_cookie_t, xcb_generic_error_t&) noexcept;
 
 			// }}}
+			// {{{ XCB : DRI3
+			
+			using ProviderInfoMap = std::unordered_map<xcb_randr_provider_t, xcb_randr_get_provider_info_reply_t>;
+
+			std::error_code driInit() noexcept;
+			std::pair<uint32_t, uint32_t> driVersion() noexcept;
+
+			// }}}
 			// {{{ XCB : RandR
 
 			int randr_error_base          = 0;
@@ -736,6 +745,7 @@ namespace zakero
 			void randrEvent(const xcb_randr_output_change_t*) noexcept;
 			void randrEvent(const xcb_randr_notify_event_t*) noexcept;
 			void randrEvent(const xcb_randr_screen_change_notify_event_t*) noexcept;
+			Xenium::ProviderInfoMap randrProvider(const xcb_window_t) noexcept;
 
 			// }}}
 			// {{{ XCB : Utility
@@ -787,8 +797,8 @@ namespace zakero
 	
 			struct WindowData
 			{
-				Xenium*    xenium;
-				WindowId   window_id;
+				Xenium*      xenium;
+				WindowId     window_id;
 			};
 
 			struct WindowDelete
@@ -796,6 +806,14 @@ namespace zakero
 				Xenium::Lambda close_request_lambda;
 				xcb_atom_t     atom;
 			};
+
+			struct WindowPixmap
+			{
+				xcb_gcontext_t gc;
+				xcb_pixmap_t   pixmap;
+				int32_t        file;
+			};
+			using WindowPixmapMap = std::unordered_map<WindowId, WindowPixmap>;
 
 			enum struct SizeUnit
 			{	Millimeter
@@ -867,6 +885,7 @@ namespace zakero
 			using WindowSizeMap        = std::unordered_map<WindowId, WindowSize>;
 			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
 
+			WindowPixmapMap      window_pixmap          = {};
 			WindowMap            window_map             = {};
 			WindowDecorationsMap window_decorations_map = {};
 			WindowDeleteMap      window_delete_map      = {};
@@ -2720,8 +2739,8 @@ void Xenium::disconnect() noexcept
  *
  * \return The error code.
  */
-std::error_code Xenium::init(xcb_connection_t* connection ///< The XCB Connection
-	, int screen_number                               ///< The Screen being used.
+std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connection
+	, int                                  screen_number ///< The Screen being used.
 	) noexcept
 {
 	this->connection = connection;
@@ -2763,9 +2782,14 @@ std::error_code Xenium::init(xcb_connection_t* connection ///< The XCB Connectio
 		return error;
 	}
 
+	error = driInit();
+	if(error)
+	{
+		return error;
+	}
+
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
-
 
 // }}}
 // {{{ Cursor
@@ -3652,6 +3676,7 @@ void Xenium::outputAdd(const xcb_randr_get_crtc_info_reply_t* crtc_info   ///< C
 	,	.pixels_per_mm_vertical   = (float)crtc_info->height / output_info->mm_height
 	};
 
+ZAKERO_XENIUM__DEBUG_VAR(output_id)
 ZAKERO_XENIUM__DEBUG_VAR(this->output_data.map[output_id].name)
 }
 
@@ -5127,12 +5152,21 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
  *
  * \return An error code.
  */
+size_t frame_len = 0;
+uint8_t* frame = nullptr;
 std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
 	, Xenium::SizePixel&                        size  ///< The image size
 	) noexcept
 {
-	ZAKERO_UNUSED(image);
-	ZAKERO_UNUSED(size);
+	if(frame)
+	{
+		free(frame);
+	}
+
+	size = xenium->window_size_map[window_id].pixel;
+	frame_len = size.width * size.height * 4;
+	frame     = (uint8_t*)malloc(sizeof(uint8_t) * frame_len);
+	image = frame;
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -5146,6 +5180,39 @@ std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
  */
 void Xenium::Window::imagePresent() noexcept
 {
+	xcb_void_cookie_t void_cookie;
+	xcb_gcontext_t gc = xcb_generate_id(xenium->connection);
+
+	void_cookie =
+	xcb_create_gc_checked(xenium->connection
+		, gc
+		, window_id
+		, 0
+		, nullptr
+		);
+	xenium->requestCheckHasError(void_cookie);
+
+	SizePixel& size = xenium->window_size_map[window_id].pixel;
+
+	void_cookie =
+	xcb_put_image_checked(xenium->connection
+		, XCB_IMAGE_FORMAT_Z_PIXMAP
+		, window_id
+		, gc
+		, size.width
+		, size.height
+		, 0
+		, 0
+		, 0
+		, xenium->screen->root_depth
+		, frame_len
+		, frame
+		);
+	xenium->requestCheckHasError(void_cookie);
+
+	xcb_free_gc(xenium->connection, gc);
+	free(frame);
+	frame = nullptr;
 }
 
 
@@ -5179,7 +5246,7 @@ uint32_t Xenium::Window::time() const noexcept
  */
 uint8_t Xenium::Window::bytesPerPixel() const noexcept
 {
-	return 0;
+	return 4; // ARGB8888
 }
 
 
@@ -6656,7 +6723,7 @@ void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
 
 
 
-std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window size
+std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The window size
 	, const uint32_t                                 value_mask ///< The value mask
 	, xcb_create_window_value_list_t&                value_list ///< The value list
 	, WindowId&                                      window_id
@@ -6719,6 +6786,71 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size ///< The window si
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
+
+#if 0
+	ProviderInfoMap provider_info_map = randrProvider(window_id);
+
+	xcb_dri3_open_cookie_t dri3_cookie =
+		xcb_dri3_open(this->connection
+			, window_id
+			, provider_info_map.begin()->first
+			);
+
+	xcb_dri3_open_reply_t* dri3_reply =
+		xcb_dri3_open_reply(this->connection
+			, dri3_cookie
+			, nullptr
+			);
+
+	int* fd_list = xcb_dri3_open_reply_fds(this->connection, dri3_reply);
+
+	window_pixmap[window_id].pixmap_id = xcb_generate_id(this->connection);
+	window_pixmap[window_id].file_id   = fd_list[0];
+
+#if 1
+	xcb_void_cookie_t pixmap_cookie =
+		xcb_dri3_pixmap_from_buffer_checked(this->connection
+			, window_pixmap[window_id].pixmap_id  // pixmap
+			, window_id                           // drawable
+			, (size.width * size.height * 4)      // size
+			, size.width                          // width
+			, size.height                         // height
+			, (size.width * 4)                    // stride
+			, this->screen->root_depth            // depth
+			, 8                                   // bpp
+			, window_pixmap[window_id].file_id    // pixmap_fd
+			);
+
+	if(requestCheckHasError(pixmap_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+#else
+	xcb_dri3_buffer_from_pixmap_cookie_t pixmap_cookie =
+		xcb_dri3_buffer_from_pixmap(this->connection
+			, window_pixmap[window_id].pixmap_id  // pixmap
+			);
+
+	xcb_dri3_buffer_from_pixmap_reply_t* pixmap_reply =
+		xcb_dri3_buffer_from_pixmap_reply(this->connection
+			, pixmap_cookie
+			, nullptr
+			);
+	
+	if(pixmap_reply == nullptr)
+	{
+		printf("------ no pixmap ------\n");
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+printf("size: %dx%d\n"
+	, pixmap_reply->width
+	, pixmap_reply->height
+	);
+#endif
+#endif
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -7304,6 +7436,55 @@ void Xenium::xkbIndicatorStateUpdate() noexcept
 }
 
 // }}}
+// {{{ XCB : DRI3
+
+std::error_code Xenium::driInit() noexcept
+{
+	auto version = driVersion();
+
+	printf("DRI3 Version: %d.%d\n"
+		, version.first
+		, version.second
+		);
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+std::pair<uint32_t, uint32_t> Xenium::driVersion() noexcept
+{
+	xcb_dri3_query_version_cookie_t version_cookie =
+		xcb_dri3_query_version(this->connection
+			, std::numeric_limits<uint32_t>::max()
+			, std::numeric_limits<uint32_t>::max()
+			);
+
+	xcb_generic_error_t* generic_error = nullptr;
+
+	xcb_dri3_query_version_reply_t* version_reply =
+		xcb_dri3_query_version_reply(this->connection
+			, version_cookie
+			, &generic_error
+			);
+
+	if(version_reply == nullptr)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR((*generic_error));
+
+		return {0, 0};
+	}
+
+	std::pair<uint32_t, uint32_t> version =
+		{	version_reply->major_version
+		,	version_reply->minor_version
+		};
+
+	free(version_reply);
+
+	return version;
+}
+
+// }}}
 // {{{ XCB : RandR
 
 /**
@@ -7520,6 +7701,82 @@ void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///<
 	printf("w: %08x\n",  event->request_window);
 	printf("d: %ux%u\n", event->width, event->height);
 	printf("m: %ux%u\n", event->mwidth, event->mheight);
+}
+
+
+Xenium::ProviderInfoMap Xenium::randrProvider(const xcb_window_t window_id
+	) noexcept
+{
+	xcb_randr_get_providers_cookie_t providers_cookie =
+		xcb_randr_get_providers(this->connection, window_id);
+	
+	xcb_generic_error_t* generic_error = nullptr;
+
+	xcb_randr_get_providers_reply_t* providers_reply =
+		xcb_randr_get_providers_reply(this->connection
+			, providers_cookie
+			, &generic_error
+			);
+	
+	if(providers_reply == nullptr)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR((*generic_error));
+
+		return {};
+	}
+
+	int providers_length =
+		xcb_randr_get_providers_providers_length(providers_reply);;
+
+	xcb_randr_provider_t* provider =
+		xcb_randr_get_providers_providers(providers_reply);
+
+	Xenium::ProviderInfoMap retval = {};
+
+	for(int provider_index = 0; provider_index < providers_length; provider_index++)
+	{
+		xcb_randr_get_provider_info_cookie_t info_cookie =
+			xcb_randr_get_provider_info(this->connection
+				, provider[provider_index]
+				, 0
+				);
+
+		xcb_randr_get_provider_info_reply_t* info_reply =
+			xcb_randr_get_provider_info_reply(this->connection
+				, info_cookie
+				, nullptr
+				);
+
+		if(info_reply == nullptr)
+		{
+			continue;
+		}
+
+		int crtcs_length =
+			xcb_randr_get_provider_info_crtcs_length(info_reply);
+
+		xcb_randr_crtc_t* crtc =
+			xcb_randr_get_provider_info_crtcs(info_reply);
+
+		bool crtc_is_valid = false;
+		for(int crtc_index = 0; crtc_index < crtcs_length; crtc_index++)
+		{
+			if(output_data.map.contains(crtc[crtc_index]))
+			{
+				crtc_is_valid = true;
+				break;
+			}
+		}
+
+		if(crtc_is_valid)
+		{
+			retval[provider[provider_index]] = *info_reply;
+		}
+
+		free(info_reply);
+	}
+
+	return retval;
 }
 
 // }}}

@@ -49,8 +49,6 @@ int main()
 		printf("--- Output Removed: %u\n", id);
 	});
 
-	printf("Hello\n");
-
 	/*
 	zakero::Xenium::SizeMm size{40, 40};
 	zakero::Xenium::SizePercent size{0.5, 0.5};
@@ -219,18 +217,54 @@ int main()
 //			);
 //	});
 
-	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
-	{
-		printf(">>> Key: %s, Mod: %s\n"
-			, zakero::to_string(key).c_str()
-			, zakero::to_string(mod).c_str()
-			);
-	});
+//	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
+//	{
+//		printf(">>> Key: %s, Mod: %s\n"
+//			, zakero::to_string(key).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
 	printf("--- Looping\n");
+
+	uint32_t x_offset = 0;
+	zakero::Xenium::SizePixel window_size = { 1, 1 };
+
 	while(!time_to_die)
 	{
-		usleep(10);
+		usleep(1);
+
+		uint8_t* pixel;
+
+		window->imageNext(pixel, window_size);
+
+		if(pixel != nullptr)
+		{
+			x_offset = (x_offset + 1) % window_size.width;
+
+			for(int32_t y = 0; y < window_size.height; y++)
+			{
+				float yf = float(y) / window_size.height;
+				uint8_t yp = yf * 255;
+
+				for(int32_t x = 0; x < window_size.width; x++)
+				{
+					float xf = float((x + x_offset) % window_size.width) / window_size.width;
+					uint8_t xp = xf * 255;
+
+					uint8_t c = xp ^ yp;
+
+					pixel[0] = 0;
+					pixel[1] = 0;
+					pixel[2] = c;
+					pixel[3] = 0xff;
+
+					pixel += 4;
+				}
+			}
+
+			window->imagePresent();
+		}
 	}
 
 	delete window;

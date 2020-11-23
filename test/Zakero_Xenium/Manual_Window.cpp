@@ -209,13 +209,15 @@ int main()
 //			);
 //	});
 
-//	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis, const zakero::Xenium::KeyModifier& mod)
-//	{
-//		printf(">>> Axis: %s, Mod: %s\n"
-//			, zakero::to_string(axis).c_str()
-//			, zakero::to_string(mod).c_str()
-//			);
-//	});
+	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis
+		, const zakero::Xenium::KeyModifier& mod
+		)
+	{
+		printf(">> Pointer Axis: %s, Mod: %s\n"
+			, zakero::to_string(axis).c_str()
+			, zakero::to_string(mod).c_str()
+			);
+	});
 
 //	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
 //	{

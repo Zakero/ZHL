@@ -109,25 +109,25 @@ int main()
 
 	uint32_t red_x_offset = 0;
 	zakero::Yetani::SizePixel red_size = { 1, 1 };
-	zakero::Yetani::SizeMm    red_window_size = { 160, 90 };
+	//zakero::Yetani::SizeMm    red_window_size = { 160, 90 };
 	//zakero::Yetani::SizeMm    red_window_size = { 30, 30 };
-	//zakero::Yetani::SizePixel red_window_size = { 640, 400 };
+	zakero::Yetani::SizePixel red_window_size = { 640, 400 };
 	zakero::Yetani::Window* red = yetani->windowCreate(red_window_size
 		, WL_SHM_FORMAT_ARGB8888
 		, error
 		);
 	red->cursorUse("cursor_1");
 
-	red->setClass("Yetani: Manual Window");
-	red->setTitle("Red XOR Pattern");
-	//red->setDecorations(zakero::Yetani::WindowDecorations::Client_Side);
-	red->setDecorations(zakero::Yetani::WindowDecorations::Server_Side);
+	red->classSet("Yetani: Manual Window");
+	red->titleSet("Red XOR Pattern");
+	//red->decorationsSet(zakero::Yetani::WindowDecorations::Client_Side);
+	red->decorationsSet(zakero::Yetani::WindowDecorations::Server_Side);
 	//red->setMode(zakero::Yetani::WindowMode::Fullscreen);
 	//red->setMode(zakero::Yetani::WindowMode::Maximized);
-	//red->setSize(zakero::Yetani::SizeMm{ 150, 100 });
-	//red->setSize(zakero::Yetani::SizePercent{ 0.25, 0.5 });
-	//red->setSize(zakero::Yetani::SizePixel{ 100, 100});
-	//red->setSizeMinMax(zakero::Yetani::SizeMm{ 100, 100} , zakero::Yetani::SizeMm{ 150, 150});
+	//red->sizeSet(zakero::Yetani::SizeMm{ 150, 100 });
+	//red->sizeSet(zakero::Yetani::SizePercent{ 0.25, 0.5 });
+	//red->sizeSet(zakero::Yetani::SizePixel{ 100, 100});
+	//red->sizeSetMinMax(zakero::Yetani::SizeMm{ 100, 100} , zakero::Yetani::SizeMm{ 150, 150});
 	//red->minimize();
 
 	red->onCloseRequest([&]()
@@ -139,7 +139,7 @@ int main()
 		printf("************************************************\n");
 	});
 /*
-	red->onDecorationsChange([&](const zakero::Yetani::WindowDecorations mode)
+	red->decorationsOnChange([&](const zakero::Yetani::WindowDecorations mode)
 	{
 		printf("************************************************\n");
 		printf("** Red: Using %s-Side Borders\n"
@@ -183,6 +183,7 @@ int main()
 		printf("************************************************\n");
 	});
 */
+/*
 	red->pointerOnEnter([&](const zakero::Yetani::PointMm& point, const zakero::Yetani::KeyModifier&)
 	{
 		printf("************************************************\n");
@@ -195,6 +196,7 @@ int main()
 		printf("** Red: Pointer Leave\n");
 		printf("************************************************\n");
 	});
+*/
 /*
 	red->pointerOnMotion([&](const zakero::Yetani::PointMm& point
 		, const zakero::Yetani::KeyModifier& modifier
@@ -223,20 +225,27 @@ int main()
 		printf("**    : %s\n", zakero::to_string(modifier).c_str());
 		printf("************************************************\n");
 	});
-	red->pointerOnAxis([&](zakero::Yetani::PointerAxis axis
-		, const zakero::Yetani::KeyModifier&)
+*/
+
+	red->pointerOnAxis([&](const zakero::Yetani::PointerAxis& axis
+		, const zakero::Yetani::KeyModifier&              mod
+		)
 	{
+		printf(">> Red: Pointer Axis: %s Mod: %s\n"
+			, zakero::to_string(axis).c_str()
+			, zakero::to_string(mod).c_str()
+			);
 		printf("************************************************\n");
-		printf("** Red: Pointer Axis = %s %f %d %s (%u)\n"
+		printf("** Red: Pointer Axis = %s %f %d %s (%u) Mod: %s\n"
 			, zakero::to_string(axis.type).c_str()
 			, axis.distance
 			, axis.steps
 			, zakero::to_string(axis.source).c_str()
 			, axis.time
+			, zakero::to_string(mod).c_str()
 			);
 		printf("************************************************\n");
 	});
-*/
 /*
 	red->keyboardOnEnter([&]()
 	{
@@ -274,10 +283,10 @@ int main()
 		, WL_SHM_FORMAT_XRGB8888
 		, error
 		);
-	green->setClass("Yetani: Manual Window");
-	green->setTitle("Green XOR Pattern");
-	//green->setSizeMinMax(zakero::Yetani::SizeMm{  80,  45}, zakero::Yetani::SizeMm{ 240, 135});
-	green->onDecorationsChange([&](const zakero::Yetani::WindowDecorations mode)
+	green->classSet("Yetani: Manual Window");
+	green->titleSet("Green XOR Pattern");
+	//green->sizeSetMinMax(zakero::Yetani::SizeMm{  80,  45}, zakero::Yetani::SizeMm{ 240, 135});
+	green->decorationsOnChange([&](const zakero::Yetani::WindowDecorations mode)
 	{
 		printf("************************************************\n");
 		printf("** Green: Using %s-Side Borders\n"
@@ -472,8 +481,8 @@ int main()
 		, error
 		);
 	blue->cursorUse("cursor_2");
-	blue->setClass("Yetani: Manual Window");
-	blue->setTitle("Blue XOR Pattern");
+	blue->classSet("Yetani: Manual Window");
+	blue->titleSet("Blue XOR Pattern");
 	blue->onFocusChange([&](const bool has_focus)
 	{
 		printf("************************************************\n");

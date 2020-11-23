@@ -150,7 +150,7 @@
  * 		return 1;
  * 	}
  * 
- * 	window->setTitle("Yetani");
+ * 	window->titleSet("Yetani");
  * 
  * 	bool time_to_die = false;
  * 	window->onCloseRequest([&]()
@@ -1201,8 +1201,8 @@ namespace zakero
 				int32_t     y                        = 0;
 				int32_t     width                    = 0;
 				int32_t     height                   = 0;
-				int32_t     physical_width_mm        = 0;
-				int32_t     physical_height_mm       = 0;
+				uint32_t    physical_width_mm        = 0;
+				uint32_t    physical_height_mm       = 0;
 				int32_t     subpixel                 = 0;
 				int32_t     refresh_mHz              = 0;
 				int32_t     scale_factor             = 0;
@@ -1316,17 +1316,27 @@ namespace zakero
 
 					// {{{ Configuration
 
-					void                 setClass(const std::string&) noexcept;
-					void                 setTitle(const std::string&) noexcept;
-					std::error_code      setDecorations(const Yetani::WindowDecorations) noexcept;
-					std::error_code      setSize(const Yetani::SizeMm&) noexcept;
-					std::error_code      setSize(const Yetani::SizePercent&) noexcept;
-					std::error_code      setSize(const Yetani::SizePixel&) noexcept;
-					std::error_code      setSizeMinMax(const Yetani::SizeMm&, const Yetani::SizeMm&) noexcept;
-					std::error_code      setSizeMinMax(const Yetani::SizePercent&, const Yetani::SizePercent&) noexcept;
-					std::error_code      setSizeMinMax(const Yetani::SizePixel&, const Yetani::SizePixel&) noexcept;
+					void                 classSet(const std::string&) noexcept;
+					void                 titleSet(const std::string&) noexcept;
 
-					uint8_t              bytesPerPixel() const noexcept;
+					// }}}
+					// {{{ Decorations
+
+					std::error_code      decorationsSet(const Yetani::WindowDecorations) noexcept;
+					void                 decorationsOnChange(Yetani::LambdaWindowDecorations) noexcept;
+
+					// }}}
+					// {{{ Size
+
+					std::error_code      sizeSet(const Yetani::SizeMm&) noexcept;
+					std::error_code      sizeSet(const Yetani::SizePercent&) noexcept;
+					std::error_code      sizeSet(const Yetani::SizePixel&) noexcept;
+					std::error_code      sizeSetMinMax(const Yetani::SizeMm&, const Yetani::SizeMm&) noexcept;
+					std::error_code      sizeSetMinMax(const Yetani::SizePercent&, const Yetani::SizePercent&) noexcept;
+					std::error_code      sizeSetMinMax(const Yetani::SizePixel&, const Yetani::SizePixel&) noexcept;
+					void                 sizeOnChange(Yetani::LambdaSizeMm) noexcept;
+					void                 sizeOnChange(Yetani::LambdaSizePercent) noexcept;
+					void                 sizeOnChange(Yetani::LambdaSizePixel) noexcept;
 
 					// }}}
 					// {{{ Window Mode
@@ -1344,6 +1354,7 @@ namespace zakero
 					std::error_code      imageNext(uint8_t*&, Yetani::SizePixel&) noexcept;
 					void                 imagePresent() noexcept;
 					uint32_t             time() const noexcept;
+					uint8_t              bytesPerPixel() const noexcept;
 
 					// }}}
 					// {{{ Conversion
@@ -1375,6 +1386,10 @@ namespace zakero
 					// }}}
 					// {{{ Pointer
 
+					void                 pointerOnAxis(Yetani::LambdaAxis) noexcept;
+					void                 pointerOnButton(Yetani::LambdaButtonMm) noexcept;
+					void                 pointerOnButton(Yetani::LambdaButtonPercent) noexcept;
+					void                 pointerOnButton(Yetani::LambdaButtonPixel) noexcept;
 					void                 pointerOnEnter(Yetani::LambdaPointMm) noexcept;
 					void                 pointerOnEnter(Yetani::LambdaPointPercent) noexcept;
 					void                 pointerOnEnter(Yetani::LambdaPointPixel) noexcept;
@@ -1382,10 +1397,8 @@ namespace zakero
 					void                 pointerOnMotion(Yetani::LambdaPointMm) noexcept;
 					void                 pointerOnMotion(Yetani::LambdaPointPercent) noexcept;
 					void                 pointerOnMotion(Yetani::LambdaPointPixel) noexcept;
-					void                 pointerOnButton(Yetani::LambdaButtonMm) noexcept;
-					void                 pointerOnButton(Yetani::LambdaButtonPercent) noexcept;
-					void                 pointerOnButton(Yetani::LambdaButtonPixel) noexcept;
-					void                 pointerOnAxis(Yetani::LambdaAxis) noexcept;
+
+					// Not Used? Or Future?
 					void                 pointerOnAxisSource(Yetani::Lambda) noexcept;
 					void                 pointerOnAxisStop(Yetani::Lambda) noexcept;
 					void                 pointerOnAxisDiscrete(Yetani::Lambda) noexcept;
@@ -1394,11 +1407,7 @@ namespace zakero
 					// {{{ Events
 
 					void                 onCloseRequest(Yetani::Lambda) noexcept;
-					void                 onDecorationsChange(Yetani::LambdaWindowDecorations) noexcept;
 					void                 onFocusChange(Yetani::LambdaBool) noexcept;
-					void                 onSizeChange(Yetani::LambdaSizeMm) noexcept;
-					void                 onSizeChange(Yetani::LambdaSizePercent) noexcept;
-					void                 onSizeChange(Yetani::LambdaSizePixel) noexcept;
 
 					// }}}
 
@@ -8895,7 +8904,7 @@ void Yetani::Window::cursorShow() noexcept
  * \note See http://standards.freedesktop.org/desktop-entry-spec for more 
  * details.
  */
-void Yetani::Window::setClass(const std::string& class_name ///< The class name
+void Yetani::Window::classSet(const std::string& class_name ///< The class name
 	) noexcept
 {
 	xdg_toplevel_set_app_id(xdg_toplevel, class_name.c_str());
@@ -8908,7 +8917,7 @@ void Yetani::Window::setClass(const std::string& class_name ///< The class name
  * The window's title can be changed by using this method.  Changing the title 
  * does not change the window's name.
  */
-void Yetani::Window::setTitle(const std::string& title ///< The window title
+void Yetani::Window::titleSet(const std::string& title ///< The window title
 	) noexcept
 {
 	xdg_toplevel_set_title(xdg_toplevel, title.c_str());
@@ -8934,7 +8943,7 @@ void Yetani::Window::setTitle(const std::string& title ///< The window title
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Yetani::Window::setDecorations(const Yetani::WindowDecorations decorations ///< The requested decorations
+std::error_code Yetani::Window::decorationsSet(const Yetani::WindowDecorations decorations ///< The requested decorations
 	) noexcept
 {
 	if(yetani->decoration_manager == nullptr)
@@ -9050,7 +9059,7 @@ void Yetani::Window::windowModeSet(const Yetani::WindowMode window_mode ///< The
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Yetani::Window::setSize(const Yetani::SizeMm& size ///< The %Window size
+std::error_code Yetani::Window::sizeSet(const Yetani::SizeMm& size ///< The %Window size
 	) noexcept
 {
 	if(size.width <= 0 || size.height <= 0)
@@ -9102,7 +9111,7 @@ std::error_code Yetani::Window::setSize(const Yetani::SizeMm& size ///< The %Win
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Yetani::Window::setSize(const Yetani::SizePercent& size ///< The %Window size
+std::error_code Yetani::Window::sizeSet(const Yetani::SizePercent& size ///< The %Window size
 	) noexcept
 {
 	if(size.width <= 0 || size.height <= 0)
@@ -9154,7 +9163,7 @@ std::error_code Yetani::Window::setSize(const Yetani::SizePercent& size ///< The
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Yetani::Window::setSize(const Yetani::SizePixel& size ///< The %Window size
+std::error_code Yetani::Window::sizeSet(const Yetani::SizePixel& size ///< The %Window size
 	) noexcept
 {
 	if(size.width <= 0 || size.height <= 0)
@@ -9188,7 +9197,7 @@ std::error_code Yetani::Window::setSize(const Yetani::SizePixel& size ///< The %
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
  */
-std::error_code Yetani::Window::setSizeMinMax(const Yetani::SizeMm& size_min ///< The minimum size
+std::error_code Yetani::Window::sizeSetMinMax(const Yetani::SizeMm& size_min ///< The minimum size
 	, const Yetani::SizeMm&                                     size_max ///< The maximum size
 	) noexcept
 {
@@ -9239,7 +9248,7 @@ std::error_code Yetani::Window::setSizeMinMax(const Yetani::SizeMm& size_min ///
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
  */
-std::error_code Yetani::Window::setSizeMinMax(const Yetani::SizePercent& size_min ///< The minimum size
+std::error_code Yetani::Window::sizeSetMinMax(const Yetani::SizePercent& size_min ///< The minimum size
 	, const Yetani::SizePercent&                                     size_max ///< The maximum size
 	) noexcept
 {
@@ -9290,7 +9299,7 @@ std::error_code Yetani::Window::setSizeMinMax(const Yetani::SizePercent& size_mi
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
  */
-std::error_code Yetani::Window::setSizeMinMax(const Yetani::SizePixel& size_min ///< The minimum size
+std::error_code Yetani::Window::sizeSetMinMax(const Yetani::SizePixel& size_min ///< The minimum size
 	, const Yetani::SizePixel&                                     size_max ///< The maximum size
 	) noexcept
 {
@@ -9678,7 +9687,7 @@ void Yetani::Window::onCloseRequest(Yetani::Lambda lambda ///< The lambda
  * %Window to be border-less.  This lambda will be called when that event 
  * happens.
  */
-void Yetani::Window::onDecorationsChange(Yetani::LambdaWindowDecorations lambda ///< The lambda
+void Yetani::Window::decorationsOnChange(Yetani::LambdaWindowDecorations lambda ///< The lambda
 	) noexcept
 {
 	XdgDecoration& decoration = yetani->xdg_decoration_map[xdg_surface];
@@ -9838,7 +9847,7 @@ void Yetani::Window::windowModeOnChange(Yetani::LambdaWindowMode lambda ///< The
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
  */
-void Yetani::Window::onSizeChange(Yetani::LambdaSizeMm lambda ///< The lambda
+void Yetani::Window::sizeOnChange(Yetani::LambdaSizeMm lambda ///< The lambda
 	) noexcept
 {
 	Yetani::SurfaceEvent& event = yetani->surface_event_map[wl_surface];
@@ -9867,7 +9876,7 @@ void Yetani::Window::onSizeChange(Yetani::LambdaSizeMm lambda ///< The lambda
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
  */
-void Yetani::Window::onSizeChange(Yetani::LambdaSizePercent lambda ///< The lambda
+void Yetani::Window::sizeOnChange(Yetani::LambdaSizePercent lambda ///< The lambda
 	) noexcept
 {
 	Yetani::SurfaceEvent& event = yetani->surface_event_map[wl_surface];
@@ -9896,7 +9905,7 @@ void Yetani::Window::onSizeChange(Yetani::LambdaSizePercent lambda ///< The lamb
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
  */
-void Yetani::Window::onSizeChange(Yetani::LambdaSizePixel lambda ///< The lambda
+void Yetani::Window::sizeOnChange(Yetani::LambdaSizePixel lambda ///< The lambda
 	) noexcept
 {
 	Yetani::SurfaceEvent& event = yetani->surface_event_map[wl_surface];

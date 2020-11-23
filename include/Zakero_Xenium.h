@@ -416,8 +416,8 @@ namespace zakero
 				int32_t     y                        = 0;
 				int32_t     width                    = 0;
 				int32_t     height                   = 0;
-				int64_t     physical_width_mm        = 0;
-				int64_t     physical_height_mm       = 0;
+				uint32_t    physical_width_mm        = 0;
+				uint32_t    physical_height_mm       = 0;
 				int32_t     subpixel                 = 0;
 				int32_t     transform                = 0;
 				float       pixels_per_mm_horizontal = 0.0;
@@ -441,7 +441,7 @@ namespace zakero
 			Xenium::Output         output(const Xenium::OutputId) const noexcept;
 			Xenium::VectorOutputId outputVector() const noexcept;
 			static std::string     outputSubpixelName(int32_t) noexcept;
-			//static std::string     outputTransformName(int32_t) noexcept; // Not Available?
+			static std::string     outputTransformName(int32_t) noexcept;
 
 			Xenium::PointMm        outputConvertToMm(const Xenium::OutputId, const Xenium::PointPixel&) const noexcept;
 			Xenium::PointPercent   outputConvertToPercent(const Xenium::OutputId, const Xenium::PointPixel&) const noexcept;
@@ -560,9 +560,8 @@ namespace zakero
 					// }}}
 					// {{{ Keyboard
 
-					// Not supported by XCB/X11
-					//void                 keyboardOnEnter(Xenium::Lambda) noexcept;
-					//void                 keyboardOnLeave(Xenium::Lambda) noexcept;
+					void                 keyboardOnEnter(Xenium::Lambda) noexcept;
+					void                 keyboardOnLeave(Xenium::Lambda) noexcept;
 					void                 keyboardOnKey(Xenium::LambdaKey) noexcept;
 
 					// }}}
@@ -871,6 +870,12 @@ namespace zakero
 				Xenium::LambdaPointPixel   lambda_pixel;
 			};
 
+			struct WindowKeyboardData
+			{
+				Xenium::Lambda on_enter;
+				Xenium::Lambda on_leave;
+			};
+
 			using WindowMap            = std::unordered_map<WindowId, Window*>;
 			using WindowDecorationsMap = std::unordered_map<WindowId, WindowDecorationsData>;
 			using WindowDeleteMap      = std::unordered_map<WindowId, WindowDelete>;
@@ -884,6 +889,7 @@ namespace zakero
 			using WindowOutputMap      = std::unordered_map<WindowId, OutputId>;
 			using WindowSizeMap        = std::unordered_map<WindowId, WindowSize>;
 			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
+			using WindowKeyboard       = std::unordered_map<WindowId, WindowKeyboardData>;
 
 			WindowPixmapMap      window_pixmap          = {};
 			WindowMap            window_map             = {};
@@ -896,6 +902,7 @@ namespace zakero
 			WindowOnButtonMap    window_on_button_map   = {};
 			WindowOnEnterMap     window_on_enter_map    = {};
 			WindowOnLeaveMap     window_on_leave_map    = {};
+			WindowKeyboard       window_keyboard        = {};
 			WindowOnKeyMap       window_on_key_map      = {};
 			WindowOnMotionMap    window_on_motion_map   = {};
 			WindowOutputMap      window_output_map      = {};
@@ -942,6 +949,26 @@ namespace zakero
 	// {{{ Convenience
 
 	std::string to_string(const std::error_code&) noexcept;
+	std::string to_string(const std::vector<xcb_atom_t>&) noexcept;
+	std::string to_string(const std::vector<int32_t>&) noexcept;
+	std::string to_string(const xcb_generic_error_t&) noexcept;
+	std::string to_string(const xcb_button_press_event_t&) noexcept;
+	std::string to_string(const xcb_client_message_event_t&) noexcept;
+	std::string to_string(const xcb_configure_notify_event_t&) noexcept;
+	std::string to_string(const xcb_enter_notify_event_t&) noexcept;
+	std::string to_string(const xcb_expose_event_t&) noexcept;
+	std::string to_string(const xcb_focus_in_event_t&) noexcept;
+	std::string to_string(const xcb_generic_event_t&) noexcept;
+	std::string to_string(const xcb_gravity_notify_event_t&) noexcept;
+	std::string to_string(const xcb_key_press_event_t&) noexcept;
+	std::string to_string(const xcb_map_notify_event_t&) noexcept;
+	std::string to_string(const xcb_motion_notify_event_t&) noexcept;
+	std::string to_string(const xcb_property_notify_event_t&) noexcept;
+	std::string to_string(const xcb_reparent_notify_event_t&) noexcept;
+	std::string to_string(const xcb_unmap_notify_event_t&) noexcept;
+	std::string to_string(const xcb_format_t&) noexcept;
+	std::string to_string(const xcb_screen_t&) noexcept;
+	std::string to_string(const xcb_setup_t&) noexcept;
 	std::string to_string(const Xenium::Key&) noexcept;
 	std::string to_string(const Xenium::KeyModifier&) noexcept;
 	std::string to_string(const Xenium::KeyState) noexcept;
@@ -958,17 +985,6 @@ namespace zakero
 
 	// }}}
 }
-
-
-/**
- * \brief Insert an Output object into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&  stream ///< The stream to use
-	, const zakero::Xenium::Output& output ///< The value in insert into the stream
-	) noexcept;
 
 
 // {{{ Implementation
@@ -1172,610 +1188,16 @@ std::ostream& operator<<(std::ostream&  stream ///< The stream to use
 	X(XCB_RENDER_SUB_PIXEL_VERTICAL_BGR   , "Vertical BGR"    ) \
 	X(XCB_RENDER_SUB_PIXEL_NONE           , "No Geometry"     ) \
 
-
-// }}}
-
-#include <sstream>
-
-// {{{ Stream Operators
-
 /**
- * \brief Insert an xcb_generic_error_t into an output stream.
+ * \internal
  *
- * \return The \p stream.
+ * \brief Convert the enum to a string.
  */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_generic_error_t&   error  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(error.response_type)
-		<< ", \"error_code\": "    << uint32_t(error.error_code)
-		<< ", \"sequence\": "      << uint32_t(error.sequence)
-		<< ", \"resource_id\": "   << uint32_t(error.resource_id)
-		<< ", \"minor_code\": "    << uint32_t(error.minor_code)
-		<< ", \"major_code\": "    << uint32_t(error.major_code)
-		<< ", \"full_sequence\": " << uint32_t(error.full_sequence)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_generic_error_t into an output stream.
- *
- * \return The \p stream.
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_generic_error_t&          error  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< " }";
-
-	return stream;
-}
- */
-
-
-/**
- * \brief Insert an xcb_button_press_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&    stream ///< The stream to use
-	, const xcb_button_press_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"detail\": "        << uint32_t(event.detail)
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"time\": "          << uint32_t(event.time)
-		<< ", \"root\": "          << uint32_t(event.root)
-		<< ", \"event\": "         << uint32_t(event.event)
-		<< ", \"child\": "         << uint32_t(event.child)
-		<< ", \"root_x\": "        << int32_t(event.root_x)
-		<< ", \"root_y\": "        << int32_t(event.root_y)
-		<< ", \"event_x\": "       << int32_t(event.event_x)
-		<< ", \"event_y\": "       << int32_t(event.event_y)
-		<< ", \"state\": "         << uint32_t(event.state)
-		<< ", \"same_screen\": "   << uint32_t(event.same_screen)
-		<< ", \"pad0\": "          << uint32_t(event.pad0)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_client_message_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&      stream ///< The stream to use
-	, const xcb_client_message_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"format\": "        << uint32_t(event.format)
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"window\": "        << uint32_t(event.window)
-		<< ", \"type\": "          << uint32_t(event.type)
-		<< ", \"data\": [ 0x"      << std::hex << uint32_t(event.data.data8[ 0]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 1]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 2]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 3]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 4]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 5]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 6]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 7]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 8]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[ 9]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[10]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[11]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[12]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[13]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[14]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[15]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[16]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[17]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[18]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.data.data8[19]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_configure_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&        stream ///< The stream to use
-	, const xcb_configure_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"pad0\": "              << uint32_t(event.pad0)
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"event\": "             << uint32_t(event.event)
-		<< ", \"window\": "            << uint32_t(event.window)
-		<< ", \"above_sibling\": "     << uint32_t(event.above_sibling)
-		<< ", \"x\": "                 << int32_t(event.x)
-		<< ", \"y\": "                 << int32_t(event.y)
-		<< ", \"width\": "             << uint32_t(event.width)
-		<< ", \"height\": "            << uint32_t(event.height)
-		<< ", \"border_width\": "      << uint32_t(event.border_width)
-		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
-		<< ", \"pad1\": "              << uint32_t(event.pad1)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_enter_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&        stream ///< The stream to use
-	, const xcb_enter_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"detail\": "            << uint32_t(event.detail)
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"time\": "              << uint32_t(event.time)
-		<< ", \"root\": "              << uint32_t(event.root)
-		<< ", \"event\": "             << uint32_t(event.event)
-		<< ", \"root_x\": "            << int16_t(event.root_x)
-		<< ", \"root_y\": "            << int16_t(event.root_y)
-		<< ", \"event_x\": "           << int16_t(event.event_x)
-		<< ", \"event_y\": "           << int16_t(event.event_y)
-		<< ", \"state\": "             << uint32_t(event.state)
-		<< ", \"mode\": "              << uint32_t(event.mode)
-		<< ", \"same_screen_focus\": " << uint32_t(event.same_screen_focus)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_expose_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_expose_event_t&    event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"window\": "        << uint32_t(event.window)
-		<< ", \"x\": "             << int32_t(event.x)
-		<< ", \"y\": "             << int32_t(event.y)
-		<< ", \"width\": "         << uint32_t(event.width)
-		<< ", \"height\": "        << uint32_t(event.height)
-		<< ", \"count\": "         << uint32_t(event.count)
-		<< ", \"pad1\": [ 0x"      << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_focus_in_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_focus_in_event_t&  event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"detail\": "        << uint32_t(event.detail)
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"event\": "         << uint32_t(event.event)
-		<< ", \"mode\": "          << uint32_t(event.mode)
-		<< ", \"pad0\": [ 0x"      << std::hex << uint32_t(event.pad0[0]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad0[1]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad0[2]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_generic_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_generic_event_t&   event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"pad\": [ 0x"       << std::hex << uint32_t(event.pad[0]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[1]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[2]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[3]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[4]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[5]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad[6]) << std::dec
-			<< " ]"
-		<< ", \"full_sequence\": " << uint32_t(event.full_sequence)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_gravity_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&      stream ///< The stream to use
-	, const xcb_gravity_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"event\": "         << uint32_t(event.event)
-		<< ", \"window\": "        << uint32_t(event.window)
-		<< ", \"x\": "             << uint32_t(event.x)
-		<< ", \"y\": "             << uint32_t(event.y)
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_key_press_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&  stream ///< The stream to use
-	, const xcb_key_press_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"detail\": "        << uint32_t(event.detail)
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"time\": "          << uint32_t(event.time)
-		<< ", \"root\": "          << uint32_t(event.root)
-		<< ", \"event\": "         << uint32_t(event.event)
-		<< ", \"child\": "         << uint32_t(event.child)
-		<< ", \"root_x\": "        << uint32_t(event.root_x)
-		<< ", \"root_y\": "        << uint32_t(event.root_y)
-		<< ", \"event_x\": "       << uint32_t(event.event_x)
-		<< ", \"event_y\": "       << uint32_t(event.event_y)
-		<< ", \"state\": "         << uint32_t(event.state)
-		<< ", \"same_screen\": "   << uint32_t(event.same_screen)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_map_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&  stream ///< The stream to use
-	, const xcb_map_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"event\": "             << uint32_t(event.event)
-		<< ", \"window\": "            << uint32_t(event.window)
-		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
-		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_motion_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&       stream ///< The stream to use
-	, const xcb_motion_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"detail\": "        << std::hex << uint32_t(event.detail) << std::dec
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"time\": "          << uint32_t(event.time)
-		<< ", \"root\": "          << uint32_t(event.root)
-		<< ", \"event\": "         << uint32_t(event.event)
-		<< ", \"child\": "         << uint32_t(event.child)
-		<< ", \"root_x\": "        << int32_t(event.root_x)
-		<< ", \"root_y\": "        << int32_t(event.root_y)
-		<< ", \"event_x\": "       << int32_t(event.event_x)
-		<< ", \"event_y\": "       << int32_t(event.event_y)
-		<< ", \"state\": "         << uint32_t(event.state)
-		<< ", \"same_screen\": "   << uint32_t(event.same_screen)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_property_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&       stream ///< The stream to use
-	, const xcb_property_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": " << uint32_t(event.response_type)
-		<< ", \"pad0\": "          << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "      << uint32_t(event.sequence)
-		<< ", \"window\": "        << uint32_t(event.window)
-		<< ", \"atom\": "          << uint32_t(event.atom)
-		<< ", \"time\": "          << uint32_t(event.time)
-		<< ", \"state\": "         << uint32_t(event.state)
-		<< ", \"pad1\": [ 0x"      << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< ", 0x"          << std::hex << uint32_t(event.pad1[2]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_reparent_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&       stream ///< The stream to use
-	, const xcb_reparent_notify_event_t& event  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": "     << uint32_t(event.response_type)
-		<< ", \"pad0\": "              << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "          << uint32_t(event.sequence)
-		<< ", \"event\": "             << uint32_t(event.event)
-		<< ", \"window\": "            << uint32_t(event.window)
-		<< ", \"parent\": "            << uint32_t(event.parent)
-		<< ", \"x\": "                 << uint32_t(event.x)
-		<< ", \"y\": "                 << uint32_t(event.y)
-		<< ", \"override_redirect\": " << uint32_t(event.override_redirect)
-		<< ", \"pad1\": [ 0x"          << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< ", 0x"              << std::hex << uint32_t(event.pad1[2]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_unmap_notify_event_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&  stream  ///< The stream to use
-	, const xcb_unmap_notify_event_t& event ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"response_type\": "  << uint32_t(event.response_type)
-		<< ", \"pad0\": "           << std::hex << uint32_t(event.pad0) << std::dec
-		<< ", \"sequence\": "       << uint32_t(event.sequence)
-		<< ", \"event\": "          << uint32_t(event.event)
-		<< ", \"window\": "         << uint32_t(event.window)
-		<< ", \"from_configure\": " << uint32_t(event.from_configure)
-		<< ", \"pad1\": [ 0x"       << std::hex << uint32_t(event.pad1[0]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(event.pad1[1]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(event.pad1[2]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_format_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_format_t&          format ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"depth\": "          << uint32_t(format.depth)
-		<< ", \"bits_per_pixel\": " << uint32_t(format.bits_per_pixel)
-		<< ", \"scanline_pad\": "   << uint32_t(format.scanline_pad)
-		<< ", \"pad0\": [ 0x"       << std::hex << uint32_t(format.pad0[0]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(format.pad0[1]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(format.pad0[2]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(format.pad0[3]) << std::dec
-			<< ", 0x"           << std::hex << uint32_t(format.pad0[4]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_screen_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_screen_t&          screen ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"root\": "                  << uint32_t(screen.root)
-		<< ", \"default_colormap\": "      << uint32_t(screen.default_colormap)
-		<< ", \"white_pixel\": "           << uint32_t(screen.white_pixel)
-		<< ", \"black_pixel\": "           << uint32_t(screen.black_pixel)
-		<< ", \"current_input_masks\": "   << uint32_t(screen.current_input_masks)
-		<< ", \"width_in_pixels\": "       << uint32_t(screen.width_in_pixels)
-		<< ", \"height_in_pixels\": "      << uint32_t(screen.height_in_pixels)
-		<< ", \"width_in_millimeters\": "  << uint32_t(screen.width_in_millimeters)
-		<< ", \"height_in_millimeters\": " << uint32_t(screen.height_in_millimeters)
-		<< ", \"min_installed_maps\": "    << uint32_t(screen.min_installed_maps)
-		<< ", \"max_installed_maps\": "    << uint32_t(screen.max_installed_maps)
-		<< ", \"root_visual\": "           << uint32_t(screen.root_visual)
-		<< ", \"backing_stores\": "        << uint32_t(screen.backing_stores)
-		<< ", \"save_unders\": "           << uint32_t(screen.save_unders)
-		<< ", \"root_depth\": "            << uint32_t(screen.root_depth)
-		<< ", \"allowed_depths_len\": "    << uint32_t(screen.allowed_depths_len)
-		<< " }";
-
-	return stream;
-}
-
-
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&   stream ///< The stream to use
-	, const std::vector<xcb_atom_t>& vector ///< The value in insert into the stream
-	) noexcept
-{
-	std::string delim = "";
-
-	stream << "[";
-	for(const auto& atom : vector)
-	{
-		stream << delim << ' ' << uint32_t(atom);
-
-		delim = ",";
-	}
-
-	stream << " ]";
-
-	return stream;
-}
-
-
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const std::vector<int32_t>&  vector ///< The value in insert into the stream
-	) noexcept
-{
-	std::string delim = "";
-
-	stream << "[";
-	for(const int32_t& value : vector)
-	{
-		stream << delim << ' ' << std::to_string(value);
-
-		delim = ",";
-	}
-
-	stream << " ]";
-
-	return stream;
-}
-
-
-/**
- * \brief Insert an xcb_setup_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream& stream ///< The stream to use
-	, const xcb_setup_t&           setup  ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"status\": "                      << uint32_t(setup.status)
-		<< ", \"pad0\": "                        << uint32_t(setup.pad0)
-		<< ", \"protocol_major_version\": "      << uint32_t(setup.protocol_major_version)
-		<< ", \"protocol_minor_version\": "      << uint32_t(setup.protocol_minor_version)
-		<< ", \"length\": "                      << uint32_t(setup.length)
-		<< ", \"release_number\": "              << uint32_t(setup.release_number)
-		<< ", \"resource_id_base\": "            << uint32_t(setup.resource_id_base)
-		<< ", \"resource_id_mask\": "            << uint32_t(setup.resource_id_mask)
-		<< ", \"motion_buffer_size\": "          << uint32_t(setup.motion_buffer_size)
-		<< ", \"vendor_len\": "                  << uint32_t(setup.vendor_len)
-		<< ", \"maximum_request_length\": "      << uint32_t(setup.maximum_request_length)
-		<< ", \"roots_len\": "                   << uint32_t(setup.roots_len)
-		<< ", \"pixmap_formats_len\": "          << uint32_t(setup.pixmap_formats_len)
-		<< ", \"image_byte_order\": "            << uint32_t(setup.image_byte_order)
-		<< ", \"bitmap_format_bit_order\": "     << uint32_t(setup.bitmap_format_bit_order)
-		<< ", \"bitmap_format_scanline_unit\": " << uint32_t(setup.bitmap_format_scanline_unit)
-		<< ", \"bitmap_format_scanline_pad\": "  << uint32_t(setup.bitmap_format_scanline_pad)
-		<< ", \"min_keycode\": "                 << uint32_t(setup.min_keycode)
-		<< ", \"max_keycode\": "                 << uint32_t(setup.max_keycode)
-		<< ", \"pad1\": [ 0x"                    << std::hex << uint32_t(setup.pad1[0]) << std::dec
-			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[1]) << std::dec
-			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[2]) << std::dec
-			<< ", 0x"                        << std::hex << uint32_t(setup.pad1[3]) << std::dec
-			<< " ]"
-		<< " }";
-
-	return stream;
-}
+#define ZAKERO_XENIUM__OUTPUT_TRANSFORM \
+	X(XCB_RANDR_TRANSFORM_UNIT       , "Unit"       ) \
+	X(XCB_RANDR_TRANSFORM_SCALE_UP   , "Scale Up"   ) \
+	X(XCB_RANDR_TRANSFORM_SCALE_DOWN , "Scale Down" ) \
+	X(XCB_RANDR_TRANSFORM_PROJECTIVE , "Projective" ) \
 
 // }}}
 
@@ -2747,7 +2169,7 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 
 	// --- X11 Server Setup Information --- //
 	this->setup = xcb_get_setup(this->connection);
-	ZAKERO_XENIUM__DEBUG_VAR(*setup);
+	ZAKERO_XENIUM__DEBUG_VAR(to_string(*setup));
 
 	// --- Find the current screen --- //
 	xcb_screen_iterator_t screen_iterator = xcb_setup_roots_iterator(this->setup);
@@ -2758,7 +2180,7 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 	}
 
 	this->screen = screen_iterator.data;
-	ZAKERO_XENIUM__DEBUG_VAR(*screen);
+	ZAKERO_XENIUM__DEBUG_VAR(to_string(*screen));
 
 	// --- XXB Extension --- //
 	std::error_code error;
@@ -2985,11 +2407,11 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 						xenium->randrEvent(
 							(xcb_randr_notify_event_t*)event
 							);
-std::cout << "RandR Event:     " << *event << '\n';
+std::cout << "RandR Event:     " << to_string(*event) << '\n';
 					}
 					else
 					{
-std::cout << "Unknown:         " << *event << '\n';
+std::cout << "Unknown:         " << to_string(*event) << '\n';
 					}
 
 				// --- ------------------------------------ --- //
@@ -3155,6 +2577,31 @@ std::string Xenium::outputSubpixelName(int32_t subpixel_format ///< The Subpixel
 #define X(value_, name_) \
 		case value_: return name_;
 		ZAKERO_XENIUM__OUTPUT_SUBPIXEL
+#undef X
+		default: return "";
+	}
+}
+
+
+/**
+ * \brief Get a human readable string.
+ *
+ * The `Xenium::Output::subpixel` is an XCB RandR enum value and this method 
+ * will convert that value into a descriptive name string.  If an invalid value 
+ * is passed, then an empty string will be returned.
+ *
+ * \return The name of the transform.
+ *
+ * \thread_user
+ */
+std::string Xenium::outputTransformName(int32_t transform ///< The Transform
+	) noexcept
+{
+	switch(transform)
+	{
+#define X(value_, name_) \
+		case value_: return name_;
+		ZAKERO_XENIUM__OUTPUT_TRANSFORM
 #undef X
 		default: return "";
 	}
@@ -4109,6 +3556,7 @@ void Xenium::windowDestroy(WindowId window_id
 	window_output_map.erase(window_id);
 	window_on_motion_map.erase(window_id);
 	window_on_leave_map.erase(window_id);
+	window_keyboard.erase(window_id);
 	window_on_key_map.erase(window_id);
 	window_on_enter_map.erase(window_id);
 	window_on_button_map.erase(window_id);
@@ -4141,7 +3589,7 @@ bool Xenium::windowPropertySet(WindowId window_id
 
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 		return false;
 	}
 
@@ -4167,7 +3615,7 @@ bool Xenium::windowPropertySet(WindowId window_id
 			);
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 		return false;
 	}
 
@@ -4335,7 +3783,7 @@ void Xenium::Window::classSet(const std::string& class_name ///< The class name
 
 	if(success == false)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 	}
 }
 
@@ -4360,7 +3808,7 @@ void Xenium::Window::titleSet(const std::string& title ///< The window title
 
 	if(success == false)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 	}
 }
 
@@ -4883,7 +4331,7 @@ std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id
 			);
 	if(error_ptr)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << *error_ptr << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(*error_ptr) << '\n';
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -4930,7 +4378,7 @@ std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id
 
 	if(requestCheckHasError(cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -5498,28 +4946,42 @@ void Xenium::Window::onFocusChange(Xenium::LambdaBool lambda ///< The lambda
 }
 
 
-/*
+/**
  * \brief Respond to "Keyboard Enter" events.
  *
  * When a window gains keyboard focus, the provided \p lambda will be called.
+ */
 void Xenium::Window::keyboardOnEnter(Xenium::Lambda lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	if(lambda == nullptr)
+	{
+		xenium->window_keyboard[window_id].on_enter = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_keyboard[window_id].on_enter = lambda;
+	}
 }
- */
 
 
-/*
+/**
  * \brief Respond to "Keyboard Leave" events.
  *
  * When a window loses keyboard focus, the provided \p lambda will be called.
+ */
 void Xenium::Window::keyboardOnLeave(Xenium::Lambda lambda ///< The lambda
 	) noexcept
 {
-	ZAKERO_UNUSED(lambda);
+	if(lambda == nullptr)
+	{
+		xenium->window_keyboard[window_id].on_leave = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_keyboard[window_id].on_leave = lambda;
+	}
 }
- */
 
 
 /**
@@ -5859,7 +5321,7 @@ std::error_code Xenium::windowBorder(const WindowId window_id
 
 	if(motif_wm_hints_atom == XCB_ATOM_NONE)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
@@ -5884,7 +5346,7 @@ std::error_code Xenium::windowBorder(const WindowId window_id
 
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
@@ -5918,7 +5380,7 @@ std::error_code Xenium::windowLocationSet(const WindowId window_id
 	xcb_generic_error_t generic_error;
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -5953,7 +5415,7 @@ std::error_code Xenium::windowSizeSet(const WindowId window_id
 	xcb_generic_error_t generic_error;
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -6055,7 +5517,7 @@ void Xenium::windowResizeTo(const Output&     output
 void Xenium::xcbEvent(const xcb_client_message_event_t* event
 	) noexcept
 {
-std::cout << "Client Message:  " << *event << '\n';
+//std::cout << "Client Message:  " << to_string(*event) << '\n';
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDelete& window_delete = window_delete_map[event->window];
@@ -6071,7 +5533,7 @@ std::cout << "Client Message:  " << *event << '\n';
 void Xenium::xcbEvent(const xcb_button_press_event_t* event
 	) noexcept
 {
-//std::cout << "Button Press:  " << *event << '\n';
+//std::cout << "Button Press:  " << to_string(*event) << '\n';
 
 	/**
 	 * \bug This is broken, WindowSize are locked when the lambdas are 
@@ -6182,7 +5644,7 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 	) noexcept
 {
-//std::cout << "Configue Notify: " << *event << '\n';
+//std::cout << "Configue Notify: " << to_string(*event) << '\n';
 	if((event->response_type & 0x80) == 0)
 	{
 		// Only care about events with the "synthetic bit" set
@@ -6248,7 +5710,7 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Enter Notify:    " << *event << '\n';
+//std::cout << "Enter Notify:    " << to_string(*event) << '\n';
 
 	/**
 	 * \bug This is broken, WindowSize are locked when the lambdas are 
@@ -6261,6 +5723,7 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	if(event->response_type == XCB_LEAVE_NOTIFY)
 	{
 		window_on_leave_map[window_id]();
+		window_keyboard[window_id].on_leave();
 		return;
 	}
 
@@ -6292,13 +5755,14 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	window_on_enter_map[window_id].lambda_mm(point_mm, key_modifier);
 	window_on_enter_map[window_id].lambda_percent(point_percent, key_modifier);
 	window_on_enter_map[window_id].lambda_pixel(point_pixel, key_modifier);
+	window_keyboard[window_id].on_enter();
 }
 
 
 void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
-//std::cout << "Expose:          " << *event << '\n';
+//std::cout << "Expose:          " << to_string(*event) << '\n';
 	setWindowReady(event->window);
 }
 
@@ -6306,7 +5770,7 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 void Xenium::xcbEvent(const xcb_focus_in_event_t* event
 	) noexcept
 {
-//std::cout << "Focus:           " << *event << '\n';
+//std::cout << "Pocus:           " << to_string(*event) << '\n';
 
 	const WindowId window_id = event->event;
 
@@ -6332,7 +5796,7 @@ void Xenium::xcbEvent(const xcb_focus_in_event_t* event
 void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Gravity Notify:  " << *event << '\n';
+//std::cout << "Gravity Notify:  " << to_string(*event) << '\n';
 }
 
 
@@ -6366,7 +5830,7 @@ void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
 void Xenium::xcbEvent(const xcb_key_press_event_t* event
 	) noexcept
 {
-//std::cout << "Key Press:       " << *event << '\n';
+//std::cout << "Key Press:       " << to_string(*event) << '\n';
 
 	uint32_t key_code  = (uint32_t)event->detail - 8;
 
@@ -6557,14 +6021,14 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 void Xenium::xcbEvent(const xcb_map_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Map Notify:      " << *event << '\n';
+//std::cout << "Map Netify:      " << to_string(*event) << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Motion Notify:   " << *event << '\n';
+//std::cout << "Motion Notify:   " << to_string(*event) << '\n';
 
 	/**
 	 * \bug This is broken, WindowSize are locked when the lambdas are 
@@ -6601,7 +6065,7 @@ void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
 void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Property Notify: " << *event << '\n';
+//std::cout << "Property Notify: " << to_string(*event) << '\n';
 
 	xcb_generic_error_t generic_error = {0};
 //printf("--- - Atom: %d '%s'\n", event->atom, atomName(event->atom).c_str());
@@ -6710,14 +6174,14 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Reparent Notify: " << *event << '\n';
+//std::cout << "Reparent Notify: " << to_string(*event) << '\n';
 }
 
 
 void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
 	) noexcept
 {
-//std::cout << "Unmap Notify:    " << *event << '\n';
+//std::cout << "Unmap Notify:    " << to_string(*event) << '\n';
 }
 
 
@@ -6750,7 +6214,7 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The win
 
 	if(requestCheckHasError(cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -6761,7 +6225,7 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The win
 
 	if(atom == XCB_ATOM_NONE)
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
 		xcb_destroy_window(this->connection, window_id);
 		window_id = 0;
@@ -6782,7 +6246,7 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The win
 
 	if(requestCheckHasError(cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -6823,7 +6287,7 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The win
 
 	if(requestCheckHasError(pixmap_cookie, generic_error))
 	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -7030,7 +6494,7 @@ xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
 
 	if(property_was_set == false)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(generic_error);
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
 		return XCB_ATOM_NONE;
 	}
 
@@ -7059,8 +6523,8 @@ std::string Xenium::atomName(const xcb_atom_t atom
 
 	if(reply == nullptr)
 	{
-		//ZAKERO_XENIUM__DEBUG_VAR(*generic_error);
-		//ZAKERO_XENIUM__DEBUG_VAR(*error);
+		//ZAKERO_XENIUM__DEBUG_VAR(to_string(*generic_error));
+		//ZAKERO_XENIUM__DEBUG_VAR(to_string(*error));
 		return "";
 	}
 
@@ -7210,7 +6674,7 @@ xcb_atom_t Xenium::internAtom(const std::string& atom_name
 		generic_error = *error;
 		free(error);
 
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 	}
 	else if(atom_reply->atom == XCB_ATOM_NONE
 		&& atom_name != "XCB_ATOM_NONE"
@@ -7271,7 +6735,7 @@ xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_co
 		generic_error = *error;
 		free(error);
 
-		ZAKERO_XENIUM__DEBUG << "Error: " << generic_error << '\n';
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 	}
 	else if(atom_reply->atom == XCB_ATOM_NONE)
 	{
@@ -7469,7 +6933,7 @@ std::pair<uint32_t, uint32_t> Xenium::driVersion() noexcept
 
 	if(version_reply == nullptr)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR((*generic_error));
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(*generic_error));
 
 		return {0, 0};
 	}
@@ -7720,7 +7184,7 @@ Xenium::ProviderInfoMap Xenium::randrProvider(const xcb_window_t window_id
 	
 	if(providers_reply == nullptr)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR((*generic_error));
+		ZAKERO_XENIUM__DEBUG_VAR((to_string(*generic_error)));
 
 		return {};
 	}
@@ -7789,7 +7253,7 @@ bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
 
 	if(error != nullptr)
 	{
-		std::cout << "requestCheck Error: " << *error << '\n';
+		std::cout << "requestCheck Error: " << to_string(*error) << '\n';
 
 		free(error);
 
@@ -7808,7 +7272,7 @@ bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
 
 	if(error != nullptr)
 	{
-		std::cout << "requestCheck Error: " << *error << '\n';
+		std::cout << "requestCheck Error: " << to_string(*error) << '\n';
 
 		generic_error = *error;
 
@@ -7958,9 +7422,14 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 
 	window_output_map[window_id] = output_id;
 
-	window_on_key_map[window_id] = LambdaKey_DoNothing;
+	window_keyboard[window_id] =
+	{	.on_enter = Lambda_DoNothing
+	,	.on_leave = Lambda_DoNothing
+	};
+
+	window_on_key_map[window_id]   = LambdaKey_DoNothing;
 	window_on_leave_map[window_id] = Lambda_DoNothing;
-	window_on_axis_map[window_id] = LambdaAxis_DoNothing;
+	window_on_axis_map[window_id]  = LambdaAxis_DoNothing;
 
 	window_on_motion_map[window_id] =
 	{	.lambda_mm      = LambdaPointMm_DoNothing
@@ -8035,6 +7504,511 @@ void Xenium::waitForWindowReady(const WindowId window_id
 
 // }}}
 // {{{ Convenience
+
+/**
+ * \brief Insert an xcb_generic_error_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_generic_error_t& generic_error) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(generic_error.response_type)
+		+ ", \"error_code\": "    + std::to_string(generic_error.error_code)
+		+ ", \"sequence\": "      + std::to_string(generic_error.sequence)
+		+ ", \"resource_id\": "   + std::to_string(generic_error.resource_id)
+		+ ", \"minor_code\": "    + std::to_string(generic_error.minor_code)
+		+ ", \"major_code\": "    + std::to_string(generic_error.major_code)
+		+ ", \"full_sequence\": " + std::to_string(generic_error.full_sequence)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_button_press_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_button_press_event_t& event ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"detail\": "        + std::to_string(event.detail)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"time\": "          + std::to_string(event.time)
+		+ ", \"root\": "          + std::to_string(event.root)
+		+ ", \"event\": "         + std::to_string(event.event)
+		+ ", \"child\": "         + std::to_string(event.child)
+		+ ", \"root_x\": "        + std::to_string(event.root_x)
+		+ ", \"root_y\": "        + std::to_string(event.root_y)
+		+ ", \"event_x\": "       + std::to_string(event.event_x)
+		+ ", \"event_y\": "       + std::to_string(event.event_y)
+		+ ", \"state\": "         + std::to_string(event.state)
+		+ ", \"same_screen\": "   + std::to_string(event.same_screen)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_client_message_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_client_message_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"format\": "        + std::to_string(event.format)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"window\": "        + std::to_string(event.window)
+		+ ", \"type\": "          + std::to_string(event.type)
+		+ ", \"data\": [ 0x"      + std::to_string(event.data.data8[ 0])
+		+	", 0x"            + std::to_string(event.data.data8[ 1])
+		+	", 0x"            + std::to_string(event.data.data8[ 2])
+		+	", 0x"            + std::to_string(event.data.data8[ 3])
+		+	", 0x"            + std::to_string(event.data.data8[ 4])
+		+	", 0x"            + std::to_string(event.data.data8[ 5])
+		+	", 0x"            + std::to_string(event.data.data8[ 6])
+		+	", 0x"            + std::to_string(event.data.data8[ 7])
+		+	", 0x"            + std::to_string(event.data.data8[ 8])
+		+	", 0x"            + std::to_string(event.data.data8[ 9])
+		+	", 0x"            + std::to_string(event.data.data8[10])
+		+	", 0x"            + std::to_string(event.data.data8[11])
+		+	", 0x"            + std::to_string(event.data.data8[12])
+		+	", 0x"            + std::to_string(event.data.data8[13])
+		+	", 0x"            + std::to_string(event.data.data8[14])
+		+	", 0x"            + std::to_string(event.data.data8[15])
+		+	", 0x"            + std::to_string(event.data.data8[16])
+		+	", 0x"            + std::to_string(event.data.data8[17])
+		+	", 0x"            + std::to_string(event.data.data8[18])
+		+	", 0x"            + std::to_string(event.data.data8[19])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_configure_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_configure_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "     + std::to_string(event.response_type)
+		+ ", \"pad0\": "              + std::to_string(event.pad0)
+		+ ", \"sequence\": "          + std::to_string(event.sequence)
+		+ ", \"event\": "             + std::to_string(event.event)
+		+ ", \"window\": "            + std::to_string(event.window)
+		+ ", \"above_sibling\": "     + std::to_string(event.above_sibling)
+		+ ", \"x\": "                 + std::to_string(event.x)
+		+ ", \"y\": "                 + std::to_string(event.y)
+		+ ", \"width\": "             + std::to_string(event.width)
+		+ ", \"height\": "            + std::to_string(event.height)
+		+ ", \"border_width\": "      + std::to_string(event.border_width)
+		+ ", \"override_redirect\": " + std::to_string(event.override_redirect)
+		+ ", \"pad1\": "              + std::to_string(event.pad1)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_enter_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_enter_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "     + std::to_string(event.response_type)
+		+ ", \"detail\": "            + std::to_string(event.detail)
+		+ ", \"sequence\": "          + std::to_string(event.sequence)
+		+ ", \"time\": "              + std::to_string(event.time)
+		+ ", \"root\": "              + std::to_string(event.root)
+		+ ", \"event\": "             + std::to_string(event.event)
+		+ ", \"root_x\": "            + std::to_string(event.root_x)
+		+ ", \"root_y\": "            + std::to_string(event.root_y)
+		+ ", \"event_x\": "           + std::to_string(event.event_x)
+		+ ", \"event_y\": "           + std::to_string(event.event_y)
+		+ ", \"state\": "             + std::to_string(event.state)
+		+ ", \"mode\": "              + std::to_string(event.mode)
+		+ ", \"same_screen_focus\": " + std::to_string(event.same_screen_focus)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_expose_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_expose_event_t&    event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"window\": "        + std::to_string(event.window)
+		+ ", \"x\": "             + std::to_string(event.x)
+		+ ", \"y\": "             + std::to_string(event.y)
+		+ ", \"width\": "         + std::to_string(event.width)
+		+ ", \"height\": "        + std::to_string(event.height)
+		+ ", \"count\": "         + std::to_string(event.count)
+		+ ", \"pad1\": [ 0x"      + std::to_string(event.pad1[0])
+		+	", 0x"            + std::to_string(event.pad1[1])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_focus_in_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_focus_in_event_t&  event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"detail\": "        + std::to_string(event.detail)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"event\": "         + std::to_string(event.event)
+		+ ", \"mode\": "          + std::to_string(event.mode)
+		+ ", \"pad0\": [ 0x"      + std::to_string(event.pad0[0])
+		+	", 0x"            + std::to_string(event.pad0[1])
+		+	", 0x"            + std::to_string(event.pad0[2])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_generic_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_generic_event_t&   event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"pad\": [ 0x"       + std::to_string(event.pad[0])
+		+	", 0x"            + std::to_string(event.pad[1])
+		+	", 0x"            + std::to_string(event.pad[2])
+		+	", 0x"            + std::to_string(event.pad[3])
+		+	", 0x"            + std::to_string(event.pad[4])
+		+	", 0x"            + std::to_string(event.pad[5])
+		+	", 0x"            + std::to_string(event.pad[6])
+		+	" ]"
+		+ ", \"full_sequence\": " + std::to_string(event.full_sequence)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_gravity_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_gravity_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"event\": "         + std::to_string(event.event)
+		+ ", \"window\": "        + std::to_string(event.window)
+		+ ", \"x\": "             + std::to_string(event.x)
+		+ ", \"y\": "             + std::to_string(event.y)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_key_press_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_key_press_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"detail\": "        + std::to_string(event.detail)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"time\": "          + std::to_string(event.time)
+		+ ", \"root\": "          + std::to_string(event.root)
+		+ ", \"event\": "         + std::to_string(event.event)
+		+ ", \"child\": "         + std::to_string(event.child)
+		+ ", \"root_x\": "        + std::to_string(event.root_x)
+		+ ", \"root_y\": "        + std::to_string(event.root_y)
+		+ ", \"event_x\": "       + std::to_string(event.event_x)
+		+ ", \"event_y\": "       + std::to_string(event.event_y)
+		+ ", \"state\": "         + std::to_string(event.state)
+		+ ", \"same_screen\": "   + std::to_string(event.same_screen)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_map_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_map_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "     + std::to_string(event.response_type)
+		+ ", \"pad0\": "              + std::to_string(event.pad0)
+		+ ", \"sequence\": "          + std::to_string(event.sequence)
+		+ ", \"event\": "             + std::to_string(event.event)
+		+ ", \"window\": "            + std::to_string(event.window)
+		+ ", \"override_redirect\": " + std::to_string(event.override_redirect)
+		+ ", \"pad1\": [ 0x"          + std::to_string(event.pad1[0])
+		+	", 0x"                + std::to_string(event.pad1[1])
+		+	", 0x"                + std::to_string(event.pad1[2])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_motion_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_motion_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"detail\": "        + std::to_string(event.detail)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"time\": "          + std::to_string(event.time)
+		+ ", \"root\": "          + std::to_string(event.root)
+		+ ", \"event\": "         + std::to_string(event.event)
+		+ ", \"child\": "         + std::to_string(event.child)
+		+ ", \"root_x\": "        + std::to_string(event.root_x)
+		+ ", \"root_y\": "        + std::to_string(event.root_y)
+		+ ", \"event_x\": "       + std::to_string(event.event_x)
+		+ ", \"event_y\": "       + std::to_string(event.event_y)
+		+ ", \"state\": "         + std::to_string(event.state)
+		+ ", \"same_screen\": "   + std::to_string(event.same_screen)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_property_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_property_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": " + std::to_string(event.response_type)
+		+ ", \"pad0\": "          + std::to_string(event.pad0)
+		+ ", \"sequence\": "      + std::to_string(event.sequence)
+		+ ", \"window\": "        + std::to_string(event.window)
+		+ ", \"atom\": "          + std::to_string(event.atom)
+		+ ", \"time\": "          + std::to_string(event.time)
+		+ ", \"state\": "         + std::to_string(event.state)
+		+ ", \"pad1\": [ 0x"      + std::to_string(event.pad1[0])
+		+	", 0x"            + std::to_string(event.pad1[1])
+		+	", 0x"            + std::to_string(event.pad1[2])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_reparent_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_reparent_notify_event_t& event  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "     + std::to_string(event.response_type)
+		+ ", \"pad0\": "              + std::to_string(event.pad0)
+		+ ", \"sequence\": "          + std::to_string(event.sequence)
+		+ ", \"event\": "             + std::to_string(event.event)
+		+ ", \"window\": "            + std::to_string(event.window)
+		+ ", \"parent\": "            + std::to_string(event.parent)
+		+ ", \"x\": "                 + std::to_string(event.x)
+		+ ", \"y\": "                 + std::to_string(event.y)
+		+ ", \"override_redirect\": " + std::to_string(event.override_redirect)
+		+ ", \"pad1\": [ 0x"          + std::to_string(event.pad1[0])
+		+	", 0x"                + std::to_string(event.pad1[1])
+		+	", 0x"                + std::to_string(event.pad1[2])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_unmap_notify_event_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_unmap_notify_event_t& event ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "  + std::to_string(event.response_type)
+		+ ", \"pad0\": "           + std::to_string(event.pad0)
+		+ ", \"sequence\": "       + std::to_string(event.sequence)
+		+ ", \"event\": "          + std::to_string(event.event)
+		+ ", \"window\": "         + std::to_string(event.window)
+		+ ", \"from_configure\": " + std::to_string(event.from_configure)
+		+ ", \"pad1\": [ 0x"       + std::to_string(event.pad1[0])
+		+	", 0x"             + std::to_string(event.pad1[1])
+		+	", 0x"             + std::to_string(event.pad1[2])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_format_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_format_t&          format ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"depth\": "          + std::to_string(format.depth)
+		+ ", \"bits_per_pixel\": " + std::to_string(format.bits_per_pixel)
+		+ ", \"scanline_pad\": "   + std::to_string(format.scanline_pad)
+		+ ", \"pad0\": [ 0x"       + std::to_string(format.pad0[0])
+		+	", 0x"             + std::to_string(format.pad0[1])
+		+	", 0x"             + std::to_string(format.pad0[2])
+		+	", 0x"             + std::to_string(format.pad0[3])
+		+	", 0x"             + std::to_string(format.pad0[4])
+		+	" ]"
+		+ " }";
+}
+
+
+/**
+ * \brief Insert an xcb_screen_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_screen_t&          screen ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"root\": "                  + std::to_string(screen.root)
+		+ ", \"default_colormap\": "      + std::to_string(screen.default_colormap)
+		+ ", \"white_pixel\": "           + std::to_string(screen.white_pixel)
+		+ ", \"black_pixel\": "           + std::to_string(screen.black_pixel)
+		+ ", \"current_input_masks\": "   + std::to_string(screen.current_input_masks)
+		+ ", \"width_in_pixels\": "       + std::to_string(screen.width_in_pixels)
+		+ ", \"height_in_pixels\": "      + std::to_string(screen.height_in_pixels)
+		+ ", \"width_in_millimeters\": "  + std::to_string(screen.width_in_millimeters)
+		+ ", \"height_in_millimeters\": " + std::to_string(screen.height_in_millimeters)
+		+ ", \"min_installed_maps\": "    + std::to_string(screen.min_installed_maps)
+		+ ", \"max_installed_maps\": "    + std::to_string(screen.max_installed_maps)
+		+ ", \"root_visual\": "           + std::to_string(screen.root_visual)
+		+ ", \"backing_stores\": "        + std::to_string(screen.backing_stores)
+		+ ", \"save_unders\": "           + std::to_string(screen.save_unders)
+		+ ", \"root_depth\": "            + std::to_string(screen.root_depth)
+		+ ", \"allowed_depths_len\": "    + std::to_string(screen.allowed_depths_len)
+		+ " }";
+}
+
+
+std::string to_string(const std::vector<xcb_atom_t>& vector ///< The value in insert into the stream
+	) noexcept
+{
+	std::string string = "[ ";
+	std::string delim = "";
+
+	for(const auto& atom : vector)
+	{
+		string += delim + ' ' + std::to_string(atom);
+
+		delim = ",";
+	}
+
+	string += " ]";
+
+	return string;
+}
+
+
+std::string to_string(const std::vector<int32_t>&  vector ///< The value in insert into the stream
+	) noexcept
+{
+	std::string string = "[ ";
+	std::string delim = "";
+
+	for(const int32_t& value : vector)
+	{
+		string += delim + ' ' + std::to_string(value);
+
+		delim = ",";
+	}
+
+	string += " ]";
+
+	return string;
+}
+
+
+/**
+ * \brief Insert an xcb_setup_t into an output stream.
+ *
+ * \return The \p stream.
+ */
+std::string to_string(const xcb_setup_t&           setup  ///< The value in insert into the stream
+	) noexcept
+{
+	return std::string()
+		+ "{ \"status\": "                      + std::to_string(setup.status)
+		+ ", \"pad0\": "                        + std::to_string(setup.pad0)
+		+ ", \"protocol_major_version\": "      + std::to_string(setup.protocol_major_version)
+		+ ", \"protocol_minor_version\": "      + std::to_string(setup.protocol_minor_version)
+		+ ", \"length\": "                      + std::to_string(setup.length)
+		+ ", \"release_number\": "              + std::to_string(setup.release_number)
+		+ ", \"resource_id_base\": "            + std::to_string(setup.resource_id_base)
+		+ ", \"resource_id_mask\": "            + std::to_string(setup.resource_id_mask)
+		+ ", \"motion_buffer_size\": "          + std::to_string(setup.motion_buffer_size)
+		+ ", \"vendor_len\": "                  + std::to_string(setup.vendor_len)
+		+ ", \"maximum_request_length\": "      + std::to_string(setup.maximum_request_length)
+		+ ", \"roots_len\": "                   + std::to_string(setup.roots_len)
+		+ ", \"pixmap_formats_len\": "          + std::to_string(setup.pixmap_formats_len)
+		+ ", \"image_byte_order\": "            + std::to_string(setup.image_byte_order)
+		+ ", \"bitmap_format_bit_order\": "     + std::to_string(setup.bitmap_format_bit_order)
+		+ ", \"bitmap_format_scanline_unit\": " + std::to_string(setup.bitmap_format_scanline_unit)
+		+ ", \"bitmap_format_scanline_pad\": "  + std::to_string(setup.bitmap_format_scanline_pad)
+		+ ", \"min_keycode\": "                 + std::to_string(setup.min_keycode)
+		+ ", \"max_keycode\": "                 + std::to_string(setup.max_keycode)
+		+ ", \"pad1\": [ 0x"                    + std::to_string(setup.pad1[0])
+		+	", 0x"                          + std::to_string(setup.pad1[1])
+		+	", 0x"                          + std::to_string(setup.pad1[2])
+		+	", 0x"                          + std::to_string(setup.pad1[3])
+		+	" ]"
+		+ " }";
+}
+
 
 /**
  * \brief Convert a value to a std::string.
@@ -8154,22 +8128,22 @@ std::string to_string(const Xenium::Output& output ///< The value
 	) noexcept
 {
 	return std::string()
-		+ "{\tname: \""                     + output.name + "\""
-		+ "\n,\tx: "                        + std::to_string(output.x)
-		+ "\n,\ty: "                        + std::to_string(output.y)
-		+ "\n,\tphysical_width_mm: "        + std::to_string(output.physical_width_mm)
-		+ "\n,\tphysical_height_mm: "       + std::to_string(output.physical_height_mm)
-		+ "\n,\tsubpixel: "                 + std::to_string(output.subpixel)
-		//+ "\n,\tmake: \""                   + output.make + "\""
-		//+ "\n,\tmodel: \""                  + output.model + "\""
-		//+ "\n,\ttransform: "                + std::to_string(output.transform)
-		+ "\n,\twidth: "                    + std::to_string(output.width)
-		+ "\n,\theight: "                   + std::to_string(output.height)
-		//+ "\n,\trefresh_mHz: "              + std::to_string(output.refresh_mHz)
-		//+ "\n,\tscale_factor: "             + std::to_string(output.scale_factor)
-		+ "\n,\tpixels_per_mm_horizontal: " + std::to_string(output.pixels_per_mm_horizontal)
-		+ "\n,\tpixels_per_mm_vertical: "   + std::to_string(output.pixels_per_mm_vertical)
-		+ "\n}";
+		+ "{ \"name\": \""                     + output.name + "\""
+		+ ", \"x\": "                        + std::to_string(output.x)
+		+ ", \"y\": "                        + std::to_string(output.y)
+		+ ", \"width\": "                    + std::to_string(output.width)
+		+ ", \"height\": "                   + std::to_string(output.height)
+		+ ", \"physical_width_mm\": "        + std::to_string(output.physical_width_mm)
+		+ ", \"physical_height_mm:\" "       + std::to_string(output.physical_height_mm)
+		+ ", \"subpixel\": "                 + std::to_string(output.subpixel)
+		+ ", \"transform\": "                + zakero::Xenium::outputTransformName(output.transform)
+		+ ", \"pixels_per_mm_horizontal\": " + std::to_string(output.pixels_per_mm_horizontal)
+		+ ", \"pixels_per_mm_vertical\": "   + std::to_string(output.pixels_per_mm_vertical)
+		//+ ", \"make\": \""                   + output.make + "\""
+		//+ ", \"model\": \""                  + output.model + "\""
+		//+ ", \"refresh_mHz\": "              + std::to_string(output.refresh_mHz)
+		//+ ", \"scale_factor\": "             + std::to_string(output.scale_factor)
+		+ " }";
 }
 
 
@@ -8495,38 +8469,6 @@ bool operator==(Xenium::SizePixel& lhs ///< Left-Hand side
 // }}}
 
 };
-
-
-/**
- * \brief Insert an xcb_generic_error_t into an output stream.
- *
- * \return The \p stream.
- */
-[[nodiscard]]
-std::ostream& operator<<(std::ostream&  stream ///< The stream to use
-	, const zakero::Xenium::Output& output ///< The value in insert into the stream
-	) noexcept
-{
-	stream
-		<< "{ \"name\": \""                   << output.name << "\""
-		<< ", \"x\": "                        << std::to_string(output.x)
-		<< ", \"y\": "                        << std::to_string(output.y)
-		<< ", \"width\": "                    << std::to_string(output.width)
-		<< ", \"height\": "                   << std::to_string(output.height)
-		<< ", \"physical_width_mm\": "        << std::to_string(output.physical_width_mm)
-		<< ", \"physical_height_mm\": "       << std::to_string(output.physical_height_mm)
-		<< ", \"subpixel\": "                 << std::to_string(output.subpixel)
-		<< ", \"transform\": "                << std::to_string(output.transform)
-		<< ", \"pixels_per_mm_horizontal\": " << std::to_string(output.pixels_per_mm_horizontal)
-		<< ", \"pixels_per_mm_vertical\": "   << std::to_string(output.pixels_per_mm_vertical)
-		//<< ", \"make\": \""                   << output.make << "\""
-		//<< ", \"model\": \""                  << output.model << "\""
-		//<< ", \"refresh_mHz\": "              << std::to_string(output.refresh_mHz)
-		//<< ", \"scale_factor\": "             << std::to_string(output.scale_factor)
-		<< " }";
-
-	return stream;
-}
 
 #endif // ZAKERO_XENIUM_IMPLEMENTATION
 

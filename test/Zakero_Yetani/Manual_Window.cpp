@@ -208,69 +208,46 @@ int main()
 		printf("************************************************\n");
 	});
 */
-/*
-	red->pointerOnButton([&](const zakero::Yetani::PointerButton& button
-		, const zakero::Yetani::PointMm&     point
-		, const zakero::Yetani::KeyModifier& modifier
-		)
-	{
-		printf("************************************************\n");
-		printf("** Red: Pointer Button = %f x %f (%u) %u %s\n"
-			, point.x
-			, point.y
-			, point.time
-			, button.code
-			, zakero::to_string(button.state).c_str()
-			);
-		printf("**    : %s\n", zakero::to_string(modifier).c_str());
-		printf("************************************************\n");
-	});
-*/
 
-	red->pointerOnAxis([&](const zakero::Yetani::PointerAxis& axis
-		, const zakero::Yetani::KeyModifier&              mod
-		)
-	{
-		printf(">> Red: Pointer Axis: %s Mod: %s\n"
-			, zakero::to_string(axis).c_str()
-			, zakero::to_string(mod).c_str()
-			);
-		printf("************************************************\n");
-		printf("** Red: Pointer Axis = %s %f %d %s (%u) Mod: %s\n"
-			, zakero::to_string(axis.type).c_str()
-			, axis.distance
-			, axis.steps
-			, zakero::to_string(axis.source).c_str()
-			, axis.time
-			, zakero::to_string(mod).c_str()
-			);
-		printf("************************************************\n");
-	});
-/*
-	red->keyboardOnEnter([&]()
-	{
-		printf("************************************************\n");
-		printf("** Red: Keyboard Enter\n");
-		printf("************************************************\n");
-	});
-	red->keyboardOnLeave([&]()
-	{
-		printf("************************************************\n");
-		printf("** Red: Keyboard Leave\n");
-		printf("************************************************\n");
-	});
-	red->keyboardOnKey([&](const zakero::Yetani::Key& key, const zakero::Yetani::KeyModifier& modifier)
-	{
-		printf("************************************************\n");
-		printf("** Red: Keyboard Key %d %s (%u)\n"
-			, key.code
-			, zakero::to_string(key.state).c_str()
-			, key.time
-			);
-		printf("**    : %s\n", zakero::to_string(modifier).c_str());
-		printf("************************************************\n");
-	});
-*/
+//	red->pointerOnButton([&](const zakero::Yetani::PointerButton& button
+//		, const zakero::Yetani::PointPixel&                   point
+//		, const zakero::Yetani::KeyModifier&                  mod
+//		)
+//	{
+//		printf(">> Button (pixel): %s %s %s\n"
+//			, zakero::to_string(button).c_str()
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
+
+//	red->pointerOnAxis([&](const zakero::Yetani::PointerAxis& axis
+//		, const zakero::Yetani::KeyModifier&              mod
+//		)
+//	{
+//		printf(">> Red: Pointer Axis: %s Mod: %s\n"
+//			, zakero::to_string(axis).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
+
+//	red->keyboardOnEnter([&]()
+//	{
+//		printf(">> Red: Keyboard Enter\n");
+//	});
+
+//	red->keyboardOnLeave([&]()
+//	{
+//		printf("** Red: Keyboard Leave\n");
+//	});
+
+//	red->keyboardOnKey([&](const zakero::Yetani::Key& key, const zakero::Yetani::KeyModifier& mod)
+//	{
+//		printf(">> Key: %s, Mod: %s\n"
+//			, zakero::to_string(key).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
 
 

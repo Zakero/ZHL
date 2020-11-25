@@ -1,5 +1,5 @@
 /*
-g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-xkb -lxcb-randr -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
+g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-xkb -lxcb-randr -lxcb-dri3 -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
  */
 
 /*
@@ -200,28 +200,43 @@ int main()
 //			);
 //	});
 
-//	window->pointerOnButton([](const zakero::Xenium::PointerButton& button, const zakero::Xenium::PointPixel& point, const zakero::Xenium::KeyModifier& mod)
-//	{
-//		printf(">>> Button (pixel): %s %s %s\n"
-//			, zakero::to_string(button).c_str()
-//			, zakero::to_string(point).c_str()
-//			, zakero::to_string(mod).c_str()
-//			);
-//	});
-
-	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis
-		, const zakero::Xenium::KeyModifier& mod
+	window->pointerOnButton([](const zakero::Xenium::PointerButton& button
+		, const zakero::Xenium::PointPixel&                     point
+		, const zakero::Xenium::KeyModifier&                    mod
 		)
 	{
-		printf(">> Pointer Axis: %s, Mod: %s\n"
-			, zakero::to_string(axis).c_str()
+		printf(">> Button (pixel): %s %s %s\n"
+			, zakero::to_string(button).c_str()
+			, zakero::to_string(point).c_str()
 			, zakero::to_string(mod).c_str()
 			);
 	});
 
-//	window->keyboardOnKey([](const zakero::Xenium::Key& key, const zakero::Xenium::KeyModifier& mod)
+//	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis
+//		, const zakero::Xenium::KeyModifier&                mod
+//		)
 //	{
-//		printf(">>> Key: %s, Mod: %s\n"
+//		printf(">> Pointer Axis: %s, Mod: %s\n"
+//			, zakero::to_string(axis).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
+
+//	window->keyboardOnEnter([&]()
+//	{
+//		printf(">> Keyboard Enter\n");
+//	});
+
+//	window->keyboardOnLeave([&]()
+//	{
+//		printf(">> Keyboard Leave\n");
+//	});
+
+//	window->keyboardOnKey([](const zakero::Xenium::Key& key
+//		, const zakero::Xenium::KeyModifier& mod
+//		)
+//	{
+//		printf(">> Key: %s, Mod: %s\n"
 //			, zakero::to_string(key).c_str()
 //			, zakero::to_string(mod).c_str()
 //			);

@@ -1354,6 +1354,17 @@ namespace
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_CAPSLOCK = 0x00000001;
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_NUMLOCK  = 0x00000002;
 
+	constexpr std::array<uint32_t, 8> Pointer_Button_Event_Code =
+	{	BTN_LEFT	// 0x110  272
+	,	BTN_MIDDLE	// 0x112  274
+	,	BTN_RIGHT	// 0x111  273
+	,	BTN_SIDE	// 0x113  275
+	,	BTN_EXTRA	// 0x114  276
+	,	BTN_FORWARD	// 0x115  277
+	,	BTN_BACK	// 0x116  278
+	,	BTN_TASK	// 0x116  279
+	};
+
 	const uint32_t Default_Value_Mask = 0
 		//| XCB_CW_BACK_PIXMAP       // Not Used
 		| XCB_CW_BACK_PIXEL        // Not Used
@@ -5547,13 +5558,21 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 
 	if(button_code <= 3 || button_code >= 8)
 	{
-		if(button_code >= 8)
+		if(button_code > 9)
 		{
-			button_code -= 4;
+			button_code = 0;
+		}
+		else if(button_code >= 8)
+		{
+			button_code -= 5;
+		}
+		else
+		{
+			button_code--;
 		}
 
 		PointerButton button =
-		{	.code = (BTN_MOUSE - 1) + button_code
+		{	.code = Pointer_Button_Event_Code[button_code]
 		,	.state = event->response_type == XCB_BUTTON_PRESS
 				? Xenium::PointerButtonState::Pressed
 				: Xenium::PointerButtonState::Released
@@ -5592,8 +5611,8 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 		{
 			PointerAxis pointer_axis =
 			{	.time     = event->time
-			,	.steps    = 1
-			,	.distance = button_code == 4 ? 15.0f : -15.0f
+			,	.steps    = button_code == 4 ? -1 : 1
+			,	.distance = button_code == 4 ? -15.0f : 15.0f
 			,	.source   = PointerAxisSource::Wheel
 			,	.type     = PointerAxisType::Vertical
 			};
@@ -5604,8 +5623,8 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 		{
 			PointerAxis pointer_axis =
 			{	.time     = event->time
-			,	.steps    = 1
-			,	.distance = button_code == 6 ? 15.0f : -15.0f
+			,	.steps    = button_code == 6 ? -1 : 1
+			,	.distance = button_code == 6 ? -15.0f : 15.0f
 			,	.source   = PointerAxisSource::Wheel
 			,	.type     = PointerAxisType::Horizontal
 			};

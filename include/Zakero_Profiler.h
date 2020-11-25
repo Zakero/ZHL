@@ -215,11 +215,13 @@
  * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
  * - Improved ZAKERO_PROFILER_INIT() to use std::filesystem instead of strings.
  * - Removed Macro: ZAKERO_PROFILER_INIT_METADATA()
+ * - Added ZAKERO_PROFILER_COMPLETE()
  * - Added MetaData support to ZAKERO_PROFILER_DURATION()
  * - Added MetaData support to ZAKERO_PROFILER_INSTANT()
+ * - Added error support
  *
  * __0.9.0__
- * - Bug Fix: Use a mutex to prevent multipule threads from writing at the same 
+ * - Bug Fix: Use a mutex to prevent multiple threads from writing at the same 
  * time
  * - Bug Fix: Don't write to a _null_ stream in the destructor
  * 
@@ -243,9 +245,6 @@
  *
  * \author Andrew "Zakero" Moore
  * 	- Original Author
- *
- * \todo Add error handling
- * \todo Look into converting Duration to use a "Complete" event (phase = 'X').
  */
 
 
@@ -388,20 +387,65 @@
 	zakero::Profiler::deactivate();
 
 /**
- * \internal
+ * \brief Generate profiler data.
  *
- * \brief Create a unique variable name.
+ * This macro will generate a "complete" profiler event, meaning that the time 
+ * when the macro was executed is recorded and the time when current code block 
+ * goes out-of-scope is also recorded.  The ZAKERO_PROFILER_DURATION() macro 
+ * provides the same information, however this event generates less data 
+ * resulting in smaller output files.
  *
- * Create a unique variable name using the provided \p name_ and append the 
- * current line number.
+ * The \p category_ can be used to group together related \p name_ data.  For 
+ * example, profiling a C++ class could use the class name for the category and 
+ * the \p name_ would be the part of the class being profiled.
  *
- * \note An alternative would be to use __COUNTER__ instead of __LINE__, 
- * however __COUNTER__ is not part of the C++ standard even though it is widely 
- * supported.
+ * The \p meta_data_ arg is optional.  The \p meta_data_ is a map of 
+ * _%std::string/%std::string_ key/value pairs.  Any data placed in the \p 
+ * meta_data_ map will appear as "args" when being viewed.  The following keys 
+ * will be over written if used:
+ * - file_name
+ * - function_name
+ * 
+ * \note The file name and function name are automatically recorded and stored 
+ * in the MetaData.
  *
- * \param name_ The variable name.
+ * \parcode
+ * void func()
+ * {
+ *     ZAKERO_PROFILER_COMPLETE("busy", "doing stuff")
+ *     
+ *     // Doing stuff
+ *     
+ *     for(int i = 0; i < max_i; i++)
+ *     {
+ *         ZAKERO_PROFILER_COMPLETE("busy", "gone loopy",
+ *         {    { "i", std::to_string(i) }
+ *         })
+ *         
+ *         // Doing more stuff
+ *         
+ *         if(i % magic)
+ *         {
+ *             ZAKERO_PROFILER_INSTANT("busy", "shhh, it's magic")
+ * 
+ *             // Doing magic stuff
+ *         }
+ *     }
+ * }
+ * \endparcode
+ *
+ * \param category_  The category of the data
+ * \param name_      The name of the data
+ * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_UNIQUE(name_) ZAKERO_CONCAT(name_, __LINE__)
+#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)            \
+	zakero::Profiler::Complete ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                          \
+	, name_                                                              \
+	, std::experimental::source_location::current()                      \
+	, ##meta_data_                                                       \
+	);                                                                   \
+
 
 /**
  * \brief Generate profiler data.
@@ -453,13 +497,13 @@
  * \param name_      The name of the data
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)                    \
-	zakero::Profiler::Duration ZAKERO_PROFILER_UNIQUE(zakero_profiler_duration_) \
-	( category_                                                                  \
-	, name_                                                                      \
-	, std::experimental::source_location::current()                              \
-	, ##meta_data_                                                               \
-	);                                                                           \
+#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)            \
+	zakero::Profiler::Duration ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                          \
+	, name_                                                              \
+	, std::experimental::source_location::current()                      \
+	, ##meta_data_                                                       \
+	);                                                                   \
 
 /**
  * \brief Generate profiler data.
@@ -481,21 +525,22 @@
  * \param name_      The name of the data
  * \param meta_data_ Extra data
  */
-#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)                   \
-	{                                                                          \
-	zakero::Profiler::Instant ZAKERO_PROFILER_UNIQUE(zakero_profiler_instant_) \
-	( category_                                                                \
-	, name_                                                                    \
-	, std::experimental::source_location::current()                            \
-	, ##meta_data_                                                             \
-	);                                                                         \
-	}                                                                          \
+#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)            \
+{                                                                           \
+	zakero::Profiler::Instant ZAKERO_CONCAT(zakero_profiler_, __LINE__) \
+	( category_                                                         \
+	, name_                                                             \
+	, std::experimental::source_location::current()                     \
+	, ##meta_data_                                                      \
+	);                                                                  \
+}                                                                           \
 
 #else
 
 #define ZAKERO_PROFILER_INIT(output_, meta_data_...)
 #define ZAKERO_PROFILER_ACTIVATE
 #define ZAKERO_PROFILER_DEACTIVATE
+#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)
 #define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)
 #define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)
 
@@ -518,12 +563,22 @@ namespace zakero
 				std::string                        category;
 				std::string                        name;
 				std::experimental::source_location location;
+				std::chrono::microseconds::rep     duration;
 				std::chrono::microseconds::rep     time_stamp;
 				std::thread::id                    thread_id;
 				pid_t                              process_id;
 				char                               phase;
 
 				Data(const char, const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
+			};
+
+			struct Complete
+				: public zakero::Profiler::Data
+			{
+				bool was_active;
+
+				Complete(const std::string&, const std::string&, const std::experimental::source_location&, zakero::Profiler::MetaData = {}) noexcept;
+				~Complete() noexcept;
 			};
 
 			struct Duration
@@ -544,8 +599,8 @@ namespace zakero
 			Profiler() noexcept;
 			~Profiler() noexcept;
 
-			static void init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
-			static void init(const std::filesystem::path, zakero::Profiler::MetaData = {}) noexcept;
+			static std::error_code init(std::ostream&, zakero::Profiler::MetaData = {}) noexcept;
+			static std::error_code init(const std::filesystem::path, zakero::Profiler::MetaData = {}) noexcept;
 
 			static void activate() noexcept;
 			static void deactivate() noexcept;
@@ -567,6 +622,36 @@ namespace zakero
 #ifdef ZAKERO_PROFILER_IMPLEMENTATION
 
 // {{{ Macros
+
+/**
+ * \internal
+ *
+ * \brief _Error_Table_
+ *
+ * An X-Macro table of error codes. The columns are:
+ * -# __ErrorName__<br>
+ * -# __ErrorValue__<br>
+ * -# __ErrorMessage__<br>
+ */
+#define ZAKERO_PROFILER__ERROR_DATA \
+	X(Error_None                ,  0 , "No Error"                                       ) \
+	X(Error_Stream_Already_Open ,  1 , "The profiler is already using an output stream" ) \
+	X(Error_No_Filename         ,  2 , "No filename was provided"                       ) \
+	X(Error_Cant_Open_Stream    ,  3 , "Unable to open the output stream"               ) \
+	X(Error_Bad_Stream          ,  4 , "The stream is not in a good state"              ) \
+
+/**
+ * \internal
+ *
+ * \brief Make generating Error Conditions less verbose.
+ *
+ * All this Macro Function does is expand into code that creates an 
+ * std::error_code.
+ *
+ * \param err_ The error code
+ */
+#define ZAKERO_PROFILER__ERROR(err_) std::error_code(err_, ProfilerErrorCategory)
+
 // {{{ Macros : Doxygen
 
 #ifdef ZAKERO__DOXYGEN_DEFINE_DOCS
@@ -609,6 +694,47 @@ namespace zakero
 
 namespace
 {
+	/**
+	 * \brief Error Categories.
+	 *
+	 * This class implements the std::error_category interface to provide 
+	 * consistent access to error code values and messages.
+	 *
+	 * See https://en.cppreference.com/w/cpp/error/error_category for 
+	 * details.
+	 */
+	class ProfilerErrorCategory_
+		: public std::error_category
+	{
+		public:
+			constexpr ProfilerErrorCategory_() noexcept
+			{
+			}
+
+			const char* name() const noexcept override
+			{
+				return "zakero.Profiler";
+			}
+
+			std::string message(int condition) const override
+			{
+				switch(condition)
+				{
+#define X(name_, val_, mesg_) \
+					case val_: return mesg_;
+					ZAKERO_PROFILER__ERROR_DATA
+#undef X
+				}
+
+				return "Unknown error condition";
+			}
+	} ProfilerErrorCategory;
+
+#define X(name_, val_, mesg_) \
+	static constexpr int name_ = val_;
+	ZAKERO_PROFILER__ERROR_DATA
+#undef X
+
 	zakero::Profiler zakero_profiler;
 
 	// std::format performance testing
@@ -696,31 +822,32 @@ Profiler::~Profiler() noexcept
  * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
  * for information on keys that will be over-written.
  */
-void zakero::Profiler::init(const std::filesystem::path path      ///< The file path
-	, zakero::Profiler::MetaData                    meta_data ///< Extra meta data
+std::error_code zakero::Profiler::init(const std::filesystem::path path      ///< The file path
+	, zakero::Profiler::MetaData                               meta_data ///< Extra meta data
 	) noexcept
 {
 	if(zakero_profiler.stream != nullptr)
 	{
-		printf("Already have an open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Stream_Already_Open);
 	}
 
 	if(path.has_filename() == false)
 	{
-		printf("Path does not have a filename\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_No_Filename);
 	}
 
 	zakero_profiler.file_output.open(path);
 
 	if(zakero_profiler.file_output.is_open() == false)
 	{
-		printf("Can't open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Cant_Open_Stream);
 	}
 
-	init(zakero_profiler.file_output, meta_data);
+	std::error_code error;
+
+	error = init(zakero_profiler.file_output, meta_data);
+
+	return error;
 }
 
 
@@ -733,7 +860,7 @@ void zakero::Profiler::init(const std::filesystem::path path      ///< The file 
  * output stream.  See the documentation for the ZAKERO_PROFILER_INIT() macro 
  * for information on keys that will be over-written.
  */
-void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
+std::error_code zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	, zakero::Profiler::MetaData      meta_data     ///< Extra meta data
 	) noexcept
 {
@@ -741,14 +868,12 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 
 	if(zakero_profiler.stream != nullptr)
 	{
-		printf("Already have an open stream\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Stream_Already_Open);
 	}
 
 	if(output_stream.good() == false)
 	{
-		printf("Stream is not in a good state\n");
-		return;
+		return ZAKERO_PROFILER__ERROR(Error_Bad_Stream);
 	}
 
 	zakero_profiler.stream = &output_stream;
@@ -781,6 +906,8 @@ void zakero::Profiler::init(std::ostream& output_stream ///< The output stream
 	}
 
 	(*zakero_profiler.stream) << "\"traceEvents\":[{}\n";
+
+	return ZAKERO_PROFILER__ERROR(Error_None);
 }
 
 
@@ -827,6 +954,7 @@ void Profiler::report(const zakero::Profiler::Data& data ///< Profiling data
 	(*zakero_profiler.stream)
 		<< ",{\"ph\":\""   << data.phase << "\""
 		<<  ",\"ts\":"     << data.time_stamp
+		<<  ",\"dur\":"    << data.duration
 		<<  ",\"pid\":"    << data.process_id
 		<<  ",\"tid\":"    << data.thread_id
 		<<  ",\"cat\":\""  << data.category << "\""
@@ -899,6 +1027,7 @@ Profiler::Data::Data(const char                     phase     ///< The phase
 	, category(category)
 	, name(name)
 	, location(location)
+	, duration(0)
 	, time_stamp(ZAKERO_STEADY_TIME_NOW(microseconds))
 	, thread_id(std::this_thread::get_id())
 	, process_id(ZAKERO_PID)
@@ -910,11 +1039,55 @@ Profiler::Data::Data(const char                     phase     ///< The phase
 /**
  * \internal
  *
+ * \struct Profiler::Complete
+ *
+ * \brief Profiling Complete
+ *
+ * Adds data a behavior to Profiler::Data
+ */
+
+/**
+ * \brief Initialize the Profiler Complete.
+ *
+ * Initialize the data using the provided values as well as run-time values.  
+ *
+ * Since this object is a member of Profiler, it has access to Profiler's 
+ * private methods.
+ */
+Profiler::Complete::Complete(const std::string&     category  ///< The category
+	, const std::string&                        name      ///< The name
+	, const std::experimental::source_location& location  ///< The location
+	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
+	) noexcept
+	: zakero::Profiler::Data('X', category, name, location, meta_data)
+	, was_active(zakero_profiler.is_active)
+{
+}
+
+
+/**
+ * \brief Destructor
+ *
+ * Write the collected data.
+ */
+Profiler::Complete::~Complete() noexcept
+{
+	if(was_active || zakero_profiler.is_active)
+	{
+		duration = ZAKERO_STEADY_TIME_NOW(microseconds) - time_stamp;
+		zakero::Profiler::report(*this);
+	}
+}
+
+
+/**
+ * \internal
+ *
  * \struct Profiler::Duration
  *
  * \brief Profiling Duration
  *
- * Adds data a behavour to Profiler::Data
+ * Adds data a behavior to Profiler::Data
  */
 
 /**
@@ -961,7 +1134,7 @@ Profiler::Duration::~Duration() noexcept
  *
  * \brief Profiling Instant
  *
- * Adds data a behavour to Profiler::Data
+ * Adds data a behavior to Profiler::Data
  */
 
 /**
@@ -977,7 +1150,7 @@ Profiler::Instant::Instant(const std::string&       category  ///< The category
 	, const std::experimental::source_location& location  ///< The location
 	, zakero::Profiler::MetaData                meta_data ///< Extra meta data
 	) noexcept
-	: zakero::Profiler::Data('I', category, name, location, meta_data)
+	: zakero::Profiler::Data('i', category, name, location, meta_data)
 {
 	if(zakero_profiler.is_active)
 	{

@@ -2068,9 +2068,13 @@ namespace zakero
 
 	std::string to_string(const wl_shm_format&) noexcept;
 	std::string to_string(const std::error_code&) noexcept;
+	std::string to_string(const Yetani::Key&) noexcept;
 	std::string to_string(const Yetani::KeyModifier&) noexcept;
 	std::string to_string(const Yetani::KeyState&) noexcept;
 	std::string to_string(const Yetani::Output&) noexcept;
+	std::string to_string(const Yetani::PointMm&) noexcept;
+	std::string to_string(const Yetani::PointPercent&) noexcept;
+	std::string to_string(const Yetani::PointPixel&) noexcept;
 	std::string to_string(const Yetani::PointerAxis&) noexcept;
 	std::string to_string(const Yetani::PointerAxisSource&) noexcept;
 	std::string to_string(const Yetani::PointerAxisType&) noexcept;
@@ -10342,6 +10346,25 @@ std::string to_string(const wl_shm_format& shm_format ///< The value
 /**
  * \brief Convert a value to a std::string.
  *
+ * The \p key data will be converted into a JSON formatted std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::Key& key ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": "    + std::to_string(key.time)
+		+ ", \"code\": "    + std::to_string(key.code)
+		+ ", \"state\": \"" + zakero::to_string(key.state) + "\""
+		+ " }"
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
  * The \p key_modifier data will be converted into a JSON formatted 
  * std::string.
  *
@@ -10462,6 +10485,60 @@ std::string to_string(const Yetani::Output& output ///< The value
 /**
  * \brief Convert a value to a std::string.
  *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointMm& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointPercent& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointPixel& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		;
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
  * The \p axis will be converted into a std::string.
  *
  * \return A string
@@ -10518,6 +10595,24 @@ std::string to_string(const Yetani::PointerAxisType& type ///< The value
 		case Yetani::PointerAxisType::Unknown:    [[fallthrough]];
 		default:                                  return "";
 	}
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p button will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointerButton& button ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"code\": " + std::to_string(button.code)
+		+ ", \"state\": " + zakero::to_string(button.state)
+		+ " }"
+		;
 }
 
 

@@ -2066,15 +2066,16 @@ namespace zakero
 	// }}}
 	// {{{ Convenience
 
-	std::string to_string(const wl_shm_format) noexcept;
+	std::string to_string(const wl_shm_format&) noexcept;
 	std::string to_string(const std::error_code&) noexcept;
 	std::string to_string(const Yetani::KeyModifier&) noexcept;
-	std::string to_string(const Yetani::KeyState) noexcept;
+	std::string to_string(const Yetani::KeyState&) noexcept;
 	std::string to_string(const Yetani::Output&) noexcept;
-	std::string to_string(const Yetani::PointerAxisSource) noexcept;
-	std::string to_string(const Yetani::PointerAxisType) noexcept;
-	std::string to_string(const Yetani::PointerButtonState) noexcept;
-	std::string to_string(const Yetani::WindowMode) noexcept;
+	std::string to_string(const Yetani::PointerAxis&) noexcept;
+	std::string to_string(const Yetani::PointerAxisSource&) noexcept;
+	std::string to_string(const Yetani::PointerAxisType&) noexcept;
+	std::string to_string(const Yetani::PointerButtonState&) noexcept;
+	std::string to_string(const Yetani::WindowMode&) noexcept;
 
 	// }}}
 }
@@ -10331,7 +10332,7 @@ void Yetani::Window::pointerOnAxisDiscrete(Yetani::Lambda lambda ///< The lambda
  *
  * \return A string
  */
-std::string to_string(const wl_shm_format shm_format ///< The value
+std::string to_string(const wl_shm_format& shm_format ///< The value
 	) noexcept
 {
 	return Yetani::shmFormatName(shm_format);
@@ -10413,7 +10414,7 @@ std::string to_string(const Yetani::KeyModifier& key_modifier ///< The value
  *
  * \return A string
  */
-std::string to_string(const Yetani::KeyState key_state ///< The value
+std::string to_string(const Yetani::KeyState& key_state ///< The value
 	) noexcept
 {
 	switch(key_state)
@@ -10421,7 +10422,7 @@ std::string to_string(const Yetani::KeyState key_state ///< The value
 		case Yetani::KeyState::Pressed:  return "Pressed";
 		case Yetani::KeyState::Released: return "Released";
 		case Yetani::KeyState::Repeat:   return "Repeat";
-		default: return "";
+		default:                         return "";
 	}
 }
 
@@ -10436,24 +10437,45 @@ std::string to_string(const Yetani::KeyState key_state ///< The value
 std::string to_string(const Yetani::Output& output ///< The value
 	) noexcept
 {
-	return      "{\tx: "                        + std::to_string(output.x)
-		+ "\n,\ty: "                        + std::to_string(output.y)
-		+ "\n,\tphysical_width_mm: "        + std::to_string(output.physical_width_mm)
-		+ "\n,\tphysical_height_mm: "       + std::to_string(output.physical_height_mm)
-		+ "\n,\tsubpixel: "                 + std::to_string(output.subpixel)
-		+ "\n,\tsubpixel_name: \""          + Yetani::outputSubpixelName(output.subpixel) + "\""
-		+ "\n,\tmake: \""                   + output.make + "\""
-		+ "\n,\tmodel: \""                  + output.model + "\""
-		+ "\n,\ttransform: "                + std::to_string(output.transform)
-		+ "\n,\ttransform_name: \""         + Yetani::outputTransformName(output.transform) + "\""
-		+ "\n,\tflags: "                    + std::to_string(output.flags)
-		+ "\n,\twidth: "                    + std::to_string(output.width)
-		+ "\n,\theight: "                   + std::to_string(output.height)
-		+ "\n,\trefresh_mHz: "              + std::to_string(output.refresh_mHz)
-		+ "\n,\tscale_factor: "             + std::to_string(output.scale_factor)
-		+ "\n,\tpixels_per_mm_horizontal: " + std::to_string(output.pixels_per_mm_horizontal)
-		+ "\n,\tpixels_per_mm_vertical: "   + std::to_string(output.pixels_per_mm_vertical)
-		+ "\n}";
+	return std::string()
+		+ "{ \"x\": "                        + std::to_string(output.x)
+		+ ", \"y\": "                        + std::to_string(output.y)
+		+ ", \"physical_width_mm\": "        + std::to_string(output.physical_width_mm)
+		+ ", \"physical_height_mm\": "       + std::to_string(output.physical_height_mm)
+		+ ", \"subpixel\": "                 + std::to_string(output.subpixel)
+		+ ", \"subpixel_name\": \""          + Yetani::outputSubpixelName(output.subpixel) + "\""
+		+ ", \"make\": \""                   + output.make + "\""
+		+ ", \"model\": \""                  + output.model + "\""
+		+ ", \"transform\": "                + std::to_string(output.transform)
+		+ ", \"transform_name\": \""         + Yetani::outputTransformName(output.transform) + "\""
+		+ ", \"flags\": "                    + std::to_string(output.flags)
+		+ ", \"width\": "                    + std::to_string(output.width)
+		+ ", \"height\": "                   + std::to_string(output.height)
+		+ ", \"refresh_mHz\": "              + std::to_string(output.refresh_mHz)
+		+ ", \"scale_factor\": "             + std::to_string(output.scale_factor)
+		+ ", \"pixels_per_mm_horizontal\": " + std::to_string(output.pixels_per_mm_horizontal)
+		+ ", \"pixels_per_mm_vertical\": "   + std::to_string(output.pixels_per_mm_vertical)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p axis will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointerAxis& axis ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": "     + std::to_string(axis.time)
+		+ ", \"steps\": "    + std::to_string(axis.steps)
+		+ ", \"distance\": " + std::to_string(axis.distance)
+		+ ", \"source\": "   + zakero::to_string(axis.source)
+		+ ", \"type\": "     + zakero::to_string(axis.type)
+		+ " }";
 }
 
 
@@ -10464,7 +10486,7 @@ std::string to_string(const Yetani::Output& output ///< The value
  *
  * \return A string
  */
-std::string to_string(const Yetani::PointerAxisSource source ///< The value
+std::string to_string(const Yetani::PointerAxisSource& source ///< The value
 	) noexcept
 {
 	switch(source)
@@ -10486,7 +10508,7 @@ std::string to_string(const Yetani::PointerAxisSource source ///< The value
  *
  * \return A string
  */
-std::string to_string(const Yetani::PointerAxisType type ///< The value
+std::string to_string(const Yetani::PointerAxisType& type ///< The value
 	) noexcept
 {
 	switch(type)
@@ -10506,14 +10528,14 @@ std::string to_string(const Yetani::PointerAxisType type ///< The value
  *
  * \return A string
  */
-std::string to_string(const Yetani::PointerButtonState button_state ///< The value
+std::string to_string(const Yetani::PointerButtonState& button_state ///< The value
 	) noexcept
 {
 	switch(button_state)
 	{
 		case Yetani::PointerButtonState::Pressed:  return "Pressed";
 		case Yetani::PointerButtonState::Released: return "Released";
-		default: return "";
+		default:                                   return "";
 	}
 }
 
@@ -10525,7 +10547,7 @@ std::string to_string(const Yetani::PointerButtonState button_state ///< The val
  *
  * \return A string
  */
-std::string to_string(const Yetani::WindowMode window_mode ///< The value
+std::string to_string(const Yetani::WindowMode& window_mode ///< The value
 	) noexcept
 {
 	switch(window_mode)
@@ -10533,7 +10555,7 @@ std::string to_string(const Yetani::WindowMode window_mode ///< The value
 		case Yetani::WindowMode::Fullscreen: return "Fullscreen";
 		case Yetani::WindowMode::Maximized:  return "Maximized";
 		case Yetani::WindowMode::Normal:     return "Normal";
-		default: return "";
+		default:                             return "";
 	}
 }
 

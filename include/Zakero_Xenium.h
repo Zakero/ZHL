@@ -5553,7 +5553,7 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 		}
 
 		PointerButton button =
-		{	.code = button_code
+		{	.code = (BTN_MOUSE - 1) + button_code
 		,	.state = event->response_type == XCB_BUTTON_PRESS
 				? Xenium::PointerButtonState::Pressed
 				: Xenium::PointerButtonState::Released
@@ -5707,6 +5707,11 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 }
 
 
+/**
+ * \bug X11 emulation in Waylay maybe broken with KDE/kwin
+ *      - When a window loses focus, an additional Enter notify is generated
+ *      - When click in a window that has focus, generates an Enter Notify
+ */
 void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	) noexcept
 {

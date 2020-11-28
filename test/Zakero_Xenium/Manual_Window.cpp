@@ -63,8 +63,10 @@ int main()
 	}
 	window->classSet("Xenium : Manual_Window");
 	window->titleSet("Xenium Test");
+
+	//window->sizeSet(zakero::Xenium::SizeMm{80, 40});
+	//window->sizeSet(zakero::Xenium::SizePixel{100, 100});
 	/*
-	window->sizeSet(zakero::Xenium::SizePixel{100, 100});
 	window->sizeSetMinMax(
 		zakero::Xenium::SizePixel{400, 400}, zakero::Xenium::SizePixel{500, 500}
 		zakero::Xenium::SizeMm{30, 30}, zakero::Xenium::SizeMm{50, 50}

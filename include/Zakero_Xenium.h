@@ -161,6 +161,7 @@
 #include <iostream>
 #include <thread>
 #include <array>
+#include <future>
 
 // POSIX
 #include <poll.h>
@@ -169,7 +170,6 @@
 #include <linux/input-event-codes.h>
 
 // X11/XCB
-#include <xcb/dri3.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/randr.h>
@@ -723,10 +723,12 @@ namespace zakero
 			// }}}
 			// {{{ XCB : DRI3
 			
+#if 0
 			using ProviderInfoMap = std::unordered_map<xcb_randr_provider_t, xcb_randr_get_provider_info_reply_t>;
 
 			std::error_code driInit() noexcept;
 			std::pair<uint32_t, uint32_t> driVersion() noexcept;
+#endif
 
 			// }}}
 			// {{{ XCB : RandR
@@ -744,7 +746,9 @@ namespace zakero
 			void randrEvent(const xcb_randr_output_change_t*) noexcept;
 			void randrEvent(const xcb_randr_notify_event_t*) noexcept;
 			void randrEvent(const xcb_randr_screen_change_notify_event_t*) noexcept;
+			#if 0
 			Xenium::ProviderInfoMap randrProvider(const xcb_window_t) noexcept;
+			#endif
 
 			// }}}
 			// {{{ XCB : Utility
@@ -785,6 +789,12 @@ namespace zakero
 			// }}}
 			// {{{ Window
 			
+			enum struct SizeUnit
+			{	Millimeter
+			,	Percent
+			,	Pixel
+			};
+
 			struct MotifHints
 			{
 				uint32_t flags;
@@ -794,6 +804,27 @@ namespace zakero
 				uint32_t status;
 			};
 	
+			struct WindowCreateData
+			{
+				std::promise<void>              barrier;
+				std::error_code                 error;
+				Xenium::WindowId                window_id;
+				Xenium::OutputId                output_id;
+				xcb_atom_t                      atom;
+				Xenium::SizeUnit                size_unit;
+				Xenium::SizeMm                  size_mm;
+				Xenium::SizePercent             size_percent;
+				Xenium::SizePixel               size_pixel;
+				uint32_t                        value_mask;
+				xcb_create_window_value_list_t& value_list;
+			};
+	
+			struct WindowDestroyData
+			{
+				std::promise<void>              barrier;
+				Xenium::WindowId                window_id;
+			};
+
 			struct WindowData
 			{
 				Xenium*      xenium;
@@ -813,12 +844,6 @@ namespace zakero
 				int32_t        file;
 			};
 			using WindowPixmapMap = std::unordered_map<WindowId, WindowPixmap>;
-
-			enum struct SizeUnit
-			{	Millimeter
-			,	Percent
-			,	Pixel
-			};
 
 			struct WindowSize
 			{
@@ -911,6 +936,9 @@ namespace zakero
 
 			// -------------------------------------------------- //
 
+			void            windowCreate(Xenium::WindowCreateData*) noexcept;
+			void            windowCreateAddToQueue(Xenium::WindowCreateData*) noexcept;
+			void            windowDestroyAddToQueue(Xenium::WindowDestroyData*) noexcept;
 			std::error_code windowBorder(const WindowId, const bool) noexcept;
 			std::error_code windowSizeSet(const WindowId, const SizePixel&) noexcept;
 			std::error_code windowLocationSet(const WindowId, const PointPixel&) noexcept;
@@ -923,6 +951,10 @@ namespace zakero
 			std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode, const Xenium::WindowMode) noexcept;
 			std::error_code windowMinimize(const Xenium::WindowId) noexcept;
                                 
+			void xcbWindowCreate(Xenium::WindowCreateData*) noexcept;
+			void xcbWindowDestroy(Xenium::WindowDestroyData*) noexcept;
+			void xcbWindowInit(WindowCreateData*) noexcept;
+
 			// }}}
 			// {{{ Utility
 
@@ -935,6 +967,14 @@ namespace zakero
 
 			using WindowReadyMap = std::unordered_map<WindowId, bool>;
 			WindowReadyMap window_ready_map = {};
+
+			using WindowToCreate = std::vector<WindowCreateData*>;
+			WindowToCreate window_to_create = {};
+
+			using WindowToDestroy = std::vector<Xenium::WindowDestroyData*>;
+			WindowToDestroy window_to_destroy = {};
+
+			std::mutex xenium_window_mutex = {};
 
 			void setWindowReady(const WindowId) noexcept;
 			void waitForWindowReady(const WindowId) noexcept;
@@ -1160,6 +1200,26 @@ namespace zakero
 #define ZAKERO_XENIUM__DEBUG_BOOL(var_)                    \
 	ZAKERO_XENIUM__DEBUG                               \
 		<< #var_ << ": " << std::boolalpha << var_ \
+		<< "\n";
+
+/**
+ * \internal
+ *
+ * \brief Write debugging message.
+ *
+ * Does the samething as `ZAKERO_XENIUM__DEBUG` but is specialized to work with 
+ * std::error_code values.
+ *
+ * \parcode
+ * std::error_code error = ZAKERO_XENIUM__ERROR(Error_Unknown)
+ * ZAKERO_XENIUM__DEBUG_ERROR(error);
+ * \endparcode
+ *
+ * \param var_ The variable to write.
+ */
+#define ZAKERO_XENIUM__DEBUG_ERROR(var_)                \
+	ZAKERO_XENIUM__DEBUG                            \
+		<< "Error: " << zakero::to_string(var_) \
 		<< "\n";
 
 /**
@@ -2215,11 +2275,13 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 		return error;
 	}
 
+#if 0
 	error = driInit();
 	if(error)
 	{
 		return error;
 	}
+#endif
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -2447,17 +2509,29 @@ std::cout << "Unknown:         " << to_string(*event) << '\n';
 			free(event);
 		}
 
-		// Update and render windows
-		/*
-		for(unsigned int i = 0; i < windows_to_close.size(); i++)
-		{
-			const uint32_t window_id = windows_to_close[i];
+		xenium->xenium_window_mutex.lock();
 
-			delete XcbWindow::window(window_id);
+		for(WindowCreateData* window_data : xenium->window_to_create)
+		{
+			xenium->windowCreate(window_data);
 		}
 
-		windows_to_close.clear();
-		*/
+		for(WindowCreateData* window_data : xenium->window_to_create)
+		{
+			window_data->barrier.set_value();
+		}
+
+		xenium->window_to_create.clear();
+
+		for(WindowDestroyData* window_data : xenium->window_to_destroy)
+		{
+			xenium->xcbWindowDestroy(window_data);
+			window_data->barrier.set_value();
+		}
+
+		xenium->window_to_destroy.clear();
+
+		xenium->xenium_window_mutex.unlock();
 
 		std::this_thread::yield();
 	}
@@ -3141,6 +3215,7 @@ ZAKERO_XENIUM__DEBUG_VAR(this->output_data.map[output_id].name)
 
 // }}}
 // {{{ Window
+// {{{ Window : Documentation
 
 /**
  * \enum Xenium::WindowDecorations
@@ -3282,6 +3357,7 @@ ZAKERO_XENIUM__DEBUG_VAR(this->output_data.map[output_id].name)
  * \}
  */
 
+// }}}
 
 /**
  * \brief Create a window.
@@ -3327,6 +3403,47 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	, std::error_code&                                 error      ///< The error state
 	) noexcept
 {
+	Xenium::WindowCreateData data =
+	{	.barrier        = {}
+	,	.error          = {}
+	,	.window_id      = 0
+	,	.output_id      = 0
+	,	.atom           = 0
+	,	.size_unit      = Xenium::SizeUnit::Millimeter
+	,	.size_mm        = size_mm
+	,	.size_percent   = {}
+	,	.size_pixel     = {}
+	,	.value_mask     = value_mask
+	,	.value_list     = value_list
+	};
+
+	std::future<void> barrier = data.barrier.get_future();
+
+	windowCreateAddToQueue(&data);
+
+	barrier.wait();
+
+	if(data.error)
+	{
+		error = data.error;
+
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
+		return nullptr;
+	}
+
+	Xenium::WindowData window_data =
+	{	.xenium    = this
+	,	.window_id = data.window_id
+	};
+
+	Xenium::Window* window = new Xenium::Window(&window_data);
+
+	waitForWindowReady(data.window_id);
+
+	return window;
+
+#if 0
 	OutputId    output_id;
 	SizePercent size_percent;
 	SizePixel   size_pixel;
@@ -3372,6 +3489,73 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	waitForWindowReady(window_id);
 
 	return window;
+#endif
+}
+
+
+void Xenium::windowCreate(Xenium::WindowCreateData* window_data
+	) noexcept
+{
+	window_data->output_id = output_data.map.begin()->first;
+	Output& output         = output_data.map.begin()->second;
+
+	if(window_data->size_unit == Xenium::SizeUnit::Millimeter)
+	{
+		auto pixel = convertMmToPixel(output
+			, window_data->size_mm.width
+			, window_data->size_mm.height
+			);
+		window_data->size_pixel = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_percent = {percent.first, percent.second};
+	}
+	else if(window_data->size_unit == Xenium::SizeUnit::Percent)
+	{
+		auto pixel = convertPercentToPixel(output
+			, window_data->size_percent.width
+			, window_data->size_percent.height
+			);
+		window_data->size_pixel = {pixel.first, pixel.second};
+
+		auto mm = convertPixelToMm(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_mm = {mm.first, mm.second};
+	}
+	else if(window_data->size_unit == Xenium::SizeUnit::Pixel)
+	{
+		auto mm = convertPixelToMm(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_mm = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_percent = {percent.first, percent.second};
+	}
+	else
+	{
+		window_data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
+
+		return;
+	}
+
+	xcbWindowCreate(window_data);
+
+	if(window_data->error)
+	{
+		return;
+	}
+
+	xcbWindowInit(window_data);
 }
 
 
@@ -3419,6 +3603,46 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 	, std::error_code&                                      error        ///< The error state
 	) noexcept
 {
+	Xenium::WindowCreateData data =
+	{	.barrier        = {}
+	,	.error          = {}
+	,	.window_id      = 0
+	,	.output_id      = 0
+	,	.atom           = 0
+	,	.size_unit      = Xenium::SizeUnit::Percent
+	,	.size_mm        = {}
+	,	.size_percent   = size_percent
+	,	.size_pixel     = {}
+	,	.value_mask     = value_mask
+	,	.value_list     = value_list
+	};
+
+	std::future<void> barrier = data.barrier.get_future();
+
+	windowCreateAddToQueue(&data);
+
+	barrier.wait();
+
+	if(data.error)
+	{
+		error = data.error;
+
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
+		return nullptr;
+	}
+
+	Xenium::WindowData window_data =
+	{	.xenium    = this
+	,	.window_id = data.window_id
+	};
+
+	Xenium::Window* window = new Xenium::Window(&window_data);
+
+	waitForWindowReady(data.window_id);
+
+	return window;
+#if 0
 	OutputId  output_id;
 	SizeMm    size_mm;
 	SizePixel size_pixel;
@@ -3464,6 +3688,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 	waitForWindowReady(window_id);
 
 	return window;
+#endif
 }
 
 
@@ -3511,6 +3736,46 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 	, std::error_code&                                    error      ///< The error state
 	) noexcept
 {
+	Xenium::WindowCreateData data =
+	{	.barrier        = {}
+	,	.error          = {}
+	,	.window_id      = 0
+	,	.output_id      = 0
+	,	.atom           = 0
+	,	.size_unit      = Xenium::SizeUnit::Pixel
+	,	.size_mm        = {}
+	,	.size_percent   = {}
+	,	.size_pixel     = size_pixel
+	,	.value_mask     = value_mask
+	,	.value_list     = value_list
+	};
+
+	std::future<void> barrier = data.barrier.get_future();
+
+	windowCreateAddToQueue(&data);
+
+	barrier.wait();
+
+	if(data.error)
+	{
+		error = data.error;
+
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
+		return nullptr;
+	}
+
+	Xenium::WindowData window_data =
+	{	.xenium    = this
+	,	.window_id = data.window_id
+	};
+
+	Xenium::Window* window = new Xenium::Window(&window_data);
+
+	waitForWindowReady(data.window_id);
+
+	return window;
+#if 0
 	OutputId    output_id;
 	SizeMm      size_mm;
 	SizePercent size_percent;
@@ -3556,28 +3821,28 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 	waitForWindowReady(window_id);
 
 	return window;
+#endif
 }
 
 
-void Xenium::windowDestroy(WindowId window_id
+void Xenium::xcbWindowDestroy(WindowDestroyData* window_data
 	) noexcept
 {
-	std::scoped_lock lock(output_mutex, window_size_mutex);
+	xcb_destroy_window(this->connection, window_data->window_id);
 
-	window_output_map.erase(window_id);
-	window_on_motion_map.erase(window_id);
-	window_on_leave_map.erase(window_id);
-	window_keyboard.erase(window_id);
-	window_on_key_map.erase(window_id);
-	window_on_enter_map.erase(window_id);
-	window_on_button_map.erase(window_id);
-	window_on_axis_map.erase(window_id);
-	window_focus_map.erase(window_id);
-	window_delete_map.erase(window_id);
-	window_decorations_map.erase(window_id);
-	window_map.erase(window_id);
-
-	xcb_destroy_window(this->connection, window_id);
+	window_ready_map.erase(window_data->window_id);
+	window_output_map.erase(window_data->window_id);
+	window_on_motion_map.erase(window_data->window_id);
+	window_on_leave_map.erase(window_data->window_id);
+	window_keyboard.erase(window_data->window_id);
+	window_on_key_map.erase(window_data->window_id);
+	window_on_enter_map.erase(window_data->window_id);
+	window_on_button_map.erase(window_data->window_id);
+	window_on_axis_map.erase(window_data->window_id);
+	window_focus_map.erase(window_data->window_id);
+	window_delete_map.erase(window_data->window_id);
+	window_decorations_map.erase(window_data->window_id);
+	window_map.erase(window_data->window_id);
 }
 
 
@@ -3752,7 +4017,16 @@ Xenium::Window::Window(void* data
  */
 Xenium::Window::~Window()
 {
-	xenium->windowDestroy(window_id);
+	WindowDestroyData data =
+	{	.barrier   = {}
+	,	.window_id = this->window_id
+	};
+
+	std::future<void> barrier = data.barrier.get_future();
+
+	xenium->windowDestroyAddToQueue(&data);
+
+	barrier.wait();
 
 	window_id = 0;
 	xenium    = nullptr;
@@ -5315,6 +5589,28 @@ void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
 // }}}
 // {{{ Window : Helpers
 
+void Xenium::windowCreateAddToQueue(WindowCreateData* window_data
+	) noexcept
+{
+	xenium_window_mutex.lock();
+
+	window_to_create.push_back(window_data);
+
+	xenium_window_mutex.unlock();
+}
+
+
+void Xenium::windowDestroyAddToQueue(WindowDestroyData* window_data
+	) noexcept
+{
+	xenium_window_mutex.lock();
+
+	window_to_destroy.push_back(window_data);
+
+	xenium_window_mutex.unlock();
+}
+
+
 /**
  * \todo After an X11 connection has been established, create the frequently 
  * used Atoms so that they don't have to be created or retrieved every time.
@@ -5535,7 +5831,6 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event
 		if(event->data.data32[0] == window_delete.atom)
 		{
 			window_delete.close_request_lambda();
-			windowDestroy(event->window);
 		}
 	}
 }
@@ -6275,72 +6570,80 @@ std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The win
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-#if 0
-	ProviderInfoMap provider_info_map = randrProvider(window_id);
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
 
-	xcb_dri3_open_cookie_t dri3_cookie =
-		xcb_dri3_open(this->connection
-			, window_id
-			, provider_info_map.begin()->first
+
+void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data
+	) noexcept
+{
+	data->window_id = xcb_generate_id(this->connection);
+
+	xcb_void_cookie_t cookie =
+		xcb_create_window_aux_checked(this->connection
+			, this->screen->root_depth      // depth
+			, data->window_id               // requested id
+			, this->screen->root            // parent window id
+			, 0, 0                          // location x,y
+			, data->size_pixel.width        // width
+			, data->size_pixel.height       // height
+			, 0                             // border width
+			, XCB_WINDOW_CLASS_INPUT_OUTPUT // "class"
+			, this->screen->root_visual     // visual
+			, data->value_mask
+			, &data->value_list
 			);
 
-	xcb_dri3_open_reply_t* dri3_reply =
-		xcb_dri3_open_reply(this->connection
-			, dri3_cookie
-			, nullptr
-			);
+	xcb_generic_error_t generic_error;
 
-	int* fd_list = xcb_dri3_open_reply_fds(this->connection, dri3_reply);
-
-	window_pixmap[window_id].pixmap_id = xcb_generate_id(this->connection);
-	window_pixmap[window_id].file_id   = fd_list[0];
-
-#if 1
-	xcb_void_cookie_t pixmap_cookie =
-		xcb_dri3_pixmap_from_buffer_checked(this->connection
-			, window_pixmap[window_id].pixmap_id  // pixmap
-			, window_id                           // drawable
-			, (size.width * size.height * 4)      // size
-			, size.width                          // width
-			, size.height                         // height
-			, (size.width * 4)                    // stride
-			, this->screen->root_depth            // depth
-			, 8                                   // bpp
-			, window_pixmap[window_id].file_id    // pixmap_fd
-			);
-
-	if(requestCheckHasError(pixmap_cookie, generic_error))
+	if(requestCheckHasError(cookie, generic_error))
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-#else
-	xcb_dri3_buffer_from_pixmap_cookie_t pixmap_cookie =
-		xcb_dri3_buffer_from_pixmap(this->connection
-			, window_pixmap[window_id].pixmap_id  // pixmap
-			);
+		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
 
-	xcb_dri3_buffer_from_pixmap_reply_t* pixmap_reply =
-		xcb_dri3_buffer_from_pixmap_reply(this->connection
-			, pixmap_cookie
-			, nullptr
-			);
-	
-	if(pixmap_reply == nullptr)
+		return;
+	}
+
+	data->atom = atomCreateDeleteWindow(data->window_id
+		, generic_error
+		);
+
+	if(data->atom == XCB_ATOM_NONE)
 	{
-		printf("------ no pixmap ------\n");
-		return ZAKERO_XENIUM__ERROR(Error_None);
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
+
+		xcb_destroy_window(this->connection, data->window_id);
+		data->window_id = 0;
+
+		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
+
+		return;
 	}
 
-printf("size: %dx%d\n"
-	, pixmap_reply->width
-	, pixmap_reply->height
-	);
-#endif
-#endif
+	xcb_size_hints_t size_hints = { 0 };
+	xcb_change_property_checked(this->connection
+		, XCB_PROP_MODE_REPLACE
+		, data->window_id
+		, XCB_ATOM_WM_NORMAL_HINTS
+		, XCB_ATOM_WM_SIZE_HINTS
+		, 32 // 32-bit values
+		, 18 // 18 values
+		, &size_hints
+		);
 
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	if(requestCheckHasError(cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
+
+		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
+
+		return;
+	}
+
+	data->error = ZAKERO_XENIUM__ERROR(Error_None);
+
+	return;
 }
 
 
@@ -6926,6 +7229,7 @@ void Xenium::xkbIndicatorStateUpdate() noexcept
 // }}}
 // {{{ XCB : DRI3
 
+#if 0
 std::error_code Xenium::driInit() noexcept
 {
 	auto version = driVersion();
@@ -6971,6 +7275,7 @@ std::pair<uint32_t, uint32_t> Xenium::driVersion() noexcept
 
 	return version;
 }
+#endif
 
 // }}}
 // {{{ XCB : RandR
@@ -7192,6 +7497,7 @@ void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///<
 }
 
 
+#if 0
 Xenium::ProviderInfoMap Xenium::randrProvider(const xcb_window_t window_id
 	) noexcept
 {
@@ -7266,6 +7572,7 @@ Xenium::ProviderInfoMap Xenium::randrProvider(const xcb_window_t window_id
 
 	return retval;
 }
+#endif
 
 // }}}
 // {{{ XCB : Utility
@@ -7497,24 +7804,85 @@ Xenium::Window* Xenium::createWindow(WindowId window_id
 }
 
 
+void Xenium::xcbWindowInit(WindowCreateData* data
+	) noexcept
+{
+	window_size_map[data->window_id] =
+	{	.mm              = data->size_mm
+	,	.mm_minimum      = {0, 0}
+	,	.mm_maximum      = {0, 0}
+	,	.mm_lambda       = LambdaSizeMm_DoNothing
+	,	.percent         = data->size_percent
+	,	.percent_minimum = {0, 0}
+	,	.percent_maximum = {0, 0}
+	,	.percent_lambda  = LambdaSizePercent_DoNothing
+	,	.pixel           = data->size_pixel
+	,	.pixel_minimum   = {0, 0}
+	,	.pixel_maximum   = {0, 0}
+	,	.pixel_lambda    = LambdaSizePixel_DoNothing
+	,	.unit            = data->size_unit
+	};
+
+	window_mode_map[data->window_id] = 
+	{	.window_mode = WindowMode::Normal
+	,	.lambda      = LambdaWindowMode_DoNothing
+	};
+
+	window_output_map[data->window_id] = data->output_id;
+
+	window_keyboard[data->window_id] =
+	{	.on_enter = Lambda_DoNothing
+	,	.on_leave = Lambda_DoNothing
+	};
+
+	window_on_key_map[data->window_id]   = LambdaKey_DoNothing;
+	window_on_leave_map[data->window_id] = Lambda_DoNothing;
+	window_on_axis_map[data->window_id]  = LambdaAxis_DoNothing;
+
+	window_on_motion_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
+
+	window_on_button_map[data->window_id] =
+	{	.lambda_mm      = LambdaButtonMm_DoNothing
+	,	.lambda_percent = LambdaButtonPercent_DoNothing
+	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
+	};
+
+	window_on_enter_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
+
+	window_decorations_map[data->window_id] =
+	{	.window_decorations = WindowDecorations::Server_Side
+	,	.lambda             = LambdaWindowDecorations_DoNothing
+	};
+
+	window_focus_map[data->window_id] = LambdaBool_DoNothing;
+
+	window_delete_map[data->window_id] =
+	{	.close_request_lambda = Lambda_DoNothing
+	,	.atom                 = data->atom
+	};
+
+	window_ready_map[data->window_id] = false;
+}
+
+
 void Xenium::setWindowReady(const WindowId window_id
 	) noexcept
 {
-	auto iter = window_ready_map.find(window_id);
-	if(iter == std::end(window_ready_map))
-	{
-		return;
-	}
-
-	iter->second = true;
+	window_ready_map[window_id] = true;
 }
 
 
 void Xenium::waitForWindowReady(const WindowId window_id
 	) noexcept
 {
-	window_ready_map[window_id] = false;
-
 	xcb_map_window(this->connection, window_id);
 	xcb_flush(this->connection);
 
@@ -7522,8 +7890,6 @@ void Xenium::waitForWindowReady(const WindowId window_id
 	{
 		usleep(42);
 	}
-
-	window_ready_map.erase(window_id);
 }
 
 // }}}
@@ -8327,6 +8693,57 @@ std::string to_string(const Xenium::PointerButtonState& button_state ///< The va
 		case Xenium::PointerButtonState::Released: return "Released";
 		default: return "";
 	}
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::SizeMm& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::SizePercent& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Xenium::SizePixel& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
 }
 
 

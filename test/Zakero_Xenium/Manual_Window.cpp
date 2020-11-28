@@ -200,17 +200,17 @@ int main()
 //			);
 //	});
 
-	window->pointerOnButton([](const zakero::Xenium::PointerButton& button
-		, const zakero::Xenium::PointPixel&                     point
-		, const zakero::Xenium::KeyModifier&                    mod
-		)
-	{
-		printf(">> Button (pixel): %s %s %s\n"
-			, zakero::to_string(button).c_str()
-			, zakero::to_string(point).c_str()
-			, zakero::to_string(mod).c_str()
-			);
-	});
+//	window->pointerOnButton([](const zakero::Xenium::PointerButton& button
+//		, const zakero::Xenium::PointPixel&                     point
+//		, const zakero::Xenium::KeyModifier&                    mod
+//		)
+//	{
+//		printf(">> Button (pixel): %s %s %s\n"
+//			, zakero::to_string(button).c_str()
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
 //	window->pointerOnAxis([](const zakero::Xenium::PointerAxis& axis
 //		, const zakero::Xenium::KeyModifier&                mod

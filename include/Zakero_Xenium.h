@@ -534,7 +534,7 @@ namespace zakero
 					void                 minimize() noexcept;
 
 					// }}}
-					// {{{ Rendering : TODO
+					// {{{ Rendering
 
 					std::error_code      imageNext(uint8_t*&, Xenium::SizePixel&) noexcept;
 					void                 imagePresent() noexcept;
@@ -593,8 +593,11 @@ namespace zakero
 					// }}}
 
 				private:
-					Xenium*            xenium;
-					Xenium::WindowId   window_id;
+					Xenium*          xenium;
+					Xenium::WindowId window_id;
+					uint8_t*         frame_buffer;
+					size_t           frame_buffer_size;
+					uint32_t         frame_time;
 
 					Window(const Window&) = delete;
 					Window& operator=(const Window&) = delete;
@@ -922,7 +925,6 @@ namespace zakero
 			WindowDeleteMap      window_delete_map      = {};
 			WindowFocusMap       window_focus_map       = {};
 			WindowModeMap        window_mode_map        = {};
-			mutable std::mutex   window_mode_mutex      = {};
 			WindowOnAxisMap      window_on_axis_map     = {};
 			WindowOnButtonMap    window_on_button_map   = {};
 			WindowOnEnterMap     window_on_enter_map    = {};
@@ -932,7 +934,6 @@ namespace zakero
 			WindowOnMotionMap    window_on_motion_map   = {};
 			WindowOutputMap      window_output_map      = {};
 			WindowSizeMap        window_size_map        = {};
-			mutable std::mutex   window_size_mutex      = {};
 
 			// -------------------------------------------------- //
 
@@ -958,26 +959,26 @@ namespace zakero
 			// }}}
 			// {{{ Utility
 
+			using WindowReadyMap = std::unordered_map<WindowId, bool>;
+			using WindowToCreate = std::vector<WindowCreateData*>;
+			using WindowToDestroy = std::vector<Xenium::WindowDestroyData*>;
+
+			// -------------------------------------------------- //
+
+			WindowReadyMap  window_ready_map    = {};
+			WindowToCreate  window_to_create    = {};
+			WindowToDestroy window_to_destroy   = {};
+			std::mutex      xenium_window_mutex = {};
+
+			// -------------------------------------------------- //
+
 			std::pair<float, float>     convertPixelToMm(const Xenium::Output&, int32_t, int32_t) const noexcept;
 			std::pair<float, float>     convertPixelToPercent(const Xenium::Output&, int32_t, int32_t) const noexcept;
 			std::pair<int32_t, int32_t> convertMmToPixel(const Xenium::Output&, float, float) const noexcept;
 			std::pair<int32_t, int32_t> convertPercentToPixel(const Xenium::Output&, float, float) const noexcept;
 
-			Window* createWindow(WindowId, xcb_atom_t&, const Xenium::OutputId, const SizeUnit, const SizeMm&, const SizePercent&, const SizePixel&) noexcept;
-
-			using WindowReadyMap = std::unordered_map<WindowId, bool>;
-			WindowReadyMap window_ready_map = {};
-
-			using WindowToCreate = std::vector<WindowCreateData*>;
-			WindowToCreate window_to_create = {};
-
-			using WindowToDestroy = std::vector<Xenium::WindowDestroyData*>;
-			WindowToDestroy window_to_destroy = {};
-
-			std::mutex xenium_window_mutex = {};
-
-			void setWindowReady(const WindowId) noexcept;
-			void waitForWindowReady(const WindowId) noexcept;
+			void                        windowReadySet(const WindowId) noexcept;
+			void                        windowReadyWait(const WindowId) noexcept;
 
 			// }}}
 
@@ -988,7 +989,6 @@ namespace zakero
 	// }}}
 	// {{{ Convenience
 
-	std::string to_string(const std::error_code&) noexcept;
 	std::string to_string(const std::vector<xcb_atom_t>&) noexcept;
 	std::string to_string(const std::vector<int32_t>&) noexcept;
 	std::string to_string(const xcb_generic_error_t&) noexcept;
@@ -1009,6 +1009,7 @@ namespace zakero
 	std::string to_string(const xcb_format_t&) noexcept;
 	std::string to_string(const xcb_screen_t&) noexcept;
 	std::string to_string(const xcb_setup_t&) noexcept;
+	std::string to_string(const xcb_randr_screen_change_notify_event_t&) noexcept;
 	std::string to_string(const Xenium::Key&) noexcept;
 	std::string to_string(const Xenium::KeyModifier&) noexcept;
 	std::string to_string(const Xenium::KeyState) noexcept;
@@ -1021,6 +1022,10 @@ namespace zakero
 	std::string to_string(const Xenium::PointerAxisType) noexcept;
 	std::string to_string(const Xenium::PointerButton&) noexcept;
 	std::string to_string(const Xenium::PointerButtonState&) noexcept;
+	std::string to_string(const Xenium::SizeMm&) noexcept;
+	std::string to_string(const Xenium::SizePercent&) noexcept;
+	std::string to_string(const Xenium::SizePixel&) noexcept;
+	std::string to_string(const Xenium::WindowDecorations) noexcept;
 	std::string to_string(const Xenium::WindowMode) noexcept;
 
 	// }}}
@@ -1745,6 +1750,8 @@ namespace
  * \todo Create event "pixelsPerMillimeterChange()".  This event will be 
  * triggerd with the output device configuration changes and when the window is 
  * moved to a different output device. (Might need this in Zakero_Yetani)
+ *
+ * \todo Use a future/promise barrier to wait for the event loop.
  */
 
 /**
@@ -3439,57 +3446,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 
 	Xenium::Window* window = new Xenium::Window(&window_data);
 
-	waitForWindowReady(data.window_id);
+	windowReadyWait(data.window_id);
 
 	return window;
-
-#if 0
-	OutputId    output_id;
-	SizePercent size_percent;
-	SizePixel   size_pixel;
-
-	{
-		std::lock_guard<std::mutex> lock(output_mutex);
-
-		output_id      = output_data.map.begin()->first;
-		Output& output = output_data.map.begin()->second;
-
-		auto pixel = convertMmToPixel(output
-			, size_mm.width
-			, size_mm.height
-			);
-		size_pixel = {pixel.first, pixel.second};
-
-		auto percent = convertPixelToPercent(output
-			, size_pixel.width
-			, size_pixel.height
-			);
-		size_percent = {percent.first, percent.second};
-	}
-
-	WindowId   window_id;
-	xcb_atom_t atom;
-
-	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
-
-	if(error)
-	{
-		return nullptr;
-	}
-
-	Window* window = createWindow(window_id
-		, atom
-		, output_id
-		, SizeUnit::Millimeter
-		, size_mm
-		, size_percent
-		, size_pixel
-		);
-
-	waitForWindowReady(window_id);
-
-	return window;
-#endif
 }
 
 
@@ -3639,56 +3598,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 
 	Xenium::Window* window = new Xenium::Window(&window_data);
 
-	waitForWindowReady(data.window_id);
+	windowReadyWait(data.window_id);
 
 	return window;
-#if 0
-	OutputId  output_id;
-	SizeMm    size_mm;
-	SizePixel size_pixel;
-
-	{
-		std::lock_guard<std::mutex> lock(output_mutex);
-
-		output_id      = output_data.map.begin()->first;
-		Output& output = output_data.map.begin()->second;
-
-		auto pixel = convertPercentToPixel(output
-			, size_percent.width
-			, size_percent.height
-			);
-		size_pixel = {pixel.first, pixel.second};
-
-		auto mm = convertPixelToMm(output
-			, size_pixel.width
-			, size_pixel.height
-			);
-		size_mm = {mm.first, mm.second};
-	}
-
-	WindowId   window_id;
-	xcb_atom_t atom;
-
-	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
-
-	if(error)
-	{
-		return nullptr;
-	}
-
-	Window* window = createWindow(window_id
-		, atom
-		, output_id
-		, SizeUnit::Percent
-		, size_mm
-		, size_percent
-		, size_pixel
-		);
-
-	waitForWindowReady(window_id);
-
-	return window;
-#endif
 }
 
 
@@ -3772,56 +3684,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 
 	Xenium::Window* window = new Xenium::Window(&window_data);
 
-	waitForWindowReady(data.window_id);
+	windowReadyWait(data.window_id);
 
 	return window;
-#if 0
-	OutputId    output_id;
-	SizeMm      size_mm;
-	SizePercent size_percent;
-
-	{
-		std::lock_guard<std::mutex> lock(output_mutex);
-
-		output_id      = output_data.map.begin()->first;
-		Output& output = output_data.map.begin()->second;
-
-		auto mm = convertPixelToMm(output
-			, size_pixel.width
-			, size_pixel.height
-			);
-		size_mm = {mm.first, mm.second};
-
-		auto percent = convertPixelToPercent(output
-			, size_pixel.width
-			, size_pixel.height
-			);
-		size_percent = {percent.first, percent.second};
-	}
-
-	WindowId   window_id;
-	xcb_atom_t atom;
-
-	error = xcbWindowCreate(size_pixel, value_mask, value_list, window_id, atom);
-
-	if(error)
-	{
-		return nullptr;
-	}
-
-	Window* window = createWindow(window_id
-		, atom
-		, output_id
-		, SizeUnit::Pixel
-		, size_mm
-		, size_percent
-		, size_pixel
-		);
-
-	waitForWindowReady(window_id);
-
-	return window;
-#endif
 }
 
 
@@ -4008,6 +3873,9 @@ Xenium::Window::Window(void* data
 	)
 	: xenium(((WindowData*)data)->xenium)
 	, window_id(((WindowData*)data)->window_id)
+	, frame_buffer(nullptr)
+	, frame_buffer_size(0)
+	, frame_time(0)
 {
 }
 
@@ -4183,11 +4051,9 @@ void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda 
 std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
 	) noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	// --- Convert to a size in pixels and validate --- //
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 	window_size.unit = SizeUnit::Millimeter;
@@ -4204,10 +4070,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
 		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
 	}
 
-	// --- Update the Window Size --- //
-
-	window_size.mm = size;
-
 	if(pixel.first == window_size.pixel.width
 		&& pixel.second == window_size.pixel.height
 		)
@@ -4215,17 +4077,9 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
 		return ZAKERO_XENIUM__ERROR(Error_None);
 	}
 
-	window_size.pixel = {pixel.first, pixel.second};
+	SizePixel size_pixel = {pixel.first, pixel.second};
 
-	auto percent = xenium->convertPixelToMm(output
-		, window_size.pixel.width
-		, window_size.pixel.height
-		);
-	window_size.percent = {percent.first, percent.second};
-
-	// --- Resize the Window --- //
-
-	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
+	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
 
 	return error;
 }
@@ -4252,11 +4106,9 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
 std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
 	) noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	// --- Convert to a size in pixels and validate --- //
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 	window_size.unit = SizeUnit::Percent;
@@ -4273,10 +4125,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
 		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
 	}
 
-	// --- Update the Window Size --- //
-
-	window_size.percent = size;
-
 	if(pixel.first == window_size.pixel.width
 		&& pixel.second == window_size.pixel.height
 		)
@@ -4284,17 +4132,9 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
 		return ZAKERO_XENIUM__ERROR(Error_None);
 	}
 
-	window_size.pixel = {pixel.first, pixel.second};
+	SizePixel size_pixel = {pixel.first, pixel.second};
 
-	auto mm = xenium->convertPixelToMm(output
-		, window_size.pixel.width
-		, window_size.pixel.height
-		);
-	window_size.mm = {mm.first, mm.second};
-
-	// --- Resize the Window --- //
-
-	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
+	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
 
 	return error;
 }
@@ -4311,7 +4151,7 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \note This method does __not__ trigger the Resize Event.
+ * \note This method __will__ trigger a Resize Event.
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
@@ -4328,12 +4168,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
 		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
 	}
 
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
-
-	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
-
-	// --- Update the Window Size --- //
-
 	WindowSize& window_size = xenium->window_size_map[window_id];
 	window_size.unit = Xenium::SizeUnit::Pixel;
 
@@ -4344,23 +4178,7 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
 		return ZAKERO_XENIUM__ERROR(Error_None);
 	}
 
-	window_size.pixel = size;
-
-	auto mm = xenium->convertPixelToMm(output
-		, size.width
-		, size.height
-		);
-	window_size.mm = {mm.first, mm.second};
-
-	auto percent = xenium->convertPixelToPercent(output
-		, size.width
-		, size.height
-		);
-	window_size.percent = {percent.first, percent.second};
-
-	// --- Resize the Window --- //
-
-	std::error_code error = xenium->windowSizeSet(window_id, window_size.pixel);
+	std::error_code error = xenium->windowSizeSet(window_id, size);
 
 	return error;
 }
@@ -4391,7 +4209,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
 		return error;
 	}
 
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4432,7 +4250,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
 		return error;
 	}
 
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4473,7 +4291,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 		return error;
 	}
 
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
@@ -4688,8 +4506,6 @@ std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id
 void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
 	) noexcept
 {
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
-
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
 	if(lambda)
@@ -4719,8 +4535,6 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
 void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lambda
 	) noexcept
 {
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
-
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
 	if(lambda)
@@ -4750,8 +4564,6 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lamb
 void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
 	) noexcept
 {
-	std::lock_guard<std::mutex> ws_lock(xenium->window_size_mutex);
-
 	WindowSize& window_size = xenium->window_size_map[window_id];
 
 	if(lambda)
@@ -4885,21 +4697,20 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
  *
  * \return An error code.
  */
-size_t frame_len = 0;
-uint8_t* frame = nullptr;
 std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
 	, Xenium::SizePixel&                        size  ///< The image size
 	) noexcept
 {
-	if(frame)
+	if(frame_buffer)
 	{
-		free(frame);
+		free(frame_buffer);
 	}
 
 	size = xenium->window_size_map[window_id].pixel;
-	frame_len = size.width * size.height * 4;
-	frame     = (uint8_t*)malloc(sizeof(uint8_t) * frame_len);
-	image = frame;
+	frame_buffer_size = size.width * size.height * 4;
+	frame_buffer      = (uint8_t*)malloc(sizeof(uint8_t) * frame_buffer_size);
+
+	image = frame_buffer;
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -4938,14 +4749,16 @@ void Xenium::Window::imagePresent() noexcept
 		, 0
 		, 0
 		, xenium->screen->root_depth
-		, frame_len
-		, frame
+		, frame_buffer_size
+		, frame_buffer
 		);
 	xenium->requestCheckHasError(void_cookie);
 
 	xcb_free_gc(xenium->connection, gc);
-	free(frame);
-	frame = nullptr;
+	free(frame_buffer);
+	frame_buffer = nullptr;
+
+	frame_time = ZAKERO_STEADY_TIME_NOW(milliseconds);
 }
 
 
@@ -4953,17 +4766,16 @@ void Xenium::Window::imagePresent() noexcept
  * \brief When the last frame was rendered.
  *
  * Access the time, in milliseconds, of most recent window update.  The delta 
- * between two window time stamps can be used to determine the 
+ * between two window timestamps can be used to determine the 
  * Frames-Per-Second.
  *
  * \note This is not based on wall-time.
  *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
+ * \return The time.
  */
 uint32_t Xenium::Window::time() const noexcept
 {
-	return 0;
+	return frame_time;
 }
 
 // }}}
@@ -5010,7 +4822,7 @@ void Xenium::Window::minimize() noexcept
 Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5032,7 +4844,7 @@ Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///<
 Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5054,7 +4866,7 @@ Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& 
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point ///< The point to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5076,7 +4888,7 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point /
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& point ///< The point to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5099,7 +4911,7 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& po
 Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5121,7 +4933,7 @@ Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< Th
 Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5143,7 +4955,7 @@ Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& si
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///< The size to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5165,7 +4977,7 @@ Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///<
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size ///< The size to convert
 	) const noexcept
 {
-	std::scoped_lock lock(xenium->output_mutex, xenium->window_size_mutex);
+	std::lock_guard lock(xenium->output_mutex);
 
 	Output& output = xenium->output_data.map[xenium->window_output_map[window_id]];
 
@@ -5841,12 +5653,6 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 {
 //std::cout << "Button Press:  " << to_string(*event) << '\n';
 
-	/**
-	 * \bug This is broken, WindowSize are locked when the lambdas are 
-	 * called later.
-	 */
-	std::scoped_lock lock(window_size_mutex);
-
 	const WindowId window_id = event->event;
 
 	uint32_t button_code = event->detail;
@@ -5890,11 +5696,6 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
 		,	(float)event->event_x / (float)window_size.pixel.width
 		,	(float)event->event_y / (float)window_size.pixel.height
 		};
-
-		/**
-		 * \todo Change Locks
-		 *       - window_mutex_map: Control window creation and destruction
-		 */
 
 		window_on_button_map[window_id].lambda_mm(button, point_mm, key_modifier);
 		window_on_button_map[window_id].lambda_percent(button, point_percent, key_modifier);
@@ -5943,9 +5744,9 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
  *
  * This convention is use with the following X11 Servers
  * - KWin (KDE Plasma)
+ * - KWin (KDE Wayland with X11 support)
  *
  * Unconfirmed X11 Servers
- * - KWin (KDE Wayland with X11 support)
  * - Enlightenment
  * - Enlightenment (e16)
  * - Gnome
@@ -5964,12 +5765,6 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 		// Only care about events with the "synthetic bit" set
 		return;
 	}
-
-	/**
-	 * \bug This is broken, WindowSize is locked when the lambdas are 
-	 * called later.
-	 */
-	std::scoped_lock lock(window_size_mutex);
 
 	const WindowId window_id = event->window;
 
@@ -6022,7 +5817,7 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
 
 
 /**
- * \bug X11 emulation in Waylay maybe broken with KDE/kwin
+ * \bug X11 emulation in Wayland maybe broken with KDE/kwin
  *      - When a window loses focus, an additional Enter notify is generated
  *      - When click in a window that has focus, generates an Enter Notify
  */
@@ -6030,12 +5825,6 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	) noexcept
 {
 //std::cout << "Enter Notify:    " << to_string(*event) << '\n';
-
-	/**
-	 * \bug This is broken, WindowSize are locked when the lambdas are 
-	 * called later.
-	 */
-	std::scoped_lock lock(window_size_mutex);
 
 	const WindowId window_id = event->event;
 
@@ -6066,14 +5855,10 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 	,	(float)event->event_y / (float)window_size.pixel.height
 	};
 
-	/**
-	 * \todo Change Locks
-	 *       - window_mutex_map: Control window creation and destruction
-	 */
-
 	window_on_enter_map[window_id].lambda_mm(point_mm, key_modifier);
 	window_on_enter_map[window_id].lambda_percent(point_percent, key_modifier);
 	window_on_enter_map[window_id].lambda_pixel(point_pixel, key_modifier);
+
 	window_keyboard[window_id].on_enter();
 }
 
@@ -6082,7 +5867,7 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 	) noexcept
 {
 //std::cout << "Expose:          " << to_string(*event) << '\n';
-	setWindowReady(event->window);
+	windowReadySet(event->window);
 }
 
 
@@ -6349,12 +6134,6 @@ void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
 {
 //std::cout << "Motion Notify:   " << to_string(*event) << '\n';
 
-	/**
-	 * \bug This is broken, WindowSize are locked when the lambdas are 
-	 * called later.
-	 */
-	std::scoped_lock lock(window_size_mutex);
-
 	const WindowId window_id = event->event;
 
 	OutputId output_id = window_output_map[window_id];
@@ -6387,19 +6166,15 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 //std::cout << "Property Notify: " << to_string(*event) << '\n';
 
 	xcb_generic_error_t generic_error = {0};
-//printf("--- - Atom: %d '%s'\n", event->atom, atomName(event->atom).c_str());
 
 	if(event->atom == atom_net_frame_extents)
 	{
-		//std::cout << ">>> NET_FRAME_EXTENTS\n";
-
 		std::vector<int32_t> atom_data = Xenium::atomValueData(event->window
 			, atom_net_frame_extents
 			, XCB_ATOM_CARDINAL
 			, 4
 			, generic_error
 			);
-		//std::cout << "--- - Value: " << atom_data << '\n';
 
 		struct
 		{
@@ -6442,19 +6217,8 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 
 	if(event->atom == atom_net_wm_state)
 	{
-		//std::cout << ">>> NET_WM_STATE\n";
-
 		std::vector<xcb_atom_t> value =
 			atomValueAtom(event->window, event->atom, generic_error);
-
-		//std::cout << "--- - Value Count: " << value.size() << '\n';
-		//std::cout << "--- - Value: " << value << '\n';
-		//printf("--- - Value: ");
-		//for(const auto& atom : value)
-		//{
-		//	printf("'%s' ", atomName(atom).c_str());
-		//}
-		//printf("\n");
 
 		WindowMode new_window_mode = WindowMode::Normal;
 
@@ -6471,8 +6235,6 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 
 		if(window_mode_map.contains(event->window))
 		{
-			window_mode_mutex.lock();
-
 			WindowModeData& data = window_mode_map[event->window];
 			LambdaWindowMode lambda = LambdaWindowMode_DoNothing;
 			if(data.window_mode != new_window_mode)
@@ -6480,8 +6242,6 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 				data.window_mode = new_window_mode;
 				lambda = data.lambda;
 			}
-
-			window_mode_mutex.unlock();
 
 			lambda(new_window_mode);
 		}
@@ -6502,8 +6262,6 @@ void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
 {
 //std::cout << "Unmap Notify:    " << to_string(*event) << '\n';
 }
-
-
 
 
 std::error_code Xenium::xcbWindowCreate(const SizePixel& size       ///< The window size
@@ -6850,8 +6608,6 @@ std::string Xenium::atomName(const xcb_atom_t atom
 
 	if(reply == nullptr)
 	{
-		//ZAKERO_XENIUM__DEBUG_VAR(to_string(*generic_error));
-		//ZAKERO_XENIUM__DEBUG_VAR(to_string(*error));
 		return "";
 	}
 
@@ -7488,12 +7244,7 @@ void Xenium::randrEvent(const xcb_randr_notify_event_t* event ///< The event
 void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///< The event
 	) noexcept
 {
-	printf("Event: Randr_Screen_Change_Notify_Event\n");
-	printf("t: %u\n", event->timestamp);
-	printf("r: %08x\n",  event->root);
-	printf("w: %08x\n",  event->request_window);
-	printf("d: %ux%u\n", event->width, event->height);
-	printf("m: %ux%u\n", event->mwidth, event->mheight);
+std::cout << "RandR ScrnChange:" << to_string(*event) << '\n';
 }
 
 
@@ -7716,94 +7467,6 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
 }
 
 
-Xenium::Window* Xenium::createWindow(WindowId window_id
-	, xcb_atom_t&                         atom
-	, const Xenium::OutputId              output_id
-	, const Xenium::SizeUnit              size_unit
-	, const SizeMm&                       size_mm
-	, const SizePercent&                  size_percent
-	, const SizePixel&                    size_pixel
-	) noexcept
-{
-	std::lock_guard<std::mutex> lock(window_size_mutex);
-
-	window_size_map[window_id] =
-	{	.mm              = size_mm
-	,	.mm_minimum      = {0, 0}
-	,	.mm_maximum      = {0, 0}
-	,	.mm_lambda       = LambdaSizeMm_DoNothing
-	,	.percent         = size_percent
-	,	.percent_minimum = {0, 0}
-	,	.percent_maximum = {0, 0}
-	,	.percent_lambda  = LambdaSizePercent_DoNothing
-	,	.pixel           = size_pixel
-	,	.pixel_minimum   = {0, 0}
-	,	.pixel_maximum   = {0, 0}
-	,	.pixel_lambda    = LambdaSizePixel_DoNothing
-	,	.unit            = size_unit
-	};
-
-	{	std::lock_guard<std::mutex> wm_lock(window_mode_mutex);
-
-		window_mode_map[window_id] = 
-		{	.window_mode = WindowMode::Normal
-		,	.lambda      = LambdaWindowMode_DoNothing
-		};
-	}
-
-	window_output_map[window_id] = output_id;
-
-	window_keyboard[window_id] =
-	{	.on_enter = Lambda_DoNothing
-	,	.on_leave = Lambda_DoNothing
-	};
-
-	window_on_key_map[window_id]   = LambdaKey_DoNothing;
-	window_on_leave_map[window_id] = Lambda_DoNothing;
-	window_on_axis_map[window_id]  = LambdaAxis_DoNothing;
-
-	window_on_motion_map[window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_on_button_map[window_id] =
-	{	.lambda_mm      = LambdaButtonMm_DoNothing
-	,	.lambda_percent = LambdaButtonPercent_DoNothing
-	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
-	};
-
-	window_on_enter_map[window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_decorations_map[window_id] =
-	{	.window_decorations = WindowDecorations::Server_Side
-	,	.lambda             = LambdaWindowDecorations_DoNothing
-	};
-
-	window_focus_map[window_id] = LambdaBool_DoNothing;
-
-	window_delete_map[window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = atom
-	};
-
-	WindowData window_data =
-	{	.xenium    = this
-	,	.window_id = window_id
-	};
-	Window* window = new Window(&window_data);
-
-	this->window_map[window_id] = window;
-
-	return window;
-}
-
-
 void Xenium::xcbWindowInit(WindowCreateData* data
 	) noexcept
 {
@@ -7873,14 +7536,14 @@ void Xenium::xcbWindowInit(WindowCreateData* data
 }
 
 
-void Xenium::setWindowReady(const WindowId window_id
+void Xenium::windowReadySet(const WindowId window_id
 	) noexcept
 {
 	window_ready_map[window_id] = true;
 }
 
 
-void Xenium::waitForWindowReady(const WindowId window_id
+void Xenium::windowReadyWait(const WindowId window_id
 	) noexcept
 {
 	xcb_map_window(this->connection, window_id);
@@ -7896,11 +7559,12 @@ void Xenium::waitForWindowReady(const WindowId window_id
 // {{{ Convenience
 
 /**
- * \brief Insert an xcb_generic_error_t into an output stream.
+ * \brief Convert an xcb_generic_error_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_generic_error_t& generic_error) noexcept
+std::string to_string(const xcb_generic_error_t& generic_error ///< The value to convert
+	) noexcept
 {
 	return std::string()
 		+ "{ \"response_type\": " + std::to_string(generic_error.response_type)
@@ -7915,11 +7579,36 @@ std::string to_string(const xcb_generic_error_t& generic_error) noexcept
 
 
 /**
- * \brief Insert an xcb_button_press_event_t into an output stream.
+ * \brief Convert an xcb_randr_screen_change_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_button_press_event_t& event ///< The value in insert into the stream
+std::string to_string(const xcb_randr_screen_change_notify_event_t& event ///< The value to convert
+	) noexcept
+{
+	return std::string()
+		+ "{ \"response_type\": "    + std::to_string(event.response_type)
+		+ ", \"rotation\": "         + std::to_string(event.rotation)
+		+ ", \"sequence\": "         + std::to_string(event.sequence)
+		+ ", \"timestamp\": "        + std::to_string(event.timestamp)
+		+ ", \"config_timestamp\": " + std::to_string(event.config_timestamp)
+		+ ", \"root\": "             + std::to_string(event.root)
+		+ ", \"request_window\": "   + std::to_string(event.request_window)
+		+ ", \"sizeID\": "           + std::to_string(event.sizeID)
+		+ ", \"subpixel_order\": "   + std::to_string(event.subpixel_order)
+		+ ", \"width\": "            + std::to_string(event.width)
+		+ ", \"height\": "           + std::to_string(event.height)
+		+ ", \"mwidth\": "           + std::to_string(event.mwidth)
+		+ ", \"mheight\": "          + std::to_string(event.mheight)
+		+ " }";
+}
+
+/**
+ * \brief Convert an xcb_button_press_event_t into a string.
+ *
+ * \return The string.
+ */
+std::string to_string(const xcb_button_press_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -7942,11 +7631,11 @@ std::string to_string(const xcb_button_press_event_t& event ///< The value in in
 
 
 /**
- * \brief Insert an xcb_client_message_event_t into an output stream.
+ * \brief Convert an xcb_client_message_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_client_message_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_client_message_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -7981,11 +7670,11 @@ std::string to_string(const xcb_client_message_event_t& event  ///< The value in
 
 
 /**
- * \brief Insert an xcb_configure_notify_event_t into an output stream.
+ * \brief Convert an xcb_configure_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_configure_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_configure_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8007,11 +7696,11 @@ std::string to_string(const xcb_configure_notify_event_t& event  ///< The value 
 
 
 /**
- * \brief Insert an xcb_enter_notify_event_t into an output stream.
+ * \brief Convert an xcb_enter_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_enter_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_enter_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8033,11 +7722,11 @@ std::string to_string(const xcb_enter_notify_event_t& event  ///< The value in i
 
 
 /**
- * \brief Insert an xcb_expose_event_t into an output stream.
+ * \brief Convert an xcb_expose_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_expose_event_t&    event  ///< The value in insert into the stream
+std::string to_string(const xcb_expose_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8058,11 +7747,11 @@ std::string to_string(const xcb_expose_event_t&    event  ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_focus_in_event_t into an output stream.
+ * \brief Convert an xcb_focus_in_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_focus_in_event_t&  event  ///< The value in insert into the stream
+std::string to_string(const xcb_focus_in_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8080,11 +7769,11 @@ std::string to_string(const xcb_focus_in_event_t&  event  ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_generic_event_t into an output stream.
+ * \brief Convert an xcb_generic_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_generic_event_t&   event  ///< The value in insert into the stream
+std::string to_string(const xcb_generic_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8105,11 +7794,11 @@ std::string to_string(const xcb_generic_event_t&   event  ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_gravity_notify_event_t into an output stream.
+ * \brief Convert an xcb_gravity_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_gravity_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_gravity_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8125,11 +7814,11 @@ std::string to_string(const xcb_gravity_notify_event_t& event  ///< The value in
 
 
 /**
- * \brief Insert an xcb_key_press_event_t into an output stream.
+ * \brief Convert an xcb_key_press_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_key_press_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_key_press_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8152,11 +7841,11 @@ std::string to_string(const xcb_key_press_event_t& event  ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_map_notify_event_t into an output stream.
+ * \brief Convert an xcb_map_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_map_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_map_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8175,11 +7864,11 @@ std::string to_string(const xcb_map_notify_event_t& event  ///< The value in ins
 
 
 /**
- * \brief Insert an xcb_motion_notify_event_t into an output stream.
+ * \brief Convert an xcb_motion_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_motion_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_motion_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8202,11 +7891,11 @@ std::string to_string(const xcb_motion_notify_event_t& event  ///< The value in 
 
 
 /**
- * \brief Insert an xcb_property_notify_event_t into an output stream.
+ * \brief Convert an xcb_property_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_property_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_property_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8226,11 +7915,11 @@ std::string to_string(const xcb_property_notify_event_t& event  ///< The value i
 
 
 /**
- * \brief Insert an xcb_reparent_notify_event_t into an output stream.
+ * \brief Convert an xcb_reparent_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_reparent_notify_event_t& event  ///< The value in insert into the stream
+std::string to_string(const xcb_reparent_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8252,11 +7941,11 @@ std::string to_string(const xcb_reparent_notify_event_t& event  ///< The value i
 
 
 /**
- * \brief Insert an xcb_unmap_notify_event_t into an output stream.
+ * \brief Convert an xcb_unmap_notify_event_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_unmap_notify_event_t& event ///< The value in insert into the stream
+std::string to_string(const xcb_unmap_notify_event_t& event ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8275,11 +7964,11 @@ std::string to_string(const xcb_unmap_notify_event_t& event ///< The value in in
 
 
 /**
- * \brief Insert an xcb_format_t into an output stream.
+ * \brief Convert an xcb_format_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_format_t&          format ///< The value in insert into the stream
+std::string to_string(const xcb_format_t& format ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8297,11 +7986,11 @@ std::string to_string(const xcb_format_t&          format ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_screen_t into an output stream.
+ * \brief Convert an xcb_screen_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_screen_t&          screen ///< The value in insert into the stream
+std::string to_string(const xcb_screen_t& screen ///< The value to convert.
 	) noexcept
 {
 	return std::string()
@@ -8325,7 +8014,12 @@ std::string to_string(const xcb_screen_t&          screen ///< The value in inse
 }
 
 
-std::string to_string(const std::vector<xcb_atom_t>& vector ///< The value in insert into the stream
+/**
+ * \brief Convert a vector into a string.
+ *
+ * \return The string.
+ */
+std::string to_string(const std::vector<xcb_atom_t>& vector ///< The value to convert
 	) noexcept
 {
 	std::string string = "[ ";
@@ -8344,7 +8038,12 @@ std::string to_string(const std::vector<xcb_atom_t>& vector ///< The value in in
 }
 
 
-std::string to_string(const std::vector<int32_t>&  vector ///< The value in insert into the stream
+/**
+ * \brief Convert a vector into a string.
+ *
+ * \return The string.
+ */
+std::string to_string(const std::vector<int32_t>& vector ///< The value to convert
 	) noexcept
 {
 	std::string string = "[ ";
@@ -8364,11 +8063,11 @@ std::string to_string(const std::vector<int32_t>&  vector ///< The value in inse
 
 
 /**
- * \brief Insert an xcb_setup_t into an output stream.
+ * \brief Convert an xcb_setup_t into a string.
  *
- * \return The \p stream.
+ * \return The string.
  */
-std::string to_string(const xcb_setup_t&           setup  ///< The value in insert into the stream
+std::string to_string(const xcb_setup_t& setup ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8407,7 +8106,7 @@ std::string to_string(const xcb_setup_t&           setup  ///< The value in inse
  *
  * \return A string
  */
-std::string to_string(const Xenium::Key& key ///< The value
+std::string to_string(const Xenium::Key& key ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8427,7 +8126,7 @@ std::string to_string(const Xenium::Key& key ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::KeyModifier& key_modifier ///< The value
+std::string to_string(const Xenium::KeyModifier& key_modifier ///< The value to convert
 	) noexcept
 {
 	auto mod_to_str = [](std::string& s, uint32_t m)
@@ -8494,7 +8193,7 @@ std::string to_string(const Xenium::KeyModifier& key_modifier ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::KeyState key_state ///< The value
+std::string to_string(const Xenium::KeyState key_state ///< The value to convert
 	) noexcept
 {
 	switch(key_state)
@@ -8514,7 +8213,7 @@ std::string to_string(const Xenium::KeyState key_state ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::Output& output ///< The value
+std::string to_string(const Xenium::Output& output ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8544,7 +8243,7 @@ std::string to_string(const Xenium::Output& output ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointMm point ///< The value
+std::string to_string(const Xenium::PointMm point ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8563,7 +8262,7 @@ std::string to_string(const Xenium::PointMm point ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointPercent point ///< The value
+std::string to_string(const Xenium::PointPercent point ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8582,7 +8281,7 @@ std::string to_string(const Xenium::PointPercent point ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointPixel point ///< The value
+std::string to_string(const Xenium::PointPixel point ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8601,7 +8300,7 @@ std::string to_string(const Xenium::PointPixel point ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointerAxis& pointer_axis ///< The value
+std::string to_string(const Xenium::PointerAxis& pointer_axis ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8622,7 +8321,7 @@ std::string to_string(const Xenium::PointerAxis& pointer_axis ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointerAxisSource source ///< The value
+std::string to_string(const Xenium::PointerAxisSource source ///< The value to convert
 	) noexcept
 {
 	switch(source)
@@ -8644,7 +8343,7 @@ std::string to_string(const Xenium::PointerAxisSource source ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointerAxisType type ///< The value
+std::string to_string(const Xenium::PointerAxisType type ///< The value to convert
 	) noexcept
 {
 	switch(type)
@@ -8664,7 +8363,7 @@ std::string to_string(const Xenium::PointerAxisType type ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointerButton& button ///< The value
+std::string to_string(const Xenium::PointerButton& button ///< The value to convert
 	) noexcept
 {
 	std::string str = std::string()
@@ -8684,7 +8383,7 @@ std::string to_string(const Xenium::PointerButton& button ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::PointerButtonState& button_state ///< The value
+std::string to_string(const Xenium::PointerButtonState& button_state ///< The value to convert
 	) noexcept
 {
 	switch(button_state)
@@ -8703,7 +8402,7 @@ std::string to_string(const Xenium::PointerButtonState& button_state ///< The va
  *
  * \return A string
  */
-std::string to_string(const Xenium::SizeMm& size ///< The value
+std::string to_string(const Xenium::SizeMm& size ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8720,7 +8419,7 @@ std::string to_string(const Xenium::SizeMm& size ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::SizePercent& size ///< The value
+std::string to_string(const Xenium::SizePercent& size ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8737,7 +8436,7 @@ std::string to_string(const Xenium::SizePercent& size ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::SizePixel& size ///< The value
+std::string to_string(const Xenium::SizePixel& size ///< The value to convert
 	) noexcept
 {
 	return std::string()
@@ -8754,7 +8453,7 @@ std::string to_string(const Xenium::SizePixel& size ///< The value
  *
  * \return A string
  */
-std::string to_string(const Xenium::WindowDecorations window_decorations ///< The value
+std::string to_string(const Xenium::WindowDecorations window_decorations ///< The value to convert
 	) noexcept
 {
 	switch(window_decorations)

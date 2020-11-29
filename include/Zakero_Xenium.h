@@ -662,6 +662,18 @@ namespace zakero
 			void                                outputAdd(const xcb_randr_get_crtc_info_reply_t*, const xcb_randr_get_output_info_reply_t*) noexcept;
 
 			// }}}
+			// {{{ Utility
+
+			std::mutex xenium_window_mutex = {};
+
+			// -------------------------------------------------- //
+
+			[[nodiscard]] std::pair<float, float>     convertPixelToMm(const Xenium::Output&, int32_t, int32_t) const noexcept;
+			[[nodiscard]] std::pair<float, float>     convertPixelToPercent(const Xenium::Output&, int32_t, int32_t) const noexcept;
+			[[nodiscard]] std::pair<int32_t, int32_t> convertMmToPixel(const Xenium::Output&, float, float) const noexcept;
+			[[nodiscard]] std::pair<int32_t, int32_t> convertPercentToPixel(const Xenium::Output&, float, float) const noexcept;
+
+			// }}}
 			// {{{ Window
 			
 			enum struct SizeUnit
@@ -928,18 +940,6 @@ namespace zakero
 			[[nodiscard]] std::error_code xkbInit() noexcept;
 			void                          xkbControlsUpdate() noexcept;
 			void                          xkbIndicatorStateUpdate() noexcept;
-
-			// }}}
-			// {{{ Utility
-
-			std::mutex xenium_window_mutex = {};
-
-			// -------------------------------------------------- //
-
-			[[nodiscard]] std::pair<float, float>     convertPixelToMm(const Xenium::Output&, int32_t, int32_t) const noexcept;
-			[[nodiscard]] std::pair<float, float>     convertPixelToPercent(const Xenium::Output&, int32_t, int32_t) const noexcept;
-			[[nodiscard]] std::pair<int32_t, int32_t> convertMmToPixel(const Xenium::Output&, float, float) const noexcept;
-			[[nodiscard]] std::pair<int32_t, int32_t> convertPercentToPixel(const Xenium::Output&, float, float) const noexcept;
 
 			// }}}
 
@@ -2251,23 +2251,6 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 // {{{ Cursor
 
 // }}}
-// {{{ Keyboard
-
-int32_t Xenium::keyRepeatDelay() const noexcept
-{
-	return xkb_controls.repeat_delay_ms;
-}
-
-
-int32_t Xenium::keyRepeatRate() const noexcept
-{
-	return xkb_controls.repeat_interval_ms;
-}
-
-// }}}
-// {{{ Utility
-
-// }}}
 // {{{ Event Loop
 
 //#define ZAKERO_XENIUM__ENABLE_THREAD_SCHEDULER
@@ -2498,6 +2481,20 @@ std::cout << "Unknown:         " << to_string(*event) << '\n';
 	}
 
 	xenium->event_loop_is_running.store(false);
+}
+
+// }}}
+// {{{ Keyboard
+
+int32_t Xenium::keyRepeatDelay() const noexcept
+{
+	return xkb_controls.repeat_delay_ms;
+}
+
+
+int32_t Xenium::keyRepeatRate() const noexcept
+{
+	return xkb_controls.repeat_interval_ms;
 }
 
 // }}}
@@ -3167,6 +3164,195 @@ ZAKERO_XENIUM__DEBUG_VAR(output_id)
 ZAKERO_XENIUM__DEBUG_VAR(this->output_map[output_id].name)
 }
 
+
+// }}}
+// {{{ Utility
+
+/**
+ * \brief Convert Pixel to Millimeter.
+ *
+ * Using the \p output device, convert the provided pixel values into 
+ * millimeter values.
+ *
+ * \return The converted values.
+ *
+ * \thread_user
+ * \thread_wayland
+ */
+std::pair<float, float> Xenium::convertPixelToMm(const Xenium::Output& output ///< The output for the conversion
+	, int32_t                                                      xw     ///< The x or width value
+	, int32_t                                                      yh     ///< The y or height value
+	) const noexcept
+{
+	const float ratio_h = output.pixels_per_mm_horizontal;
+	const float ratio_v = output.pixels_per_mm_vertical;
+
+	return
+	{	xw / ratio_h
+	,	yh / ratio_v
+	};
+}
+
+
+/**
+ * \brief Convert Pixel to Percentage.
+ *
+ * Using the \p output device, convert the provided pixel values into 
+ * percentage values.
+ *
+ * \return The converted values.
+ *
+ * \thread_user
+ * \thread_wayland
+ */
+std::pair<float, float> Xenium::convertPixelToPercent(const Xenium::Output& output ///< The output for the conversion
+	, int32_t                                                           xw     ///< The x or width value
+	, int32_t                                                           yh     ///< The y or height value
+	) const noexcept
+{
+	return
+	{	float(xw) / output.width
+	,	float(yh) / output.height
+	};
+}
+
+
+/**
+ * \brief Convert Millimeter to Pixel.
+ *
+ * Using the \p output device, convert the provided millimeter values into 
+ * pixel values.
+ *
+ * \return The converted values.
+ *
+ * \thread_user
+ * \thread_wayland
+ */
+std::pair<int32_t, int32_t> Xenium::convertMmToPixel(const Xenium::Output& output ///< The output for the conversion
+	, float                                                            xw     ///< The x or width value
+	, float                                                            yh     ///< The y or height value
+	) const noexcept
+{
+	const float ratio_h = output.pixels_per_mm_horizontal;
+	const float ratio_v = output.pixels_per_mm_vertical;
+
+	return
+	{	int32_t(xw * ratio_h)
+	,	int32_t(yh * ratio_v)
+	};
+}
+
+
+/**
+ * \brief Convert Percentage to Pixel.
+ *
+ * Using the \p output device, convert the provided percentage values into 
+ * pixel values.
+ *
+ * \return The converted values.
+ *
+ * \thread_user
+ * \thread_wayland
+ */
+std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& output ///< The output for the conversion
+	, float                                                                 xw     ///< The x or width value
+	, float                                                                 yh     ///< The y or height value
+	) const noexcept
+{
+	return
+	{	int32_t(xw * output.width)
+	,	int32_t(yh * output.height)
+	};
+}
+
+
+void Xenium::xcbWindowInit(Xenium::WindowCreateData* data
+	) noexcept
+{
+	window_size_map[data->window_id] =
+	{	.mm              = data->size_mm
+	,	.mm_minimum      = {0, 0}
+	,	.mm_maximum      = {0, 0}
+	,	.mm_lambda       = LambdaSizeMm_DoNothing
+	,	.percent         = data->size_percent
+	,	.percent_minimum = {0, 0}
+	,	.percent_maximum = {0, 0}
+	,	.percent_lambda  = LambdaSizePercent_DoNothing
+	,	.pixel           = data->size_pixel
+	,	.pixel_minimum   = {0, 0}
+	,	.pixel_maximum   = {0, 0}
+	,	.pixel_lambda    = LambdaSizePixel_DoNothing
+	,	.unit            = data->size_unit
+	};
+
+	window_mode_map[data->window_id] = 
+	{	.window_mode = WindowMode::Normal
+	,	.lambda      = LambdaWindowMode_DoNothing
+	};
+
+	window_output_map[data->window_id] = data->output_id;
+
+	window_keyboard[data->window_id] =
+	{	.on_enter = Lambda_DoNothing
+	,	.on_leave = Lambda_DoNothing
+	};
+
+	window_on_key_map[data->window_id]   = LambdaKey_DoNothing;
+	window_on_leave_map[data->window_id] = Lambda_DoNothing;
+	window_on_axis_map[data->window_id]  = LambdaAxis_DoNothing;
+
+	window_on_motion_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
+
+	window_on_button_map[data->window_id] =
+	{	.lambda_mm      = LambdaButtonMm_DoNothing
+	,	.lambda_percent = LambdaButtonPercent_DoNothing
+	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
+	};
+
+	window_on_enter_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
+
+	window_decorations_map[data->window_id] =
+	{	.window_decorations = WindowDecorations::Server_Side
+	,	.lambda             = LambdaWindowDecorations_DoNothing
+	};
+
+	window_focus_map[data->window_id] = LambdaBool_DoNothing;
+
+	window_delete_map[data->window_id] =
+	{	.close_request_lambda = Lambda_DoNothing
+	,	.atom                 = data->atom
+	};
+
+	window_ready_map[data->window_id] = false;
+}
+
+
+void Xenium::windowReadySet(const WindowId window_id
+	) noexcept
+{
+	window_ready_map[window_id] = true;
+}
+
+
+void Xenium::windowReadyWait(const WindowId window_id
+	) noexcept
+{
+	xcb_map_window(this->connection, window_id);
+	xcb_flush(this->connection);
+
+	while(window_ready_map[window_id] == false)
+	{
+		usleep(42);
+	}
+}
 
 // }}}
 // {{{ Window
@@ -7117,195 +7303,6 @@ bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
 	}
 
 	return false;
-}
-
-// }}}
-// {{{ Utility
-
-/**
- * \brief Convert Pixel to Millimeter.
- *
- * Using the \p output device, convert the provided pixel values into 
- * millimeter values.
- *
- * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
- */
-std::pair<float, float> Xenium::convertPixelToMm(const Xenium::Output& output ///< The output for the conversion
-	, int32_t                                                      xw     ///< The x or width value
-	, int32_t                                                      yh     ///< The y or height value
-	) const noexcept
-{
-	const float ratio_h = output.pixels_per_mm_horizontal;
-	const float ratio_v = output.pixels_per_mm_vertical;
-
-	return
-	{	xw / ratio_h
-	,	yh / ratio_v
-	};
-}
-
-
-/**
- * \brief Convert Pixel to Percentage.
- *
- * Using the \p output device, convert the provided pixel values into 
- * percentage values.
- *
- * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
- */
-std::pair<float, float> Xenium::convertPixelToPercent(const Xenium::Output& output ///< The output for the conversion
-	, int32_t                                                           xw     ///< The x or width value
-	, int32_t                                                           yh     ///< The y or height value
-	) const noexcept
-{
-	return
-	{	float(xw) / output.width
-	,	float(yh) / output.height
-	};
-}
-
-
-/**
- * \brief Convert Millimeter to Pixel.
- *
- * Using the \p output device, convert the provided millimeter values into 
- * pixel values.
- *
- * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
- */
-std::pair<int32_t, int32_t> Xenium::convertMmToPixel(const Xenium::Output& output ///< The output for the conversion
-	, float                                                            xw     ///< The x or width value
-	, float                                                            yh     ///< The y or height value
-	) const noexcept
-{
-	const float ratio_h = output.pixels_per_mm_horizontal;
-	const float ratio_v = output.pixels_per_mm_vertical;
-
-	return
-	{	int32_t(xw * ratio_h)
-	,	int32_t(yh * ratio_v)
-	};
-}
-
-
-/**
- * \brief Convert Percentage to Pixel.
- *
- * Using the \p output device, convert the provided percentage values into 
- * pixel values.
- *
- * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
- */
-std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& output ///< The output for the conversion
-	, float                                                                 xw     ///< The x or width value
-	, float                                                                 yh     ///< The y or height value
-	) const noexcept
-{
-	return
-	{	int32_t(xw * output.width)
-	,	int32_t(yh * output.height)
-	};
-}
-
-
-void Xenium::xcbWindowInit(Xenium::WindowCreateData* data
-	) noexcept
-{
-	window_size_map[data->window_id] =
-	{	.mm              = data->size_mm
-	,	.mm_minimum      = {0, 0}
-	,	.mm_maximum      = {0, 0}
-	,	.mm_lambda       = LambdaSizeMm_DoNothing
-	,	.percent         = data->size_percent
-	,	.percent_minimum = {0, 0}
-	,	.percent_maximum = {0, 0}
-	,	.percent_lambda  = LambdaSizePercent_DoNothing
-	,	.pixel           = data->size_pixel
-	,	.pixel_minimum   = {0, 0}
-	,	.pixel_maximum   = {0, 0}
-	,	.pixel_lambda    = LambdaSizePixel_DoNothing
-	,	.unit            = data->size_unit
-	};
-
-	window_mode_map[data->window_id] = 
-	{	.window_mode = WindowMode::Normal
-	,	.lambda      = LambdaWindowMode_DoNothing
-	};
-
-	window_output_map[data->window_id] = data->output_id;
-
-	window_keyboard[data->window_id] =
-	{	.on_enter = Lambda_DoNothing
-	,	.on_leave = Lambda_DoNothing
-	};
-
-	window_on_key_map[data->window_id]   = LambdaKey_DoNothing;
-	window_on_leave_map[data->window_id] = Lambda_DoNothing;
-	window_on_axis_map[data->window_id]  = LambdaAxis_DoNothing;
-
-	window_on_motion_map[data->window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_on_button_map[data->window_id] =
-	{	.lambda_mm      = LambdaButtonMm_DoNothing
-	,	.lambda_percent = LambdaButtonPercent_DoNothing
-	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
-	};
-
-	window_on_enter_map[data->window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_decorations_map[data->window_id] =
-	{	.window_decorations = WindowDecorations::Server_Side
-	,	.lambda             = LambdaWindowDecorations_DoNothing
-	};
-
-	window_focus_map[data->window_id] = LambdaBool_DoNothing;
-
-	window_delete_map[data->window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = data->atom
-	};
-
-	window_ready_map[data->window_id] = false;
-}
-
-
-void Xenium::windowReadySet(const WindowId window_id
-	) noexcept
-{
-	window_ready_map[window_id] = true;
-}
-
-
-void Xenium::windowReadyWait(const WindowId window_id
-	) noexcept
-{
-	xcb_map_window(this->connection, window_id);
-	xcb_flush(this->connection);
-
-	while(window_ready_map[window_id] == false)
-	{
-		usleep(42);
-	}
 }
 
 // }}}

@@ -594,8 +594,10 @@ namespace zakero
 
 				private:
 					Xenium*           xenium;
-					Xenium::WindowId  window_id;
 					uint8_t*          frame_buffer;
+					Xenium::SizePixel frame_buffer_size;
+					Xenium::WindowId  window_id;
+					xcb_gcontext_t    gc;
 					size_t            frame_buffer_length;
 					uint32_t          frame_time;
 
@@ -685,6 +687,7 @@ namespace zakero
 				Xenium::WindowId                window_id;
 				Xenium::OutputId                output_id;
 				xcb_atom_t                      atom;
+				xcb_gcontext_t                  gc;
 				Xenium::SizeUnit                size_unit;
 				Xenium::SizeMm                  size_mm;
 				Xenium::SizePercent             size_percent;
@@ -3385,7 +3388,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 		return nullptr;
 	}
 
-	Xenium::Window* window = new Xenium::Window(this, (void*)&data.window_id);
+	Xenium::Window* window = new Xenium::Window(this, (void*)&data);
 
 	windowReadyWait(data.window_id);
 
@@ -3532,7 +3535,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 		return nullptr;
 	}
 
-	Xenium::Window* window = new Xenium::Window(this, (void*)&data.window_id);
+	Xenium::Window* window = new Xenium::Window(this, (void*)&data);
 
 	windowReadyWait(data.window_id);
 
@@ -3613,7 +3616,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 		return nullptr;
 	}
 
-	Xenium::Window* window = new Xenium::Window(this, (void*)&data.window_id);
+	Xenium::Window* window = new Xenium::Window(this, (void*)&data);
 
 	windowReadyWait(data.window_id);
 
@@ -3804,8 +3807,10 @@ Xenium::Window::Window(Xenium* xenium
 	, void*                data
 	)
 	: xenium(xenium)
-	, window_id(*(WindowId*)data)
 	, frame_buffer(nullptr)
+	, frame_buffer_size(0, 0)
+	, window_id(((WindowCreateData*)data)->window_id)
+	, gc(((WindowCreateData*)data)->gc)
 	, frame_buffer_length(0)
 	, frame_time(0)
 {
@@ -3827,6 +3832,8 @@ Xenium::Window::~Window()
 	xenium->windowDestroyAddToQueue(&data);
 
 	barrier.wait();
+
+	xcb_free_gc(xenium->connection, gc);
 
 	window_id = 0;
 	xenium    = nullptr;
@@ -4645,11 +4652,12 @@ std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
 		free(frame_buffer);
 	}
 
-	size = xenium->window_size_map[window_id].pixel;
-	frame_buffer_length = size.width * size.height * 4;
-	frame_buffer      = (uint8_t*)malloc(sizeof(uint8_t) * frame_buffer_length);
+	frame_buffer_size   = xenium->window_size_map[window_id].pixel;
+	frame_buffer_length = frame_buffer_size.width * frame_buffer_size.height * 4;
+	frame_buffer        = (uint8_t*)malloc(sizeof(uint8_t) * frame_buffer_length);
 
 	image = frame_buffer;
+	size  = frame_buffer_size;
 
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
@@ -4663,26 +4671,12 @@ std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
  */
 void Xenium::Window::imagePresent() noexcept
 {
-	xcb_void_cookie_t void_cookie;
-	xcb_gcontext_t gc = xcb_generate_id(xenium->connection);
-
-	void_cookie =
-	xcb_create_gc(xenium->connection
-		, gc
-		, window_id
-		, 0
-		, nullptr
-		);
-
-	SizePixel& size = xenium->window_size_map[window_id].pixel;
-
-	void_cookie =
 	xcb_put_image(xenium->connection
 		, XCB_IMAGE_FORMAT_Z_PIXMAP
 		, window_id
 		, gc
-		, size.width
-		, size.height
+		, frame_buffer_size.width
+		, frame_buffer_size.height
 		, 0
 		, 0
 		, 0
@@ -4690,10 +4684,6 @@ void Xenium::Window::imagePresent() noexcept
 		, frame_buffer_length
 		, frame_buffer
 		);
-
-	xcb_free_gc(xenium->connection, gc);
-	free(frame_buffer);
-	frame_buffer = nullptr;
 
 	frame_time = ZAKERO_STEADY_TIME_NOW(milliseconds);
 }
@@ -6274,6 +6264,23 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data
 	}
 
 	data->error = ZAKERO_XENIUM__ERROR(Error_None);
+
+	data->gc = xcb_generate_id(this->connection);
+	cookie = xcb_create_gc_checked(this->connection
+		, data->gc
+		, data->window_id
+		, 0
+		, nullptr
+		);
+
+	if(requestCheckHasError(cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
+
+		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
+
+		return;
+	}
 
 	return;
 }

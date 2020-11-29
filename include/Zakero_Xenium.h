@@ -178,9 +178,6 @@
 #include <array>
 #include <future>
 
-// POSIX
-#include <poll.h>
-
 // Linux
 #include <linux/input-event-codes.h>
 
@@ -195,7 +192,6 @@
 
 // Zakero
 #include "Zakero_Base.h"
-#include "Zakero_MemoryPool.h"
 
 
 /******************************************************************************
@@ -221,45 +217,33 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_XENIUM__ERROR_DATA \
-	X(Error_None                                   ,  0 , "No Error"                                                         ) \
-	X(Error_Unknown                                ,  1 , "An unknown error has occurred"                                    ) \
-	X(Error_Connection_Failed                      ,  2 , "Failed due to socket, pipe, or other stream errors"               ) \
-	X(Error_Extension_Not_Supported                ,  3 , "The requested XCB extension is not supported"                     ) \
-	X(Error_Not_Enough_Memory                      ,  4 , "Insufficient memory"                                              ) \
-	X(Error_Request_Too_Long                       ,  5 , "The request was longer than what is excepted by the X11 server"   ) \
-	X(Error_Invalid_Display_Name                   ,  6 , "An error occured while parsing the X11 display name"              ) \
-	X(Error_Invalid_Screen                         ,  7 , "The X11 server does not have a screen matching the display"       ) \
-	X(Error_RandR_Not_Available                    ,  8 , "XCB RandR extenstion is not available"                            ) \
-	X(Error_RandR_Version_Too_Old                  ,  9 , "XCB RandR version is too old"                                     ) \
-	X(Error_RandR_Screen_Resources_Not_Found       , 10 , "XCB RandR could not locate any screen resources"                  ) \
-	X(Error_RandR_Invalid_CRTC_Id                  , 11 , "XCB RandR CRTC ID is not valid"                                   ) \
-	X(Error_RandR_Invalid_Output_Id                , 12 , "XCB RandR Output ID is not valid"                                 ) \
-	X(Error_RandR_Output_Info_Not_Found            , 13 , "XCB RandR Output Information was not found"                       ) \
-	X(Error_RandR_CRTC_Info_Not_Found              , 14 , "XCB RandR CRTC Information was not found"                         ) \
-	X(Error_RandR_Output_Info_Is_Incomplete        , 15 , "XCB RandR Output Information does not have enough data"           ) \
-	X(Error_Window_Size_Too_Small                  , 16 , "The window size was too small."                                   ) \
-	X(Error_Minimum_Size_Greater_Than_Maximum_Size , 17 , "The minimum window size is larger than the maximum window size."  ) \
-	X(Error_Xcb_NETWM_State_Not_Available          , 18 , "The XCB NETWM protocol extention is not supported."               ) \
-	X(Error_Xcb_Fullscreen_Not_Available           , 19 , "The XCB Window Manager does not support fullscreen windows."      ) \
-	X(Error_Xcb_Maximized_Window_Not_Available     , 20 , "The XCB Window Manager does not support maximized windows."       ) \
-	X(Error_Xcb_WM_Delete_Window_Not_Available     , 21 , "The XCB Window Manager does not support the delete protocol."     ) \
-	X(Error_Xcb_WM_Protocols_Not_Available         , 22 , "The XCB Window Manager protocols are not available."              ) \
-	X(Error_Xcb_Hidden_Not_Available               , 23 , "The XCB Window Manager does not support hiding windows."          ) \
-	X(Error_Xcb_Xkb_Not_Available                  , 24 , "The XCB XKB Extiension v1.0 is not available."                    ) \
-
-	/* --- To Be Deleted --- */
-	/*
-	*/
+	X(Error_None                                   ,  0 , "No Error"                                                        ) \
+	X(Error_Unknown                                ,  1 , "An unknown error has occurred"                                   ) \
+	X(Error_Connection_Failed                      ,  2 , "Failed due to socket, pipe, or other stream errors"              ) \
+	X(Error_Extension_Not_Supported                ,  3 , "The requested XCB extension is not supported"                    ) \
+	X(Error_Invalid_Display_Name                   ,  4 , "An error occured while parsing the X11 display name"             ) \
+	X(Error_Invalid_Screen                         ,  5 , "The X11 server does not have a screen matching the display"      ) \
+	X(Error_Minimum_Size_Greater_Than_Maximum_Size ,  6 , "The minimum window size is larger than the maximum window size." ) \
+	X(Error_Not_Enough_Memory                      ,  7 , "Insufficient memory"                                             ) \
+	X(Error_Request_Too_Long                       ,  8 , "The request was longer than what is excepted by the X11 server"  ) \
+	X(Error_Window_Size_Too_Small                  ,  9 , "The window size was too small."                                  ) \
+	X(Error_RandR_CRTC_Info_Not_Found              , 10 , "XCB RandR CRTC Information was not found"                        ) \
+	X(Error_RandR_Invalid_CRTC_Id                  , 11 , "XCB RandR CRTC ID is not valid"                                  ) \
+	X(Error_RandR_Invalid_Output_Id                , 12 , "XCB RandR Output ID is not valid"                                ) \
+	X(Error_RandR_Not_Available                    , 13 , "XCB RandR extenstion is not available"                           ) \
+	X(Error_RandR_Output_Info_Is_Incomplete        , 14 , "XCB RandR Output Information does not have enough data"          ) \
+	X(Error_RandR_Output_Info_Not_Found            , 15 , "XCB RandR Output Information was not found"                      ) \
+	X(Error_RandR_Screen_Resources_Not_Found       , 16 , "XCB RandR could not locate any screen resources"                 ) \
+	X(Error_RandR_Version_Too_Old                  , 17 , "XCB RandR version is too old"                                    ) \
+	X(Error_Xcb_Fullscreen_Not_Available           , 18 , "The XCB Window Manager does not support fullscreen windows."     ) \
+	X(Error_Xcb_Hidden_Not_Available               , 19 , "The XCB Window Manager does not support hiding windows."         ) \
+	X(Error_Xcb_Maximized_Window_Not_Available     , 20 , "The XCB Window Manager does not support maximized windows."      ) \
+	X(Error_Xcb_NETWM_State_Not_Available          , 21 , "The XCB NETWM protocol extention is not supported."              ) \
+	X(Error_Xcb_WM_Delete_Window_Not_Available     , 22 , "The XCB Window Manager does not support the delete protocol."    ) \
+	X(Error_Xcb_WM_Protocols_Not_Available         , 23 , "The XCB Window Manager protocols are not available."             ) \
+	X(Error_Xcb_Xkb_Not_Available                  , 24 , "The XCB XKB Extiension v1.0 is not available."                   ) \
 
 // }}}
-
-/**
- * \cond Doxygen_Ignore
- */
-
-/**
- * \endcond
- */
 
 namespace zakero
 {
@@ -287,9 +271,9 @@ namespace zakero
 
 			struct Key
 			{
-				uint32_t time;
-				uint32_t code;
-				KeyState state;
+				uint32_t         time;
+				uint32_t         code;
+				Xenium::KeyState state;
 			};
 
 			static constexpr uint32_t KeyModifier_Shift    = 0x00000001;
@@ -449,7 +433,7 @@ namespace zakero
 
 			using LambdaOutputId = std::function<void(const Xenium::OutputId)>;
 
-			using VectorOutputId = std::vector<OutputId>;
+			using VectorOutputId = std::vector<Xenium::OutputId>;
 
 			// -------------------------------------------------- //
 
@@ -616,8 +600,8 @@ namespace zakero
 					size_t            frame_buffer_length;
 					uint32_t          frame_time;
 
-					Window(const Window&) = delete;
-					Window& operator=(const Window&) = delete;
+					Window(const Xenium::Window&) = delete;
+					Window& operator=(const Xenium::Window&) = delete;
 			};
 
 			// -------------------------------------------------- //
@@ -664,15 +648,15 @@ namespace zakero
 
 			// -------------------------------------------------- //
 
-			LambdaOutputId      output_on_add    = {};
-			LambdaOutputId      output_on_change = {};
-			LambdaOutputId      output_on_remove = {};
-			Map_OutputId_Output output_map       = {};
-			mutable std::mutex  output_mutex     = {};
+			Xenium::LambdaOutputId      output_on_add    = {};
+			Xenium::LambdaOutputId      output_on_change = {};
+			Xenium::LambdaOutputId      output_on_remove = {};
+			Xenium::Map_OutputId_Output output_map       = {};
+			mutable std::mutex          output_mutex     = {};
 
 			// -------------------------------------------------- //
 
-			[[nodiscard]] const Xenium::Output& output(const int16_t, const int16_t, OutputId&) noexcept;
+			[[nodiscard]] const Xenium::Output& output(const int16_t, const int16_t, Xenium::OutputId&) noexcept;
 			[[nodiscard]] std::error_code       outputInit() noexcept;
 			[[nodiscard]] std::error_code       outputAdd(xcb_randr_crtc_t, xcb_randr_output_t) noexcept;
 			void                                outputAdd(const xcb_randr_get_crtc_info_reply_t*, const xcb_randr_get_output_info_reply_t*) noexcept;
@@ -779,60 +763,60 @@ namespace zakero
 				Xenium::Lambda on_leave;
 			};
 
-			using WindowDecorationsMap = std::unordered_map<WindowId, WindowDecorationsData>;
-			using WindowDeleteMap      = std::unordered_map<WindowId, WindowDeleteData>;
-			using WindowFocusMap       = std::unordered_map<WindowId, LambdaBool>;
-			using WindowKeyboard       = std::unordered_map<WindowId, WindowKeyboardData>;
-			using WindowMap            = std::unordered_map<WindowId, Window*>;
-			using WindowModeMap        = std::unordered_map<WindowId, WindowModeData>;
-			using WindowOnAxisMap      = std::unordered_map<WindowId, LambdaAxis>;
-			using WindowOnButtonMap    = std::unordered_map<WindowId, WindowOnButtonData>;
-			using WindowOnEnterMap     = std::unordered_map<WindowId, WindowOnEnterData>;
-			using WindowOnKeyMap       = std::unordered_map<WindowId, LambdaKey>;
-			using WindowOnLeaveMap     = std::unordered_map<WindowId, Lambda>;
-			using WindowOnMotionMap    = std::unordered_map<WindowId, WindowOnMotionData>;
-			using WindowOutputMap      = std::unordered_map<WindowId, OutputId>;
-			using WindowReadyMap       = std::unordered_map<WindowId, bool>;
-			using WindowSizeMap        = std::unordered_map<WindowId, WindowSizeData>;
+			using WindowDecorationsMap = std::unordered_map<Xenium::WindowId, Xenium::WindowDecorationsData>;
+			using WindowDeleteMap      = std::unordered_map<Xenium::WindowId, Xenium::WindowDeleteData>;
+			using WindowFocusMap       = std::unordered_map<Xenium::WindowId, Xenium::LambdaBool>;
+			using WindowKeyboard       = std::unordered_map<Xenium::WindowId, Xenium::WindowKeyboardData>;
+			using WindowMap            = std::unordered_map<Xenium::WindowId, Xenium::Window*>;
+			using WindowModeMap        = std::unordered_map<Xenium::WindowId, Xenium::WindowModeData>;
+			using WindowOnAxisMap      = std::unordered_map<Xenium::WindowId, Xenium::LambdaAxis>;
+			using WindowOnButtonMap    = std::unordered_map<Xenium::WindowId, Xenium::WindowOnButtonData>;
+			using WindowOnEnterMap     = std::unordered_map<Xenium::WindowId, Xenium::WindowOnEnterData>;
+			using WindowOnKeyMap       = std::unordered_map<Xenium::WindowId, Xenium::LambdaKey>;
+			using WindowOnLeaveMap     = std::unordered_map<Xenium::WindowId, Xenium::Lambda>;
+			using WindowOnMotionMap    = std::unordered_map<Xenium::WindowId, Xenium::WindowOnMotionData>;
+			using WindowOutputMap      = std::unordered_map<Xenium::WindowId, Xenium::OutputId>;
+			using WindowReadyMap       = std::unordered_map<Xenium::WindowId, bool>;
+			using WindowSizeMap        = std::unordered_map<Xenium::WindowId, Xenium::WindowSizeData>;
 			using WindowToCreate       = std::vector<Xenium::WindowCreateData*>;
 			using WindowToDestroy      = std::vector<Xenium::WindowDestroyData*>;
 
 			// -------------------------------------------------- //
 
-			WindowDecorationsMap window_decorations_map = {};
-			WindowDeleteMap      window_delete_map      = {};
-			WindowFocusMap       window_focus_map       = {};
-			WindowKeyboard       window_keyboard        = {};
-			WindowMap            window_map             = {};
-			WindowModeMap        window_mode_map        = {};
-			WindowOnAxisMap      window_on_axis_map     = {};
-			WindowOnButtonMap    window_on_button_map   = {};
-			WindowOnEnterMap     window_on_enter_map    = {};
-			WindowOnKeyMap       window_on_key_map      = {};
-			WindowOnLeaveMap     window_on_leave_map    = {};
-			WindowOnMotionMap    window_on_motion_map   = {};
-			WindowOutputMap      window_output_map      = {};
-			WindowReadyMap       window_ready_map       = {};
-			WindowSizeMap        window_size_map        = {};
-			WindowToCreate       window_to_create       = {};
-			WindowToDestroy      window_to_destroy      = {};
+			Xenium::WindowDecorationsMap window_decorations_map = {};
+			Xenium::WindowDeleteMap      window_delete_map      = {};
+			Xenium::WindowFocusMap       window_focus_map       = {};
+			Xenium::WindowKeyboard       window_keyboard        = {};
+			Xenium::WindowMap            window_map             = {};
+			Xenium::WindowModeMap        window_mode_map        = {};
+			Xenium::WindowOnAxisMap      window_on_axis_map     = {};
+			Xenium::WindowOnButtonMap    window_on_button_map   = {};
+			Xenium::WindowOnEnterMap     window_on_enter_map    = {};
+			Xenium::WindowOnKeyMap       window_on_key_map      = {};
+			Xenium::WindowOnLeaveMap     window_on_leave_map    = {};
+			Xenium::WindowOnMotionMap    window_on_motion_map   = {};
+			Xenium::WindowOutputMap      window_output_map      = {};
+			Xenium::WindowReadyMap       window_ready_map       = {};
+			Xenium::WindowSizeMap        window_size_map        = {};
+			Xenium::WindowToCreate       window_to_create       = {};
+			Xenium::WindowToDestroy      window_to_destroy      = {};
 
 			// -------------------------------------------------- //
 
-			[[nodiscard]] std::error_code windowBorder(const WindowId, const bool) noexcept;
+			[[nodiscard]] std::error_code windowBorder(const Xenium::WindowId, const bool) noexcept;
 			void                          windowCreate(Xenium::WindowCreateData*) noexcept;
 			void                          windowCreateAddToQueue(Xenium::WindowCreateData*) noexcept;
 			void                          windowDestroyAddToQueue(Xenium::WindowDestroyData*) noexcept;
-			[[nodiscard]] std::error_code windowLocationSet(const WindowId, const PointPixel&) noexcept;
+			[[nodiscard]] std::error_code windowLocationSet(const Xenium::WindowId, const Xenium::PointPixel&) noexcept;
 			[[nodiscard]] std::error_code windowMinimize(const Xenium::WindowId) noexcept;
 			[[nodiscard]] std::error_code windowModeSet(const Xenium::WindowId, const Xenium::WindowMode, const Xenium::WindowMode) noexcept;
-			bool                          windowPropertySet(WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
-			bool                          windowPropertySet(WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
-			void                          windowReadySet(const WindowId) noexcept;
-			void                          windowReadyWait(const WindowId) noexcept;
-			void                          windowResizeTo(const Output&, Xenium::WindowSizeData&, const xcb_configure_notify_event_t*) noexcept;
-			std::error_code               windowSizeSet(const WindowId, const SizePixel&) noexcept;
-			[[nodiscard]] std::error_code windowSizeSetMinMax(const WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
+			bool                          windowPropertySet(Xenium::WindowId, const xcb_atom_t, const xcb_atom_t, xcb_generic_error_t&) noexcept;
+			bool                          windowPropertySet(Xenium::WindowId, const xcb_atom_t, const std::string&, xcb_generic_error_t&) noexcept;
+			void                          windowReadySet(const Xenium::WindowId) noexcept;
+			void                          windowReadyWait(const Xenium::WindowId) noexcept;
+			void                          windowResizeTo(const Xenium::Output&, Xenium::WindowSizeData&, const xcb_configure_notify_event_t*) noexcept;
+			std::error_code               windowSizeSet(const Xenium::WindowId, const Xenium::SizePixel&) noexcept;
+			[[nodiscard]] std::error_code windowSizeSetMinMax(const Xenium::WindowId, const int32_t, const int32_t, const int32_t, const int32_t) noexcept;
 			std::error_code               windowSizeSetMinMax(const Xenium::Output&, const Xenium::WindowId, Xenium::WindowSizeData&) noexcept;
                                 
 			// }}}
@@ -880,10 +864,10 @@ namespace zakero
 			[[nodiscard]] std::error_code          atomInit() noexcept;
 			[[nodiscard]] xcb_atom_t               atomCreateDeleteWindow(const WindowId, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] std::string              atomName(const xcb_atom_t) noexcept;
-			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const WindowId, const xcb_atom_t) noexcept;
-			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const WindowId, const xcb_atom_t, xcb_generic_error_t&) noexcept;
-			[[nodiscard]] std::vector<int32_t>     atomValueData(const WindowId, const xcb_atom_t, const xcb_atom_t, const size_t) noexcept;
-			[[nodiscard]] std::vector<int32_t>     atomValueData(const WindowId, const xcb_atom_t, const xcb_atom_t, const size_t, xcb_generic_error_t&) noexcept;
+			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const Xenium::WindowId, const xcb_atom_t) noexcept;
+			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const Xenium::WindowId, const xcb_atom_t, xcb_generic_error_t&) noexcept;
+			[[nodiscard]] std::vector<int32_t>     atomValueData(const Xenium::WindowId, const xcb_atom_t, const xcb_atom_t, const size_t) noexcept;
+			[[nodiscard]] std::vector<int32_t>     atomValueData(const Xenium::WindowId, const xcb_atom_t, const xcb_atom_t, const size_t, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] xcb_atom_t               internAtom(const std::string&, const bool, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] xcb_intern_atom_cookie_t internAtomRequest(const std::string&, const bool = true) noexcept;
 			[[nodiscard]] xcb_atom_t               internAtomReply(const xcb_intern_atom_cookie_t, xcb_generic_error_t&) noexcept;
@@ -928,14 +912,14 @@ namespace zakero
 				uint32_t            repeat_time = { 0 };
 			};
 
-			using KeyDataArray = std::array<KeyData, 256>;
+			using KeyDataArray = std::array<Xenium::KeyData, 256>;
 
 			// -------------------------------------------------- //
 
-			KeyDataArray key_data_array       = { 0 };
-			KeyModifier  key_modifier         = { 0 };
-			XkbControls  xkb_controls         = {};
-			uint16_t     xkb_modifier_pressed = 0;
+			Xenium::KeyDataArray key_data_array       = { 0 };
+			Xenium::KeyModifier  key_modifier         = { 0 };
+			Xenium::XkbControls  xkb_controls         = {};
+			uint16_t             xkb_modifier_pressed = 0;
 			
 			// -------------------------------------------------- //
 

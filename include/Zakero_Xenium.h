@@ -3835,6 +3835,8 @@ Xenium::Window::~Window()
 
 	xcb_free_gc(xenium->connection, gc);
 
+	ZAKERO_FREE(frame_buffer);
+
 	window_id = 0;
 	xenium    = nullptr;
 }

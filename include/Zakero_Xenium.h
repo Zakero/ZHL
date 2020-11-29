@@ -186,6 +186,9 @@
 #include <xcb/xcb_icccm.h>
 #include <xcb/randr.h>
 
+/**
+ * \brief xkb.h uses the C++ keyword `explicit` for a variable name.
+ */
 #define explicit explicit_
 #include <xcb/xkb.h>
 #undef explicit
@@ -928,7 +931,7 @@ namespace zakero
 
 			// -------------------------------------------------- //
 
-			Xenium::KeyDataArray key_data_array       = { 0 };
+			Xenium::KeyDataArray key_data_array       = { };
 			Xenium::KeyModifier  key_modifier         = { 0 };
 			Xenium::XkbControls  xkb_controls         = {};
 			uint16_t             xkb_modifier_pressed = 0;
@@ -1010,6 +1013,14 @@ namespace zakero
 // Only used for generating Doxygen documentation
 
 /**
+ * \def X
+ * \brief X-Macro.
+ *
+ * This macro is used to expand another macro that contain data into working 
+ * code.
+ */
+
+/**
  * \brief Activate the implementation code.
  *
  * Defining this macro will cause the _Zakero Xenium_ implementation to be 
@@ -1048,14 +1059,23 @@ namespace zakero
 // {{{ Macros : XCB
 
 #ifndef _NET_WM_STATE_REMOVE
+/**
+ * \brief A NET-WM Macro (that may not be defined).
+ */
 #define _NET_WM_STATE_REMOVE 0
 #endif
 
 #ifndef _NET_WM_STATE_ADD
+/**
+ * \brief A NET-WM Macro (that may not be defined).
+ */
 #define _NET_WM_STATE_ADD 1
 #endif
 
 #ifndef _NET_WM_STATE_TOGGLE
+/**
+ * \brief A NET-WM Macro (that may not be defined).
+ */
 #define _NET_WM_STATE_TOGGLE 2
 #endif
 
@@ -1376,9 +1396,12 @@ namespace
 	 */
 	// }}}
 
-	static constexpr uint32_t Size_Max = (uint32_t)std::numeric_limits<int32_t>::max();
+	/**
+	 * \brief The maximum value of an `int32_t`.
+	 */
+	constexpr uint32_t Size_Max = (uint32_t)std::numeric_limits<int32_t>::max();
 
-	constexpr uint8_t  XCB_KEY_REPEAT = XCB_KEY_PRESS | 0x80;
+	constexpr uint8_t XCB_KEY_REPEAT = XCB_KEY_PRESS | 0x80;
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_CAPSLOCK = 0x00000001;
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_NUMLOCK  = 0x00000002;
 
@@ -3993,7 +4016,7 @@ Xenium::Window::Window(Xenium* xenium
 	)
 	: xenium(xenium)
 	, frame_buffer(nullptr)
-	, frame_buffer_size(0, 0)
+	, frame_buffer_size{0, 0}
 	, window_id(((WindowCreateData*)data)->window_id)
 	, gc(((WindowCreateData*)data)->gc)
 	, frame_buffer_length(0)
@@ -6482,7 +6505,7 @@ std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id
 	,	.sequence      = 0
 	,	.window        = window_id
 	,	.type          = atom_wm_change_state
-	,	.data          = { 0 }
+	,	.data          = { }
 	};
 	event.data.data32[0] = XCB_ICCCM_WM_STATE_ICONIC;
 
@@ -6510,7 +6533,7 @@ std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
 	,	.sequence      = 0
 	,	.window        = window_id
 	,	.type          = atom_net_wm_state
-	,	.data          = { 0 }
+	,	.data          = { }
 	};
 
 	if(current_mode == Xenium::WindowMode::Normal)

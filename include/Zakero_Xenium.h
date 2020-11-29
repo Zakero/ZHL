@@ -2942,8 +2942,6 @@ Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id 
 void Xenium::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
 {
-	std::lock_guard<std::mutex> lock(output_mutex);
-
 	if(lambda == nullptr)
 	{
 		output_data.on_add = LambdaOutputId_DoNothing;
@@ -2967,8 +2965,6 @@ void Xenium::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
 void Xenium::outputOnChange(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
 {
-	std::lock_guard<std::mutex> lock(output_mutex);
-
 	if(lambda == nullptr)
 	{
 		output_data.on_change = LambdaOutputId_DoNothing;
@@ -2992,8 +2988,6 @@ void Xenium::outputOnChange(LambdaOutputId lambda ///< The lambda to call
 void Xenium::outputOnRemove(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
 {
-	std::lock_guard<std::mutex> lock(output_mutex);
-
 	if(lambda == nullptr)
 	{
 		output_data.on_remove = LambdaOutputId_DoNothing;

@@ -55,7 +55,7 @@ int main()
 	zakero::Xenium::SizeMm size{16.0 * 15, 9.0 * 15};
 	zakero::Xenium::SizePixel size{450, 450};
 	*/
-	zakero::Xenium::SizePixel size{450, 450};
+	zakero::Xenium::SizeMm size{40, 40};
 	auto* window = xenium->windowCreate(size, error);
 	if(error)
 	{

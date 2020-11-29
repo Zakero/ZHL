@@ -33,7 +33,6 @@
  * To use:
  * 1. Add the implementation to a source code file:
  *    \code
- *    #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
  *    #define ZAKERO_XENIUM_IMPLEMENTATION
  *    #include "Zakero_Xenium.h"
  *    \endcode
@@ -43,17 +42,38 @@
  *    \endcode
  * 3. Link to the X11/XCB libraries and pthread when building:
  *    \code
- *    -lpthread -lwayland-client
+ *    -lpthread -lxcb -lxcb-xkb -lxcb-randr
  *    \endcode
  * \endpartldr
  *
  * \parwhat{zakero_xenium}
  * X11 is a Windowing System and is used in many of the Unix-based operating 
- * systems such as Linux and BSD.
+ * systems such as Linux and BSD.  X11/XCB has three parts: the client, the 
+ * server, and the protocol.
  *
+ * The X11/XCB Server is responsible for rendering and managing all the 
+ * application windows.  The applications are the X11/XCB Clients.  These 
+ * clients tell the Server what to render as well as other requests, such as 
+ * "minimize this window".  Communication between the Server and the Clients is 
+ * done using the X11 Protocol.  XCB is the library that wraps the X11 Protocol 
+ * to ensure all communication is consistent.
+ *
+ * zakero::Xenium sits on top of the XCB library to hide it's complexity while 
+ * adding as little overhead as possible.
  * \endparwhat
  *
  * \parwhy{zakero_xenium}
+ * XCB was created to allow developers to faster and more responsive 
+ * applications by by-passing the original X11 libraries.  Not only was this 
+ * goal achieved but parts of the X11 libraries where rewritten to use XCB.
+ *
+ * However, what X11 provided was "ease of use".  XCB requires the caller to 
+ * maintain and track state, things that X11 did automatically.
+ *
+ * zakero::Xenium aims to have the speed of XCB with the ease of X11, while at 
+ * the same time offering some improvements.  Instead of creating an event loop 
+ * for all XCB applications, zakero::Xenium only creates one for you, it will 
+ * only notify you of the events that were supplied lambdas.
  * \endparwhy
  *
  * \parhow{zakero_xenium}
@@ -69,19 +89,12 @@
  * the following to that file:
  *
  * ~~~
- * #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
  * #define ZAKERO_XENIUM_IMPLEMENTATION
  * #include "Zakero_Xenium.h"
  * ~~~
  *
  * The macro \ref ZAKERO_XENIUM_IMPLEMENTATION tells the header file to include 
  * the implementation of the Xenium.
- *
- * Notice that the _Zakero MemoryPool_ implementation, 
- * ZAKERO_MEMORYPOLL_IMPLEMENTATION, is included before the `Zakero_Yetain.h` 
- * header.  _Zakero Xenium_ depends on the memory pool for shared memory with 
- * the X11 server.  If the _Zakero MemoryPool_ implementation was added else 
- * where, this define can be omitted.
  *
  * In all other files that will use Xenium, they only need to include the 
  * header.
@@ -92,11 +105,10 @@
  *
  * __Step 2__
  *
- * Below is a simple program that will conncet to the X11 Server and display a 
+ * Below is a simple program that will connect to the X11 Server and display a 
  * window.
  *
  * ~~~
- * #define ZAKERO_MEMORYPOOL_IMPLEMENTATION
  * #define ZAKERO_XENIUM_IMPLEMENTATION
  * #include "Zakero_Xenium.h"
  *
@@ -107,7 +119,7 @@
  * 	zakero::Xenium* xenium = zakero::Xenium::connect(error);
  * 	if(error)
  * 	{
- * 		std::cout << "Error: " << error << '\n';
+ * 		std::cout << "Error: " << zakero::to_string(error) << '\n';
  * 		return 1;
  * 	}
  * 
@@ -115,7 +127,7 @@
  * 	auto* window = xenium->windowCreate(window_size, error);
  * 	if(error)
  * 	{
- * 		std::cout << "Error: " << error << '\n';
+ * 		std::cout << "Error: " << zakero::to_string(error) << '\n';
  * 		return 1;
  * 	}
  * 
@@ -141,14 +153,17 @@
  *
  * The following commands will build and run the example program.
  * ~~~
- * > g++ -std=c++20 -lpthread -lxcb -o example example.cpp
+ * > g++ -std=c++20 -lpthread -lxcb -lxcb-xkb -lxcb-randr -o example example.cpp
  * > ./example
  * ~~~
  * \endparhow
  *
  * \parversion{zakero_xenium}
  * __v0.1.0__
- * - The start
+ * - Window resizing
+ * - Window image/surface rendering
+ * - Fully multi-threaded, all Wayland execution happens in a separate thread.
+ * - Flexible sizing options: Millimeters, Percent, and Pixel
  *
  * \endparversion
  */

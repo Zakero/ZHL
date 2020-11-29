@@ -16,6 +16,7 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 | Zakero_Base.h       |  0.9.1  | A collection of helper functions, macros, and templates           |
 | Zakero_MemoryPool.h |  0.9.0  | An expandable memory pool that is based on Unix File Descriptors  |
 | Zakero_Profiler.h   |  0.9.0  | Generate profiling data that can be visualized in Chrome/Chromium |
+| Zakero_Xenium.h     |  0.1.0  | A class that makes working with X11/XCB much easier               |
 | Zakero_Yetani.h     |  0.6.0  | A class that makes working with Wayland much easier               |
 | _More coming soon_  |         |                                                                   |
 

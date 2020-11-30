@@ -162,7 +162,8 @@
  * __v0.1.0__
  * - Window resizing
  * - Window image/surface rendering
- * - Fully multi-threaded, all Wayland execution happens in a separate thread.
+ * - Fully multi-threaded, all X11/XCB communication happens in a separate 
+ * thread.
  * - Flexible sizing options: Millimeters, Percent, and Pixel
  *
  * \endparversion
@@ -1401,10 +1402,21 @@ namespace
 	 */
 	constexpr uint32_t Size_Max = (uint32_t)std::numeric_limits<int32_t>::max();
 
-	constexpr uint8_t XCB_KEY_REPEAT = XCB_KEY_PRESS | 0x80;
+	//constexpr uint8_t XCB_KEY_REPEAT = XCB_KEY_PRESS | 0x80;
+
+	/**
+	 * \brief The value of the CapsLock state.
+	 */
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_CAPSLOCK = 0x00000001;
+
+	/**
+	 * \brief The value of the NumLock state.
+	 */
 	constexpr uint32_t XCB_XKB_INDICATOR_STATE_NUMLOCK  = 0x00000002;
 
+	/**
+	 * \brief Convert XCB Button Ids to Linux Event Ids
+	 */
 	constexpr std::array<uint32_t, 8> Pointer_Button_Event_Code =
 	{	BTN_LEFT	// 0x110  272
 	,	BTN_MIDDLE	// 0x112  274
@@ -1416,6 +1428,9 @@ namespace
 	,	BTN_TASK	// 0x116  279
 	};
 
+	/**
+	 * \brief The default Value Mask for creation.
+	 */
 	const uint32_t Default_Value_Mask = 0
 		//| XCB_CW_BACK_PIXMAP       // Not Used
 		| XCB_CW_BACK_PIXEL        // Not Used
@@ -1434,6 +1449,9 @@ namespace
 		//| XCB_CW_CURSOR            // Future?
 		;
 
+	/**
+	 * \brief The default Value List for creation.
+	 */
 	xcb_create_window_value_list_t Default_Value_List =
 	{	.background_pixmap     = XCB_BACK_PIXMAP_NONE
 	,	.background_pixel      = 0
@@ -1484,23 +1502,41 @@ namespace
 	 * This class implements the std::error_category interface to provide 
 	 * consistent access to error code values and messages.
 	 *
-	 * See https://en.cppreference.com/w/cpp/error/error_category for 
-	 * details.
+	 * \see https://en.cppreference.com/w/cpp/error/error_category
+	 * \see zakero::to_string(const std::error_code&)
 	 */
 	class XeniumErrorCategory_
 		: public std::error_category
 	{
 		public:
+			/**
+			 * \brief The Constructor.
+			 *
+			 * Create and initialize a new instance of the error 
+			 * category.
+			 */
 			constexpr XeniumErrorCategory_() noexcept
 			{
 			}
 
+			/**
+			 * \brief The name of the category.
+			 *
+			 * The name of the error category.
+			 */
 			const char* name() const noexcept override
 			{
 				return "zakero.Xenium";
 			}
 
-			std::string message(int condition) const override
+			/**
+			 * \brief An explination of the error.
+			 *
+			 * Based on the provided \p coniditon, an error message 
+			 * will be returned that describes the error.
+			 */
+			std::string message(int condition ///< The error condition/code
+				) const noexcept override
 			{
 				switch(condition)
 				{
@@ -1512,7 +1548,7 @@ namespace
 
 				return "Unknown error condition";
 			}
-	} XeniumErrorCategory;
+	} XeniumErrorCategory; ///< The Xenium Error Category
 
 
 	/**
@@ -1577,26 +1613,6 @@ namespace
 			default:
 				return ZAKERO_XENIUM__ERROR(Xenium::Error_Unknown);
 		}
-	}
-
-
-	/**
-	 * \brief Compare 2 floats
-	 *
-	 * Compare two floats for equality.  Since floats are not _exact_, this 
-	 * function will calculate the difference between them.  For the float 
-	 * values to be "equal", the difference must be less than the specified 
-	 * \p delta.
-	 *
-	 * \retval true  The values are equal
-	 * \retval false The values are not equal
-	 */
-	bool equalish(const float a     ///< The first value
-		, const float     b     ///< The second value
-		, const float     delta ///< The maximum difference
-		) noexcept
-	{
-		return (std::abs(a - b) < delta);
 	}
 
 
@@ -1699,45 +1715,71 @@ namespace
  * size on all monitors.
  *
  * What's wrong with using [DPI](https://en.wikipedia.org/wiki/Dots_per_inch)?  
- * DPI has become a mess in the computer world and is resolution, not a size.
+ * DPI has become a mess in the computer world and it is resolution, not a 
+ * size.
  * \endparblock
  *
- * \par Thread (not) Safe
+ * \par Multi-Threaded Considerations
  * \parblock
+ * The main X11 event loop runs in a dedicated thread.  While all the X11 
+ * communication is not hindering the application, keep in mind that all event 
+ * lambdas will be executed by Xenium's internal event loop.  This means two 
+ * things:
+ * - Lambdas that execute for a "long" time __will__ slow down the event loop.  
+ * So keep lambdas a simple and as short as possible.
+ * - If the application depends on a value that is updated by an event lambda, 
+ * that value can change at any time.  Consider making a copy of the value 
+ * before using it.
+ * \endparblock
  *
- * The main X11 event loop runs in a dedicated thread.  Because of this, there 
- * are race-conditions where execution uses the same data.  The most likely 
- * thread conflict is the resizing of a surface:
- * - User Thread: Calling one of the window's "size" methods
- * - X11 Thread: Maximizing/Fullscreen/resizing the window
- * .
- * While the above is mostly protected via mutexs' there is still a chance.
+ * \par Code Structure
+ * \parblock
+ * Looking at the code for Xenium, you will quickly see that it does not follow 
+ * traditional Object Oriented design.  Instead of having all the XCB data and 
+ * functions in the Window class, everything is in the Xenium class and the 
+ * Window only has an ID that is passed to the Xenium class.  Yes, this is 
+ * _Data Oriented_ design.  Using Data Oriented design for Xenium has the 
+ * following benefits:
  *
- * There are other potential problems such as the User Thread deleting a window 
- * while the X11 Thread is resizing the same window.  To resolve this issue 
- * will require a complete evaluation of data and thread activities.
+ * __Threading__<br>
+ * Thread execution does not cross object boundaries.  This helps maintain a 
+ * cleaner mental model of "which thread is doing what".
  *
- * Or take the easy way out and rewrite Xenium to be single-threaded...
+ * __C++ Access Restrictions__<br>
+ * Having Window as a inner class of Xenium allows the Window to be able to 
+ * access Xenium's private members.  However, Xenium does not have access to 
+ * any of Window's private members.  Using this access structure, both Xenium 
+ * and a Window can use the event lambdas.  If Window was not an inner class, 
+ * then one or both of Xenium and Window would have to be `friend`s.
+ * (`friend` by-passes C++ access restrictions, not good)
+ *
+ * __Performance__<br>
+ * Yes, it had to be mentioned.  The core of Xenium is the XCB event loop.  If 
+ * the event loop had to load the entire contents of a window just to access a 
+ * small handful of data for each event, there would a performance hit.  With 
+ * the current design, each event will only load the data it needs.  Much 
+ * faster.
  * \endparblock
  *
  * \internal
  *
- * If a struct contains a mutex, that mutex should be locked before interacting 
- * with the contents of the struct.
- *
  * \bug When setting the size of the window, the Window Manager's Frame Extents 
  * must be taken into account.  (Window Size - Frame Extents = content size)
- * See _NET_FRAME_EXTENTS usage for hints on how to get this data.  _Also, when 
- * the window borders are removed, the window content is resized to fill the 
- * space used by the window border._
+ * See \_NET_FRAME_EXTENTS usage for hints on how to get this data.  _Also, 
+ * when the window borders are removed, the window content is resized to fill 
+ * the space used by the window border._
+ * - The window size is correct at creation (On XWayland)
  *
  * \todo Convert all the `Error_Unknown` to actual errors.
  *
  * \todo Create event "pixelsPerMillimeterChange()".  This event will be 
- * triggerd with the output device configuration changes and when the window is 
- * moved to a different output device. (Might need this in Zakero_Yetani)
+ * triggered with the output device configuration changes and when the window 
+ * is moved to a different output device. (Might need this in Zakero_Yetani)
  *
  * \todo Use a future/promise barrier to wait for the event loop.
+ *
+ * \todo Be able to create a window by passing in `Value Mask` and `Value List` 
+ * data.
  */
 
 /**
@@ -1777,6 +1819,10 @@ namespace
  */
 
 /**
+ * \name Key Modifier Flags
+ * \{
+ */
+/**
  * \var Xenium::KeyModifier_Alt
  * \brief %Key Modifier flag.
  *
@@ -1789,8 +1835,14 @@ namespace
  * \var Xenium::KeyModifier_Meta
  * \brief %Key Modifier flag.
  *
+ * \var Xenium::KeyModifier_NumLock
+ * \brief %Key Modifier flag.
+ *
  * \var Xenium::KeyModifier_Shift
  * \brief %Key Modifier flag.
+ */
+/**
+ * \}
  */
 
 /**
@@ -1872,6 +1924,8 @@ namespace
  * \enum Xenium::PointerAxisSource
  *
  * \brief Where the axis information came from.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Xenium::Unknown
  * \brief Unknown
@@ -1893,6 +1947,8 @@ namespace
  * \enum Xenium::PointerAxisType
  *
  * \brief The direction of the axis movement.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Xenium::Unknown
  * \brief Unknown
@@ -1929,6 +1985,8 @@ namespace
  * \enum Xenium::PointerButtonState
  *
  * \brief Mouse button state.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Xenium::Released
  * \brief Released
@@ -1988,8 +2046,6 @@ namespace
  * \brief The height.
  */
 
-// }}}
-// {{{ Static Member Initialization
 // }}}
 // {{{ Constructor / Destructor
 
@@ -2060,7 +2116,8 @@ Xenium* Xenium::connect() noexcept
 /**
  * \brief Establish a connection with the X11 server.
  *
- * Establish a connection with the X11 server.  The following values will be 
+ * Establish a connection with the X11 server using the provided \p display 
+ * name.  If the \p display name is empty then the following values will be 
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
@@ -2119,10 +2176,12 @@ Xenium* Xenium::connect(std::error_code& error ///< The error code
 	return Xenium::connect("", error);
 }
 
+
 /**
  * \brief Establish a connection with the X11 server.
  *
- * Establish a connection with the X11 server.  The following values will be 
+ * Establish a connection with the X11 server using the provided \p display 
+ * name.  If the \p display name is empty then the following values will be 
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
@@ -2145,8 +2204,8 @@ Xenium* Xenium::connect(std::error_code& error ///< The error code
  *
  * \thread_user
  */
-Xenium* Xenium::connect(const std::string& display ///! The Display Name or ID
-	, std::error_code&                 error   ///! The error status
+Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
+	, std::error_code&                 error   ///< The error status
 	) noexcept
 {
 	const char* display_name = nullptr;
@@ -2282,7 +2341,7 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
  * \brief Start the event loop.
  *
  * Calling this method will start the Event Loop and block until the Event Loop 
- * exits.
+ * has started.
  *
  * \thread_user
  */
@@ -2296,26 +2355,26 @@ void Xenium::eventLoopStart() noexcept
 		std::this_thread::sleep_for(std::chrono::nanoseconds(42));
 	}
 
-	#ifdef ZAKERO_XENIUM__ENABLE_THREAD_SCHEDULER
-	int policy = SCHED_FIFO;
-	int priority_min = sched_get_priority_min(policy);
-	int priority_max = sched_get_priority_max(policy);
+	//#ifdef ZAKERO_XENIUM__ENABLE_THREAD_SCHEDULER
+	//int policy = SCHED_FIFO;
+	//int priority_min = sched_get_priority_min(policy);
+	//int priority_max = sched_get_priority_max(policy);
 
-	sched_param sched =
-	{	.sched_priority = (priority_min + priority_max) / 2
-	};
+	//sched_param sched =
+	//{	.sched_priority = (priority_min + priority_max) / 2
+	//};
 
-	pthread_setschedparam(event_loop.native_handle(), policy, &sched);
-	#endif
+	//pthread_setschedparam(event_loop.native_handle(), policy, &sched);
+	//#endif
 }
 
 
 /**
  * \brief Event processing.
  *
- * The Xenium Event Loop all the messages between the X11 client and server.  
- * Without this communication, programs that use the Xenium object will not be 
- * able to do anything.
+ * The Xenium Event Loop handles all the messages between the X11 client and 
+ * server.  Without this communication, programs that use the Xenium object 
+ * will not be able to do anything.
  *
  * \thread_xcb
  */
@@ -2339,6 +2398,10 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 
 			if(event == nullptr)
 			{
+				/*
+				 * No more events from the server, check if 
+				 * there any remaining key events to process.
+				 */
 				xenium->keyDataArrayProcess();
 
 				break;
@@ -2444,14 +2507,14 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 				default:
 					if(event->response_type == Randr_Notify_Event)
 					{
+						ZAKERO_XENIUM__DEBUG << "RandR Event:     " << to_string(*event) << '\n';
 						xenium->randrEvent(
 							(xcb_randr_notify_event_t*)event
 							);
-std::cout << "RandR Event:     " << to_string(*event) << '\n';
 					}
 					else
 					{
-std::cout << "Unknown:         " << to_string(*event) << '\n';
+						ZAKERO_XENIUM__DEBUG << "Unknown Event:   " << to_string(*event) << '\n';
 					}
 
 				// --- ------------------------------------ --- //
@@ -2476,28 +2539,28 @@ std::cout << "Unknown:         " << to_string(*event) << '\n';
 			free(event);
 		}
 
+		/*
+		 * All events are done, check if there are any windows to 
+		 * create or destory.
+		 */
 		xenium->xenium_window_mutex.lock();
-
-		for(Xenium::WindowCreateData* window_data : xenium->window_to_create)
 		{
-			xenium->windowCreate(window_data);
+			for(Xenium::WindowCreateData* window_data : xenium->window_to_create)
+			{
+				xenium->windowCreate(window_data);
+				window_data->barrier.set_value();
+			}
+
+			xenium->window_to_create.clear();
+
+			for(Xenium::WindowDestroyData* window_data : xenium->window_to_destroy)
+			{
+				xenium->xcbWindowDestroy(window_data);
+				window_data->barrier.set_value();
+			}
+
+			xenium->window_to_destroy.clear();
 		}
-
-		for(Xenium::WindowCreateData* window_data : xenium->window_to_create)
-		{
-			window_data->barrier.set_value();
-		}
-
-		xenium->window_to_create.clear();
-
-		for(Xenium::WindowDestroyData* window_data : xenium->window_to_destroy)
-		{
-			xenium->xcbWindowDestroy(window_data);
-			window_data->barrier.set_value();
-		}
-
-		xenium->window_to_destroy.clear();
-
 		xenium->xenium_window_mutex.unlock();
 
 		std::this_thread::yield();
@@ -2509,15 +2572,30 @@ std::cout << "Unknown:         " << to_string(*event) << '\n';
 // }}}
 // {{{ Keyboard
 
+/**
+ * \brief The key repeat delay.
+ *
+ * The _key repeat delay_ is the amount of time in milliseconds that must 
+ * elapse from a key press event to change into a key repeat event.
+ *
+ * \return The key repeat delay.
+ */
 int32_t Xenium::keyRepeatDelay() const noexcept
 {
 	return xkb_controls.repeat_delay_ms;
 }
 
-
+/**
+ * \brief The key repeat rate.
+ *
+ * The _key repeat rate_ is the number of key repeat events that will be 
+ * emitted per second.
+ *
+ * \return The key repeat rate.
+ */
 int32_t Xenium::keyRepeatRate() const noexcept
 {
-	return xkb_controls.repeat_interval_ms;
+	return 1000 / xkb_controls.repeat_interval_ms;
 }
 
 // }}}
@@ -2556,9 +2634,31 @@ Xenium::Output Xenium::output(const Xenium::OutputId output_id
 }
 
 
-const Xenium::Output& Xenium::output(const int16_t x
-	, const int16_t                            y
-	, OutputId&                                output_id
+/**
+ * \brief Find the Output.
+ *
+ * The area of a Screen can occupy many Output devices.  This method will find 
+ * the Output device that displays the requested \p x / \p y pixel location.
+ *
+ * If no Output device is found, then the nearest Output device is returned.  
+ * An example of why an Output device would not be found is:
+ *
+ * \code
+ * +--------------+----------------+
+ * |              |                |
+ * |  Monitor 1   |    Monitor 2   |
+ * |              |                |
+ * +--------------+                |
+ *  Pixel --> X   |                |
+ *                |                |
+ *                +----------------+
+ * \endcode
+ *
+ * \return The Output data.
+ */
+const Xenium::Output& Xenium::output(const int16_t x         ///< The pixel's X location
+	, const int16_t                            y         ///< The pixel's Y location
+	, OutputId&                                output_id ///< The Output's ID
 	) noexcept
 {
 	for(const auto& iter : output_map)
@@ -2572,6 +2672,7 @@ const Xenium::Output& Xenium::output(const int16_t x
 			)
 		{
 			output_id = iter.first;
+
 			return output;
 		}
 	}
@@ -2652,7 +2753,7 @@ std::string Xenium::outputSubpixelName(int32_t subpixel_format ///< The Subpixel
 /**
  * \brief Get a human readable string.
  *
- * The `Xenium::Output::subpixel` is an XCB RandR enum value and this method 
+ * The `Xenium::Output::transform` is an XCB RandR enum value and this method 
  * will convert that value into a descriptive name string.  If an invalid value 
  * is passed, then an empty string will be returned.
  *
@@ -2907,9 +3008,9 @@ Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id 
 /**
  * \brief Notification of adding an Output device.
  *
- * When a Wayland output device has been added, the \p lambda that was provided 
- * to this method will be called.  To disable these notifications, pass 
- * `nullptr` as the value of \p lambda.
+ * When an output device has been added, the \p lambda that was provided to 
+ * this method will be called.  To disable these notifications, pass `nullptr` 
+ * as the value of \p lambda.
  *
  * \thread_user
  */
@@ -2930,9 +3031,9 @@ void Xenium::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
 /**
  * \brief Notification that an Output device has changed.
  *
- * When a Wayland output device's configuration has been changed, the \p lambda 
- * that was provided to this method will be called.  To disable these 
- * notifications, pass `nullptr` as the value of \p lambda.
+ * When an output device's configuration has been changed, the \p lambda that 
+ * was provided to this method will be called.  To disable these notifications, 
+ * pass `nullptr` as the value of \p lambda.
  *
  * \thread_user
  */
@@ -2953,9 +3054,9 @@ void Xenium::outputOnChange(LambdaOutputId lambda ///< The lambda to call
 /**
  * \brief Notification of removing an Output device.
  *
- * When a Wayland output device has been removed, the \p lambda that was 
- * provided to this method will be called.  To disable these notifications, 
- * pass `nullptr` as the value of \p lambda.
+ * When an output device has been removed, the \p lambda that was provided to 
+ * this method will be called.  To disable these notifications, pass `nullptr` 
+ * as the value of \p lambda.
  *
  * \thread_user
  */
@@ -3183,8 +3284,8 @@ void Xenium::outputAdd(const xcb_randr_get_crtc_info_reply_t* crtc_info   ///< C
 	,	.pixels_per_mm_vertical   = (float)crtc_info->height / output_info->mm_height
 	};
 
-ZAKERO_XENIUM__DEBUG_VAR(output_id)
-ZAKERO_XENIUM__DEBUG_VAR(this->output_map[output_id].name)
+	ZAKERO_XENIUM__DEBUG_VAR(output_id)
+	ZAKERO_XENIUM__DEBUG_VAR(this->output_map[output_id].name)
 }
 
 
@@ -3289,7 +3390,14 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
 }
 
 
-void Xenium::xcbWindowInit(Xenium::WindowCreateData* data
+/**
+ * \brief Initialize the XCB related data structures.
+ *
+ * All the needed XCB state and data structures will be initialized using the 
+ * provided \p data.  Some of the generated values will be placed into \p data 
+ * as well (such as any `error`s encountered).
+ */
+void Xenium::xcbWindowInit(Xenium::WindowCreateData* data ///< The window data
 	) noexcept
 {
 	window_size_map[data->window_id] =
@@ -3358,14 +3466,33 @@ void Xenium::xcbWindowInit(Xenium::WindowCreateData* data
 }
 
 
-void Xenium::windowReadySet(const WindowId window_id
+/**
+ * \brief Mark a Window as "ready".
+ *
+ * The X11/XCB specification recommends that any drawing operations should be 
+ * delayed until _after_ the first __expose__ event.  This method will mark the 
+ * specified \p window_id as being ready for drawing operations.
+ *
+ * \see windowReadyWait()
+ * \see xcbEvent(const xcb_expose_event_t* event)
+ */
+void Xenium::windowReadySet(const WindowId window_id ///< The Window Id
 	) noexcept
 {
 	window_ready_map[window_id] = true;
 }
 
 
-void Xenium::windowReadyWait(const WindowId window_id
+/**
+ * \brief Wait for a Window to be "ready".
+ *
+ * The X11/XCB specification recommends that any drawing operations should be 
+ * delayed until _after_ the first __expose__ event.  This method will block 
+ * until the Window has been marked as being "ready".
+ *
+ * \see windowReadySet()
+ */
+void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
 	) noexcept
 {
 	xcb_map_window(this->connection, window_id);
@@ -4118,18 +4245,14 @@ void Xenium::Window::titleSet(const std::string& title ///< The window title
 /**
  * \brief Use the Desktop Environment borders.
  *
- * Using this method will inform the %Wayland Compositor that the window would 
- * like to use the "system borders" of the desktop environment by setting \p 
+ * Using this method will inform the X11 Server that the window would like to 
+ * use the "system borders" of the desktop environment by setting \p 
  * use_system_borders to `true`.  Or by setting \p use_system_borders to 
  * `false' the Compositor expect the window to provide its own title and 
  * borders or just be a borderlass window.
  * 
  * Even if \p use_system_borders is `true`, it may be possible for the Desktop 
  * Environment to hide the title and borders of the window.
- *
- * \note Not all %Wayland Compositors support this functionality.  Those 
- * Compositors that do not support it, expect the window provide its own title 
- * and borders.
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
@@ -5898,7 +6021,7 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event
  *
  * \thread_xenium
  */
-void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///! XCB Event
+void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///< XCB Event
 	) noexcept
 {
 //std::cout << "Configue Notify: " << to_string(*event) << '\n';
@@ -8275,8 +8398,8 @@ bool operator==(Xenium::PointMm& lhs ///< Left-Hand side
 	, Xenium::PointMm&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.x, rhs.x, 0.001)
-		&&  equalish(lhs.y, rhs.y, 0.001)
+	return zakero::equalish(lhs.x, rhs.x, 0.001)
+		&&  zakero::equalish(lhs.y, rhs.y, 0.001)
 		;
 }
 
@@ -8298,8 +8421,8 @@ bool operator==(Xenium::PointPercent& lhs ///< Left-Hand side
 	, Xenium::PointPercent&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.x, rhs.x, 0.00001)
-		&&  equalish(lhs.y, rhs.y, 0.00001)
+	return zakero::equalish(lhs.x, rhs.x, 0.00001)
+		&&  zakero::equalish(lhs.y, rhs.y, 0.00001)
 		;
 }
 
@@ -8337,8 +8460,8 @@ bool operator==(Xenium::SizeMm& lhs ///< Left-Hand side
 	, Xenium::SizeMm&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.width, rhs.width, 0.001)
-		&&  equalish(lhs.height, rhs.height, 0.001)
+	return zakero::equalish(lhs.width, rhs.width, 0.001)
+		&&  zakero::equalish(lhs.height, rhs.height, 0.001)
 		;
 }
 
@@ -8358,8 +8481,8 @@ bool operator==(Xenium::SizePercent& lhs ///< Left-Hand side
 	, Xenium::SizePercent&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.width, rhs.width, 0.00001)
-		&&  equalish(lhs.height, rhs.height, 0.00001)
+	return zakero::equalish(lhs.width, rhs.width, 0.00001)
+		&&  zakero::equalish(lhs.height, rhs.height, 0.00001)
 		;
 }
 

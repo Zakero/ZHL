@@ -50,6 +50,7 @@
  */
 
 #include <chrono>
+#include <string>
 #include <vector>
 
 
@@ -322,6 +323,25 @@ namespace zakero
 		) noexcept
 	{
 		return size * static_cast<uint64_t>(from) / static_cast<uint64_t>(to);
+	}
+
+
+	/**
+	 * \brief Compare two floats
+	 *
+	 * Compare two floats for some degree of equality.  For the float 
+	 * values to be considered "equal", the difference between the values 
+	 * must be less than the specified \p delta.
+	 *
+	 * \retval true  The values are equal
+	 * \retval false The values are not equal
+	 */
+	bool equalish(const float a     ///< The first value
+		, const float     b     ///< The second value
+		, const float     delta ///< The maximum difference
+		) noexcept
+	{
+		return (std::abs(a - b) < delta);
 	}
 
 

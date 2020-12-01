@@ -1484,6 +1484,8 @@ namespace
 
 	/**
 	 * \brief Information about the current internal state.
+	 *
+	 * \return A collection Segments
 	 */
 	MemoryPool::VectorSegment MemoryPool::segmentList(
 		) const noexcept
@@ -1915,7 +1917,7 @@ namespace
 	 *
 	 * \return The JSON formatted string.
 	 */
-	std::string to_string(const MemoryPool::VectorSegment& segment
+	std::string to_string(const MemoryPool::VectorSegment& segment ///< The value to convert
 		) noexcept
 	{
 		std::string str = "";

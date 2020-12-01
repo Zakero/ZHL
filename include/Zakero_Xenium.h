@@ -2859,7 +2859,7 @@ int32_t Xenium::keyRepeatRate() const noexcept
  *
  * \return The Output data.
  */
-Xenium::Output Xenium::output(const Xenium::OutputId output_id
+Xenium::Output Xenium::output(const Xenium::OutputId output_id ///< The %Output Id
 	) const noexcept
 {
 	std::lock_guard<std::mutex> lock(output_mutex);
@@ -7267,6 +7267,8 @@ bool Xenium::Window::windowModeIs(const Xenium::WindowMode window_mode ///< The 
  * method.
  *
  * \see Xenium::WindowMode
+ *
+ * \return An error code if there was a problem.
  */
 std::error_code Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The WindowMode
 	) noexcept
@@ -7322,6 +7324,8 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
  * Using this method will remove the window from view.  The user will have to 
  * use the Desktop Environment to have the window redisplayed, perhaps using 
  * the task viewer.
+ *
+ * \return An error code if there was a problem.
  */
 std::error_code Xenium::Window::minimize() noexcept
 {

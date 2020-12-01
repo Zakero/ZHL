@@ -3000,6 +3000,8 @@ namespace
  * \enum Yetani::PointerAxisSource
  *
  * \brief Where the axis information came from.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Yetani::Unknown
  * \brief Unknown
@@ -3021,6 +3023,8 @@ namespace
  * \enum Yetani::PointerAxisType
  *
  * \brief The direction of the axis movement.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Yetani::Unknown
  * \brief Unknown
@@ -3057,6 +3061,8 @@ namespace
  * \enum Yetani::PointerButtonState
  *
  * \brief Mouse button state.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Yetani::Released
  * \brief Released
@@ -3293,13 +3299,13 @@ Yetani::~Yetani() noexcept
  *
  * If a connection was successful, then a pointer to a new Yetani instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the Wayland Compositor, `nullptr` will be 
+ * there was an error connecting to the Wayland Compositor, \nullptr will be 
  * returned.
  *
  * \note A connection to the Wayland Compositor must be made before any windows 
  * are created.
  *
- * \return A pointer to a Yetani instance or a `nullptr`.
+ * \return A pointer to a Yetani instance or a \nullptr.
  *
  * \thread_user
  */
@@ -3325,13 +3331,13 @@ Yetani* Yetani::connect() noexcept
  *
  * If a connection was successful, then a pointer to a new Yetani instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the Wayland Compositor, `nullptr` will be 
+ * there was an error connecting to the Wayland Compositor, \nullptr will be 
  * returned.
  *
  * \note A connection to the Wayland Compositor must be made before any windows 
  * are created.
  *
- * \return A pointer to a Yetani instance or a `nullptr`.
+ * \return A pointer to a Yetani instance or a \nullptr.
  *
  * \thread_user
  */
@@ -3356,7 +3362,7 @@ Yetani* Yetani::connect(const std::string& display ///< The Display Name or ID
  *
  * If a connection was successful, then a pointer to a new Yetani instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the Wayland Compositor, `nullptr` will be 
+ * there was an error connecting to the Wayland Compositor, \nullptr will be 
  * returned.
  *
  * The provided \p error will be set to Yetani::Error_None or the reason for 
@@ -3367,7 +3373,7 @@ Yetani* Yetani::connect(const std::string& display ///< The Display Name or ID
  * \note A connection to the Wayland Compositor must be made before any windows 
  * are created.
  *
- * \return A pointer to a Yetani instance or a `nullptr`.
+ * \return A pointer to a Yetani instance or a \nullptr.
  *
  * \thread_user
  */
@@ -3391,7 +3397,7 @@ Yetani* Yetani::connect(std::error_code& error ///< The error code
  *
  * If a connection was successful, then a pointer to a new Yetani instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the Wayland Compositor, `nullptr` will be 
+ * there was an error connecting to the Wayland Compositor, \nullptr will be 
  * returned.
  *
  * The provided \p error will be set to Yetani::Error_None or the reason for 
@@ -3402,7 +3408,7 @@ Yetani* Yetani::connect(std::error_code& error ///< The error code
  * \note A connection to the Wayland Compositor must be made before any windows 
  * are created.
  *
- * \return A pointer to a Yetani instance or a `nullptr`.
+ * \return A pointer to a Yetani instance or a \nullptr.
  *
  * \thread_user
  */
@@ -5033,7 +5039,7 @@ Yetani::SizePixel Yetani::outputConvertToPixel(const Yetani::OutputId output_id 
  *
  * When a Wayland output device has been added, the \p lambda that was provided 
  * to this method will be called.  To disable these notifications, pass 
- * `nullptr` as the value of \p lambda.
+ * \nullptr as the value of \p lambda.
  *
  * \thread_user
  */
@@ -5056,7 +5062,7 @@ void Yetani::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
  *
  * When a Wayland output device's configuration has been changed, the \p lambda 
  * that was provided to this method will be called.  To disable these 
- * notifications, pass `nullptr` as the value of \p lambda.
+ * notifications, pass \nullptr as the value of \p lambda.
  *
  * \thread_user
  */
@@ -5079,7 +5085,7 @@ void Yetani::outputOnChange(LambdaOutputId lambda ///< The lambda to call
  *
  * When a Wayland output device has been removed, the \p lambda that was 
  * provided to this method will be called.  To disable these notifications, 
- * pass `nullptr` as the value of \p lambda.
+ * pass \nullptr as the value of \p lambda.
  *
  * \thread_user
  */
@@ -7855,6 +7861,8 @@ void Yetani::handlerXdgToplevelDecorationConfigure(void* data       ///< User da
  * \enum Yetani::WindowDecorations
  *
  * \brief Who is responsible for rendering the decorations.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Yetani::Client_Side
  * \brief The user app must draw the decorations.
@@ -7867,6 +7875,8 @@ void Yetani::handlerXdgToplevelDecorationConfigure(void* data       ///< User da
  * \enum Yetani::WindowMode
  *
  * All the available window modes.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Yetani::Normal
  * \brief A normal window.
@@ -7996,14 +8006,14 @@ void Yetani::handlerXdgToplevelDecorationConfigure(void* data       ///< User da
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Yetani::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size  ///< The window size
 	, std::error_code&                                 error ///< The error state
@@ -8023,13 +8033,13 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size  ///< The window
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size   ///< The window size
 	, const wl_shm_format                              format ///< The pixel format
@@ -8051,7 +8061,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size   ///< The windo
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
@@ -8060,7 +8070,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size   ///< The windo
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size   ///< The window size
 	, const wl_shm_format                              format ///< The pixel format
@@ -8081,14 +8091,14 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizeMm& size   ///< The windo
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Yetani::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size  ///< The window size
 	, std::error_code&                                      error ///< The error state
@@ -8108,13 +8118,13 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size  ///< The w
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size   ///< The window size
 	, const wl_shm_format                                   format ///< The pixel format
@@ -8136,7 +8146,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size   ///< The 
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
@@ -8145,7 +8155,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size   ///< The 
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size   ///< The window size
 	, const wl_shm_format                                   format ///< The pixel format
@@ -8166,14 +8176,14 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePercent& size   ///< The 
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Yetani::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size  ///< The window size
 	, std::error_code&                                    error ///< The error state
@@ -8193,13 +8203,13 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size  ///< The win
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size   ///< The window size
 	, const wl_shm_format                                 format ///< The pixel format
@@ -8221,7 +8231,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size   ///< The wi
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The shared memory used by the Window will use the pixel \p format.
  *
@@ -8230,7 +8240,7 @@ Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size   ///< The wi
  *
  * \note The size of a window __must__ be greater than `0`.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Yetani::Window* Yetani::windowCreate(const Yetani::SizePixel& size   ///< The window size
 	, const wl_shm_format                                 format ///< The pixel format
@@ -9647,7 +9657,7 @@ Yetani::SizePixel Yetani::Window::convertToPixel(const Yetani::SizePercent& size
  * will be called when the window receives a "Close Request" event.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  */
 void Yetani::Window::onCloseRequest(Yetani::Lambda lambda ///< The lambda
 	) noexcept
@@ -9698,7 +9708,7 @@ void Yetani::Window::decorationsOnChange(Yetani::LambdaWindowDecorations lambda 
  * to handle the change of the "Active" status.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -9829,7 +9839,7 @@ void Yetani::Window::windowModeOnChange(Yetani::LambdaWindowMode lambda ///< The
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -9858,7 +9868,7 @@ void Yetani::Window::sizeOnChange(Yetani::LambdaSizeMm lambda ///< The lambda
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -9887,7 +9897,7 @@ void Yetani::Window::sizeOnChange(Yetani::LambdaSizePercent lambda ///< The lamb
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Yetani object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.

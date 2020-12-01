@@ -715,6 +715,7 @@ namespace zakero
 			{
 				std::promise<void> barrier;
 				Xenium::WindowId   window_id;
+				xcb_gcontext_t     gc;
 			};
 
 			struct WindowDeleteData
@@ -5303,14 +5304,32 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* window_data ///< The wind
 	error = xcbWindowCreateClient(window_data);
 	if(error)
 	{
+		Xenium::WindowDestroyData data =
+		{	.barrier   = {}
+		,	.window_id = window_data->window_id
+		,	.gc        = window_data->gc
+		};
+
+		xcbWindowDestroy(&data);
+
 		window_data->error = error;
+
 		return;
 	}
 
 	error = xcbWindowCreateInit(window_data);
 	if(error)
 	{
+		Xenium::WindowDestroyData data =
+		{	.barrier   = {}
+		,	.window_id = window_data->window_id
+		,	.gc        = window_data->gc
+		};
+
+		xcbWindowDestroy(&data);
+
 		window_data->error = error;
+
 		return;
 	}
 
@@ -5435,6 +5454,8 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
+		data->window_id = 0;
+
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
@@ -5445,9 +5466,6 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 	if(data->atom_close_request == XCB_ATOM_NONE)
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
-
-		xcb_destroy_window(this->connection, data->window_id);
-		data->window_id = 0;
 
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
@@ -5482,6 +5500,8 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
+		data->gc = 0;
+
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
@@ -5495,6 +5515,18 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The window data
 	) noexcept
 {
+	if(window_data->window_id == 0)
+	{
+		return;
+	}
+
+	if(window_data->gc != 0)
+	{
+		xcb_free_gc(this->connection, window_data->gc);
+
+		window_data->gc = 0;
+	}
+
 	xcb_destroy_window(this->connection, window_data->window_id);
 
 	window_decorations_map.erase(window_data->window_id);
@@ -5512,6 +5544,8 @@ void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The wi
 	window_output_map.erase(window_data->window_id);
 	window_ready_map.erase(window_data->window_id);
 	window_size_map.erase(window_data->window_id);
+
+	window_data->window_id = 0;
 }
 
 
@@ -6555,6 +6589,7 @@ Xenium::Window::~Window()
 	Xenium::WindowDestroyData data =
 	{	.barrier   = {}
 	,	.window_id = this->window_id
+	,	.gc        = this->gc
 	};
 
 	std::future<void> barrier = data.barrier.get_future();
@@ -6562,8 +6597,6 @@ Xenium::Window::~Window()
 	xenium->windowDestroyAddToQueue(&data);
 
 	barrier.wait();
-
-	xcb_free_gc(xenium->connection, gc);
 
 	ZAKERO_FREE(frame_buffer);
 

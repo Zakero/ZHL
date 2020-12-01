@@ -5767,12 +5767,9 @@ std::string Xenium::atomName(const xcb_atom_t atom ///< The atom
 /**
  * \brief Get the atom's values.
  *
- * \todo This method could just call atomValueData() with the appropriate 
- * values.
- *
  * An atom can be associated with zero or more values.  This method will 
  * provide a vector of all the atom values associated with the provided \p 
- * atom.
+ * property atom.
  *
  * If there was a problem, an empty vector will be returned and the \p 
  * generic_error will be set.
@@ -5780,7 +5777,7 @@ std::string Xenium::atomName(const xcb_atom_t atom ///< The atom
  * \return A vector of atom values.
  */
 std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id     ///< The window id
-	, const xcb_atom_t                                   atom          ///< The atom
+	, const xcb_atom_t                                   property_atom ///< The atom
 	, xcb_generic_error_t&                               generic_error ///< The error
 	) noexcept
 {
@@ -5788,27 +5785,34 @@ std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id     ///< 
 		xcb_get_property(this->connection
 			, 0 // Don't Delete
 			, window_id
-			, atom
+			, property_atom
 			, XCB_ATOM_ATOM
-			, 0 // Data
+			, 0 // Data Offset
 			, 2 // Number of 32-bit values
 			);
 
-	xcb_generic_error_t* error = &generic_error;
+	xcb_generic_error_t* error = nullptr;
 
 	xcb_get_property_reply_t* property =
 		xcb_get_property_reply(this->connection
 			, property_cookie
 			, &error
 			);
-	
-	int count = xcb_get_property_value_length(property) / 4;
 
-	std::vector<xcb_atom_t> retval(count);
+	if(property == nullptr)
+	{
+		generic_error = *error;
+
+		return {};
+	}
+	
+	int length = xcb_get_property_value_length(property) / 4;
+
+	std::vector<xcb_atom_t> retval(length);
 
 	xcb_atom_t* value = (xcb_atom_t*)xcb_get_property_value(property);
 
-	for(int i = 0; i < count; i++)
+	for(int i = 0; i < length; i++)
 	{
 		retval[i] = value[i];
 	}
@@ -5837,7 +5841,7 @@ std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id     ///< 
  * \return A vector of atom values.
  */
 std::vector<int32_t> Xenium::atomValueData(const WindowId window_id     ///< The window id
-	, const xcb_atom_t                                property      ///< The property atom
+	, const xcb_atom_t                                property_atom ///< The property atom
 	, const xcb_atom_t                                type          ///< The property type
 	, const size_t                                    count         ///< The number of 32-bit values
 	, xcb_generic_error_t&                            generic_error ///< The error
@@ -5845,39 +5849,41 @@ std::vector<int32_t> Xenium::atomValueData(const WindowId window_id     ///< The
 {
 	xcb_get_property_cookie_t property_cookie =
 		xcb_get_property(this->connection
-			, 0 // Don't Delete
+			, 0     // Don't Delete
 			, window_id
-			, property
+			, property_atom
 			, type
-			, 0 // Data
+			, 0     // Data Offset
 			, count // Number of 32-bit values
 			);
 
-	xcb_generic_error_t* error = &generic_error;
+	xcb_generic_error_t* error = nullptr;
 
-	xcb_get_property_reply_t* property_reply =
+	xcb_get_property_reply_t* property =
 		xcb_get_property_reply(this->connection
 			, property_cookie
 			, &error
 			);
 
-	if(property_reply == nullptr)
+	if(property == nullptr)
 	{
+		generic_error = *error;
+
 		return {};
 	}
 	
-	int length = xcb_get_property_value_length(property_reply) / 4;
+	int length = xcb_get_property_value_length(property) / 4;
 
 	std::vector<int32_t> vector(length);
 
-	int32_t* value = (int32_t*)xcb_get_property_value(property_reply);
+	int32_t* value = (int32_t*)xcb_get_property_value(property);
 
 	for(int i = 0; i < length; i++)
 	{
 		vector[i] = value[i];
 	}
 
-	free(property_reply);
+	free(property);
 
 	return vector;
 }
@@ -7848,6 +7854,16 @@ std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
  */
 void Xenium::Window::imagePresent() noexcept
 {
+	/*
+	Xenium::SizePixel size = xenium->window_size_map[window_id].pixel;
+	if(size.width != frame_buffer_size.width
+		|| size.height != frame_buffer_size.height
+		)
+	{
+		return;
+	}
+	*/
+
 	xcb_put_image(xenium->connection
 		, XCB_IMAGE_FORMAT_Z_PIXMAP
 		, window_id

@@ -164,50 +164,50 @@ int main()
 			);
 		printf("************************************************\n");
 	});
-	red->onSizeChange([&](const zakero::Yetani::SizeMm& size)
-	{
-		printf("************************************************\n");
-		printf("** Red Millimeter: %f x %f\n", size.width, size.height);
-		printf("************************************************\n");
-	});
-	red->onSizeChange([&](const zakero::Yetani::SizePercent& size)
-	{
-		printf("************************************************\n");
-		printf("** Red Percent: %f x %f\n", size.width, size.height);
-		printf("************************************************\n");
-	});
-	red->onSizeChange([&](const zakero::Yetani::SizePixel& size)
-	{
-		printf("************************************************\n");
-		printf("** Red Pixel: %d x %d\n", size.width, size.height);
-		printf("************************************************\n");
-	});
 */
-/*
-	red->pointerOnEnter([&](const zakero::Yetani::PointMm& point, const zakero::Yetani::KeyModifier&)
-	{
-		printf("************************************************\n");
-		printf("** Red: Pointer Enter = %f x %f\n", point.x, point.y);
-		printf("************************************************\n");
-	});
-	red->pointerOnLeave([&]()
-	{
-		printf("************************************************\n");
-		printf("** Red: Pointer Leave\n");
-		printf("************************************************\n");
-	});
-*/
-/*
-	red->pointerOnMotion([&](const zakero::Yetani::PointMm& point
-		, const zakero::Yetani::KeyModifier& modifier
-		)
-	{
-		printf("************************************************\n");
-		printf("** Red: Pointer Motion = %f x %f (%u)\n", point.x, point.y, point.time);
-		printf("**    : %s\n", zakero::to_string(modifier).c_str());
-		printf("************************************************\n");
-	});
-*/
+
+//	red->sizeOnChange([&](const zakero::Yetani::SizeMm& size)
+//	{
+//		printf(">> Red Millimeter: %s\n"
+//			, zakero::to_string(size).c_str()
+//			);
+//	});
+
+//	red->sizeOnChange([&](const zakero::Yetani::SizePercent& size)
+//	{
+//		printf(">> Red Percent: %s\n"
+//			, zakero::to_string(size).c_str()
+//			);
+//	});
+
+//	red->sizeOnChange([&](const zakero::Yetani::SizePixel& size)
+//	{
+//		printf(">> Red Pixel: %s\n"
+//			, zakero::to_string(size).c_str()
+//			);
+//	});
+
+//	red->pointerOnEnter([&](const zakero::Yetani::PointMm& point, const zakero::Yetani::KeyModifier&)
+//	{
+//		printf(">> Red: Pointer Enter: %s\n"
+//			, zakero::to_string(point).c_str()
+//			);
+//	});
+
+//	red->pointerOnLeave([&]()
+//	{
+//		printf(">> Red: Pointer Leave\n");
+//	});
+
+//	red->pointerOnMotion([&](const zakero::Yetani::PointMm& point
+//		, const zakero::Yetani::KeyModifier&            mod
+//		)
+//	{
+//		printf(">> Button (pixel): %s %s\n"
+//			, zakero::to_string(point).c_str()
+//			, zakero::to_string(mod).c_str()
+//			);
+//	});
 
 //	red->pointerOnButton([&](const zakero::Yetani::PointerButton& button
 //		, const zakero::Yetani::PointPixel&                   point
@@ -280,19 +280,19 @@ int main()
 		printf("** Green: %s Focus\n", (has_focus ? "Gained" : "Lost"));
 		printf("************************************************\n");
 	});
-	green->onSizeChange([&](const zakero::Yetani::SizeMm& size)
+	green->sizeOnChange([&](const zakero::Yetani::SizeMm& size)
 	{
 		printf("************************************************\n");
 		printf("** Green Millimeter: %f x %f\n", size.width, size.height);
 		printf("************************************************\n");
 	});
-	green->onSizeChange([&](const zakero::Yetani::SizePercent& size)
+	green->sizeOnChange([&](const zakero::Yetani::SizePercent& size)
 	{
 		printf("************************************************\n");
 		printf("** Green Percent: %f x %f\n", size.width, size.height);
 		printf("************************************************\n");
 	});
-	green->onSizeChange([&](const zakero::Yetani::SizePixel& size)
+	green->sizeOnChange([&](const zakero::Yetani::SizePixel& size)
 	{
 		printf("************************************************\n");
 		printf("** Green Pixel: %d x %d\n", size.width, size.height);

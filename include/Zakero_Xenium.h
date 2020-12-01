@@ -820,7 +820,6 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			[[nodiscard]] std::error_code windowBorder(const Xenium::WindowId, const bool) noexcept;
-			void                          windowCreate(Xenium::WindowCreateData*) noexcept;
 			void                          windowCreateAddToQueue(Xenium::WindowCreateData*) noexcept;
 			void                          windowDestroyAddToQueue(Xenium::WindowDestroyData*) noexcept;
 			[[nodiscard]] std::error_code windowLocationSet(const Xenium::WindowId, const Xenium::PointPixel&) noexcept;
@@ -858,9 +857,11 @@ namespace zakero
 			void xcbEvent(const xcb_reparent_notify_event_t*) noexcept;
 			void xcbEvent(const xcb_unmap_notify_event_t*) noexcept;
 
-			void xcbWindowCreate(Xenium::WindowCreateData*) noexcept;
-			void xcbWindowDestroy(Xenium::WindowDestroyData*) noexcept;
-			void xcbWindowInit(Xenium::WindowCreateData*) noexcept;
+			void                          xcbWindowCreate(Xenium::WindowCreateData*) noexcept;
+			[[nodiscard]] std::error_code xcbWindowCreateValidate(Xenium::WindowCreateData*) noexcept;
+			[[nodiscard]] std::error_code xcbWindowCreateClient(Xenium::WindowCreateData*) noexcept;
+			[[nodiscard]] std::error_code xcbWindowCreateInit(Xenium::WindowCreateData*) noexcept;
+			void                          xcbWindowDestroy(Xenium::WindowDestroyData*) noexcept;
 
 			// }}}
 			// {{{ XCB : Atom
@@ -2804,7 +2805,7 @@ void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread t
 		{
 			for(Xenium::WindowCreateData* window_data : xenium->window_to_create)
 			{
-				xenium->windowCreate(window_data);
+				xenium->xcbWindowCreate(window_data);
 				window_data->barrier.set_value();
 			}
 
@@ -5281,18 +5282,58 @@ void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event ///< The XCB Event
 
 
 /**
- * \brief Create the backend window data.
+ * \brief Create a new window.
  *
- * \todo Rename to xcbWindowCreate()
- *
- * This method will fill in the gaps of the provided \p window_data then setup 
- * all the data structures.  Any errors will be placed in `window_data->error`.
+ * This method will fill in the gaps of the provided \p window_data, validate 
+ * the data, create the window client then setup all the supporting data 
+ * structures.  Any errors will be placed in `window_data->error`.
  */
-void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window data
+void Xenium::xcbWindowCreate(Xenium::WindowCreateData* window_data ///< The window data
+	) noexcept
+{
+	std::error_code error;
+
+	error = xcbWindowCreateValidate(window_data);
+	if(error)
+	{
+		window_data->error = error;
+		return;
+	}
+
+	error = xcbWindowCreateClient(window_data);
+	if(error)
+	{
+		window_data->error = error;
+		return;
+	}
+
+	error = xcbWindowCreateInit(window_data);
+	if(error)
+	{
+		window_data->error = error;
+		return;
+	}
+
+	window_data->error = ZAKERO_XENIUM__ERROR(Error_None);
+
+	return;
+}
+
+
+/**
+ * \brief Validate the window data.
+ *
+ * Validate the window data and fill in the window size values.
+ *
+ * \return An error code if the window data is not valid.
+ */
+std::error_code Xenium::xcbWindowCreateValidate(Xenium::WindowCreateData* window_data ///< The window data
 	) noexcept
 {
 	window_data->output_id = output_map.begin()->first;
-	Output& output         = output_map.begin()->second;
+	Xenium::Output& output = output_map.begin()->second;
+
+	Xenium::SizePixel size_pixel;
 
 	if(window_data->size_unit == Xenium::SizeUnit::Millimeter)
 	{
@@ -5300,7 +5341,31 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window 
 			, window_data->size_mm.width
 			, window_data->size_mm.height
 			);
-		window_data->size_pixel = {pixel.first, pixel.second};
+		size_pixel = {pixel.first, pixel.second};
+	}
+	else if(window_data->size_unit == Xenium::SizeUnit::Percent)
+	{
+		auto pixel = convertPercentToPixel(output
+			, window_data->size_percent.width
+			, window_data->size_percent.height
+			);
+		size_pixel = {pixel.first, pixel.second};
+	}
+	else // if(window_data->size_unit == Xenium::SizeUnit::Pixel)
+	{
+		size_pixel = window_data->size_pixel;
+	}
+
+	if((size_pixel.width < Window_Size_Minimum)
+		|| (size_pixel.width < Window_Size_Minimum)
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	if(window_data->size_unit == Xenium::SizeUnit::Millimeter)
+	{
+		window_data->size_pixel = size_pixel;
 
 		auto percent = convertPixelToPercent(output
 			, window_data->size_pixel.width
@@ -5310,11 +5375,7 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window 
 	}
 	else if(window_data->size_unit == Xenium::SizeUnit::Percent)
 	{
-		auto pixel = convertPercentToPixel(output
-			, window_data->size_percent.width
-			, window_data->size_percent.height
-			);
-		window_data->size_pixel = {pixel.first, pixel.second};
+		window_data->size_pixel = size_pixel;
 
 		auto mm = convertPixelToMm(output
 			, window_data->size_pixel.width
@@ -5322,7 +5383,7 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window 
 			);
 		window_data->size_mm = {mm.first, mm.second};
 	}
-	else if(window_data->size_unit == Xenium::SizeUnit::Pixel)
+	else // if(window_data->size_unit == Xenium::SizeUnit::Pixel)
 	{
 		auto mm = convertPixelToMm(output
 			, window_data->size_pixel.width
@@ -5336,30 +5397,8 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window 
 			);
 		window_data->size_percent = {percent.first, percent.second};
 	}
-	else
-	{
-		window_data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
 
-		return;
-	}
-
-	if((window_data->size_pixel.width < Window_Size_Minimum)
-		|| (window_data->size_pixel.width < Window_Size_Minimum)
-		)
-	{
-		window_data->error = ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
-
-		return;
-	}
-
-	xcbWindowCreate(window_data);
-
-	if(window_data->error)
-	{
-		return;
-	}
-
-	xcbWindowInit(window_data);
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
@@ -5367,8 +5406,10 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window 
  * \brief Create an XCB Window
  *
  * This method will create the XCB Window and the other data directly related.
+ *
+ * \return An error code if there was a problem.
  */
-void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
+std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///< The window data
 	) noexcept
 {
 	data->window_id = xcb_generate_id(this->connection);
@@ -5394,9 +5435,7 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
-		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
-
-		return;
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
 	data->atom = atomCreateDeleteWindow(data->window_id
@@ -5410,9 +5449,7 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 		xcb_destroy_window(this->connection, data->window_id);
 		data->window_id = 0;
 
-		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
-
-		return;
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
 	xcb_size_hints_t size_hints = { 0 };
@@ -5430,12 +5467,8 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
-		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
-
-		return;
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
-
-	data->error = ZAKERO_XENIUM__ERROR(Error_None);
 
 	data->gc = xcb_generate_id(this->connection);
 	cookie = xcb_create_gc_checked(this->connection
@@ -5449,12 +5482,10 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
-		data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
-
-		return;
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	return;
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
@@ -5491,7 +5522,7 @@ void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The wi
  * provided \p data.  Some of the generated values will be placed into \p data 
  * as well (such as any `error`s encountered).
  */
-void Xenium::xcbWindowInit(Xenium::WindowCreateData* data ///< The window data
+std::error_code Xenium::xcbWindowCreateInit(Xenium::WindowCreateData* data ///< The window data
 	) noexcept
 {
 	window_size_map[data->window_id] =
@@ -5557,6 +5588,8 @@ void Xenium::xcbWindowInit(Xenium::WindowCreateData* data ///< The window data
 	};
 
 	window_ready_map[data->window_id] = false;
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 // }}}

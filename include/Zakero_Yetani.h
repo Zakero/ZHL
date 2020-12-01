@@ -180,6 +180,8 @@
  * \parversion{zakero_yetani}
  * __v0.6.1__
  * - Moved to_string(std::error_code) to Zakero_Base.h
+ * - Moved equalish() to Zakero_Base.h
+ * - Documentation improvements
  *
  * __v0.6.0__
  * - Fully Documented

@@ -701,7 +701,7 @@ namespace zakero
 				std::error_code                 error;
 				Xenium::WindowId                window_id;
 				Xenium::OutputId                output_id;
-				xcb_atom_t                      atom; // Rename to "atom_close_request"
+				xcb_atom_t                      atom_close_request;
 				xcb_gcontext_t                  gc;
 				Xenium::SizeUnit                size_unit;
 				Xenium::SizeMm                  size_mm;
@@ -720,7 +720,7 @@ namespace zakero
 			struct WindowDeleteData
 			{
 				Xenium::Lambda close_request_lambda;
-				xcb_atom_t     atom;
+				xcb_atom_t     atom_close_request;
 			};
 
 			struct WindowSizeData
@@ -3700,17 +3700,17 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	) noexcept
 {
 	Xenium::WindowCreateData data =
-	{	.barrier        = {}
-	,	.error          = {}
-	,	.window_id      = 0
-	,	.output_id      = 0
-	,	.atom           = 0
-	,	.size_unit      = Xenium::SizeUnit::Millimeter
-	,	.size_mm        = size_mm
-	,	.size_percent   = {}
-	,	.size_pixel     = {}
-	,	.value_mask     = value_mask
-	,	.value_list     = value_list
+	{	.barrier            = {}
+	,	.error              = {}
+	,	.window_id          = 0
+	,	.output_id          = 0
+	,	.atom_close_request = 0
+	,	.size_unit          = Xenium::SizeUnit::Millimeter
+	,	.size_mm            = size_mm
+	,	.size_percent       = {}
+	,	.size_pixel         = {}
+	,	.value_mask         = value_mask
+	,	.value_list         = value_list
 	};
 
 	std::future<void> barrier = data.barrier.get_future();
@@ -3786,17 +3786,17 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 	) noexcept
 {
 	Xenium::WindowCreateData data =
-	{	.barrier        = {}
-	,	.error          = {}
-	,	.window_id      = 0
-	,	.output_id      = 0
-	,	.atom           = 0
-	,	.size_unit      = Xenium::SizeUnit::Percent
-	,	.size_mm        = {}
-	,	.size_percent   = size_percent
-	,	.size_pixel     = {}
-	,	.value_mask     = value_mask
-	,	.value_list     = value_list
+	{	.barrier            = {}
+	,	.error              = {}
+	,	.window_id          = 0
+	,	.output_id          = 0
+	,	.atom_close_request = 0
+	,	.size_unit          = Xenium::SizeUnit::Percent
+	,	.size_mm            = {}
+	,	.size_percent       = size_percent
+	,	.size_pixel         = {}
+	,	.value_mask         = value_mask
+	,	.value_list         = value_list
 	};
 
 	std::future<void> barrier = data.barrier.get_future();
@@ -3871,17 +3871,17 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 	) noexcept
 {
 	Xenium::WindowCreateData data =
-	{	.barrier        = {}
-	,	.error          = {}
-	,	.window_id      = 0
-	,	.output_id      = 0
-	,	.atom           = 0
-	,	.size_unit      = Xenium::SizeUnit::Pixel
-	,	.size_mm        = {}
-	,	.size_percent   = {}
-	,	.size_pixel     = size_pixel
-	,	.value_mask     = value_mask
-	,	.value_list     = value_list
+	{	.barrier            = {}
+	,	.error              = {}
+	,	.window_id          = 0
+	,	.output_id          = 0
+	,	.atom_close_request = 0
+	,	.size_unit          = Xenium::SizeUnit::Pixel
+	,	.size_mm            = {}
+	,	.size_percent       = {}
+	,	.size_pixel         = size_pixel
+	,	.value_mask         = value_mask
+	,	.value_list         = value_list
 	};
 
 	std::future<void> barrier = data.barrier.get_future();
@@ -4714,7 +4714,7 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
 	if(window_delete_map.contains(event->window))
 	{
 		WindowDeleteData& window_delete = window_delete_map[event->window];
-		if(event->data.data32[0] == window_delete.atom)
+		if(event->data.data32[0] == window_delete.atom_close_request)
 		{
 			window_delete.close_request_lambda();
 		}
@@ -5438,11 +5438,11 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	data->atom = atomCreateDeleteWindow(data->window_id
+	data->atom_close_request = atomCreateDeleteWindow(data->window_id
 		, generic_error
 		);
 
-	if(data->atom == XCB_ATOM_NONE)
+	if(data->atom_close_request == XCB_ATOM_NONE)
 	{
 		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
 
@@ -5584,7 +5584,7 @@ std::error_code Xenium::xcbWindowCreateInit(Xenium::WindowCreateData* data ///< 
 
 	window_delete_map[data->window_id] =
 	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = data->atom
+	,	.atom_close_request   = data->atom_close_request
 	};
 
 	window_ready_map[data->window_id] = false;

@@ -1,5 +1,5 @@
 /*
-g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-xkb -lxcb-randr -lxcb-dri3 -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
+g++ -std=c++20 -g -Wall -Werror -lpthread -lxcb -lxcb-xkb -lxcb-randr -I../../include -o Manual_Window Manual_Window.cpp && ./Manual_Window
  */
 
 /*

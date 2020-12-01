@@ -508,6 +508,12 @@ namespace zakero
 					void titleSet(const std::string&) noexcept;
 
 					// }}}
+					// {{{ Events
+
+					void onCloseRequest(Xenium::Lambda) noexcept;
+					void onFocusChange(Xenium::LambdaBool) noexcept;
+
+					// }}}
 					// {{{ Decorations
 
 					std::error_code decorationsSet(const Xenium::WindowDecorations) noexcept;
@@ -527,24 +533,6 @@ namespace zakero
 					void            sizeOnChange(Xenium::LambdaSizePixel) noexcept;
 
 					// }}}
-					// {{{ Window Mode
-
-					[[nodiscard]] Xenium::WindowMode windowMode() const noexcept;
-					bool                             windowModeIs(const Xenium::WindowMode) const noexcept;
-					std::error_code                  windowModeSet(const Xenium::WindowMode) noexcept;
-					void                             windowModeOnChange(Xenium::LambdaWindowMode) noexcept;
-
-					[[nodiscard]] std::error_code    minimize() noexcept;
-
-					// }}}
-					// {{{ Rendering
-
-					std::error_code        imageNext(uint8_t*&, Xenium::SizePixel&) noexcept;
-					void                   imagePresent() noexcept;
-					[[nodiscard]] uint32_t time() const noexcept;
-					[[nodiscard]] uint8_t  bytesPerPixel() const noexcept;
-
-					// }}}
 					// {{{ Conversion
 
 					[[nodiscard]] Xenium::PointMm      convertToMm(const Xenium::PointPixel&) const noexcept;
@@ -556,6 +544,16 @@ namespace zakero
 					[[nodiscard]] Xenium::SizePercent  convertToPercent(const Xenium::SizePixel&) const noexcept;
 					[[nodiscard]] Xenium::SizePixel    convertToPixel(const Xenium::SizeMm&) const noexcept;
 					[[nodiscard]] Xenium::SizePixel    convertToPixel(const Xenium::SizePercent&) const noexcept;
+
+					// }}}
+					// {{{ Window Mode
+
+					[[nodiscard]] Xenium::WindowMode windowMode() const noexcept;
+					[[nodiscard]] bool               windowModeIs(const Xenium::WindowMode) const noexcept;
+					std::error_code                  windowModeSet(const Xenium::WindowMode) noexcept;
+					void                             windowModeOnChange(Xenium::LambdaWindowMode) noexcept;
+
+					[[nodiscard]] std::error_code    minimize() noexcept;
 
 					// }}}
 					// {{{ Cursor : TODO
@@ -588,10 +586,12 @@ namespace zakero
 					//void pointerOnAxisDiscrete(Xenium::Lambda) noexcept;
 
 					// }}}
-					// {{{ Events
+					// {{{ Rendering
 
-					void onCloseRequest(Xenium::Lambda) noexcept;
-					void onFocusChange(Xenium::LambdaBool) noexcept;
+					std::error_code        imageNext(uint8_t*&, Xenium::SizePixel&) noexcept;
+					void                   imagePresent() noexcept;
+					[[nodiscard]] uint32_t time() const noexcept;
+					[[nodiscard]] uint8_t  bytesPerPixel() const noexcept;
 
 					// }}}
 
@@ -897,16 +897,10 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			[[nodiscard]] std::error_code randrInit() noexcept;
-
-			void randrEvent(const xcb_randr_crtc_change_t*) noexcept;
-			void randrEvent(const xcb_randr_output_change_t*) noexcept;
-			void randrEvent(const xcb_randr_notify_event_t*) noexcept;
-			void randrEvent(const xcb_randr_screen_change_notify_event_t*) noexcept;
-
-			// }}}
-			// {{{ XCB : Utility
-			
-			[[nodiscard]] bool requestCheckHasError(const xcb_void_cookie_t&, xcb_generic_error_t&) noexcept;
+			void                          randrEvent(const xcb_randr_crtc_change_t*) noexcept;
+			void                          randrEvent(const xcb_randr_output_change_t*) noexcept;
+			void                          randrEvent(const xcb_randr_notify_event_t*) noexcept;
+			void                          randrEvent(const xcb_randr_screen_change_notify_event_t*) noexcept;
 
 			// }}}
 			// {{{ XCB : XKB
@@ -936,11 +930,16 @@ namespace zakero
 			
 			// -------------------------------------------------- //
 
+			[[nodiscard]] std::error_code xkbInit() noexcept;
 			inline void                   keyDataArrayClear() noexcept;
 			inline void                   keyDataArrayProcess() noexcept;
-			[[nodiscard]] std::error_code xkbInit() noexcept;
 			void                          xkbControlsUpdate() noexcept;
 			void                          xkbIndicatorStateUpdate() noexcept;
+
+			// }}}
+			// {{{ XCB : Utility
+			
+			[[nodiscard]] bool requestCheckHasError(const xcb_void_cookie_t&, xcb_generic_error_t&) noexcept;
 
 			// }}}
 
@@ -2166,6 +2165,144 @@ namespace
  * \brief The height.
  */
 
+/**
+ * \enum Xenium::WindowDecorations
+ *
+ * \brief Who is responsible for rendering the decorations.
+ */
+/* Disabled because Doxygen does not support "enum classes"
+ *
+ * \var Xenium::Client_Side
+ * \brief The user app must draw the decorations.
+ *
+ * \var Xenium::Server_Side
+ * \brief The X11 server will draw the decorations.
+ */
+
+/**
+ * \enum Xenium::WindowMode
+ *
+ * \brief All the available window modes.
+ */
+/* Disabled because Doxygen does not support "enum classes"
+ *
+ * \var Xenium::Normal
+ * \brief A normal window.
+ *
+ * \var Xenium::Fullscreen
+ * \brief A window that uses the entire screen, no borders.
+ *
+ * \var Xenium::Maximized
+ * \brief A window that uses as much of the screen as possible.
+ */
+
+
+/**
+ * \name Lambdas
+ * \{
+ */
+
+/**
+ * \typedef Xenium::Lambda
+ *
+ * \brief A Lambda that has no parameters.
+ */
+
+/**
+ * \typedef Xenium::LambdaAxis
+ *
+ * \brief A Lambda that has parameters: PointerAxis and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaBool
+ *
+ * \brief A Lambda that has a parameter: bool.
+ */
+
+/**
+ * \typedef Xenium::LambdaButtonMm
+ *
+ * \brief A Lambda that has parameters: PointerButton, PointMm and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaButtonPercent
+ *
+ * \brief A Lambda that has parameters: PointerButton, PointPercent and 
+ * KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaButtonPixel
+ *
+ * \brief A Lambda that has parameters: PointerButton, PointPixel and 
+ * KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaKey
+ *
+ * \brief A Lambda that has parameters: Key and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaPointMm
+ *
+ * \brief A Lambda that has parameters: PointMm and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaPointPercent
+ *
+ * \brief A Lambda that has parameters: PointPercent and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaPointPixel
+ *
+ * \brief A Lambda that has parameters: PointPixel and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaSizeMm
+ *
+ * \brief A Lambda that has a parameter: SizeMm.
+ */
+
+/**
+ * \typedef Xenium::LambdaSizePercent
+ *
+ * \brief A Lambda that has a parameter: SizePercent.
+ */
+
+/**
+ * \typedef Xenium::LambdaSizePixel
+ *
+ * \brief A Lambda that has a parameter: SizePixel.
+ */
+
+/**
+ * \typedef Xenium::LambdaWindowDecorations
+ *
+ * \brief A Lambda that has a parameter: WindowDecorations.
+ */
+
+/**
+ * \typedef Xenium::LambdaWindowMode
+ *
+ * \brief A Lambda that has a parameter: WindowMode.
+ */
+
+/**
+ * \}
+ */
+
+/**
+ * \typedef Xenium::WindowId
+ *
+ * \brief A type for better readablity.
+ */
 // }}}
 // {{{ Constructor / Destructor
 
@@ -2755,70 +2892,6 @@ Xenium::Output Xenium::output(const Xenium::OutputId output_id
 
 
 /**
- * \brief Find the Output.
- *
- * The area of a Screen can occupy many Output devices.  This method will find 
- * the Output device that displays the requested \p x / \p y pixel location.
- *
- * If no Output device is found, then the nearest Output device is returned.  
- * An example of why an Output device would not be found is:
- *
- * \code
- * +--------------+----------------+
- * |              |                |
- * |  Monitor 1   |    Monitor 2   |
- * |              |                |
- * +--------------+                |
- *  Pixel --> X   |                |
- *                |                |
- *                +----------------+
- * \endcode
- *
- * \return The Output data.
- */
-const Xenium::Output& Xenium::output(const int16_t x         ///< The pixel's X location
-	, const int16_t                            y         ///< The pixel's Y location
-	, OutputId&                                output_id ///< The Output's ID
-	) noexcept
-{
-	for(const auto& iter : output_map)
-	{
-		const Output& output = iter.second;
-
-		if(x >= output.x
-			&& x < (output.x + output.width)
-			&& y >= output.y
-			&& y < (output.y + output.height)
-			)
-		{
-			output_id = iter.first;
-
-			return output;
-		}
-	}
-
-	uint64_t distance = std::numeric_limits<uint64_t>::max();
-
-	for(const auto& iter : output_map)
-	{
-		const Output& output = iter.second;
-
-		int64_t output_x = (std::abs(output.x) + output.width) / 2;
-		int64_t output_y = (std::abs(output.y) + output.height) / 2;
-		
-		uint64_t dist = std::abs(x - output_x) + std::abs(y - output_y);
-
-		if(dist < distance)
-		{
-			output_id = iter.first;
-		}
-	}
-
-	return output_map[output_id];
-}
-
-
-/**
  * \brief Get a list of the Output Id's.
  *
  * All the Output IDs will be returned.  It is possible that an output device 
@@ -3195,6 +3268,70 @@ void Xenium::outputOnRemove(LambdaOutputId lambda ///< The lambda to call
 
 
 /**
+ * \brief Find the Output.
+ *
+ * The area of a Screen can occupy many Output devices.  This method will find 
+ * the Output device that displays the requested \p x / \p y pixel location.
+ *
+ * If no Output device is found, then the nearest Output device is returned.  
+ * An example of why an Output device would not be found is:
+ *
+ * \code
+ * +--------------+----------------+
+ * |              |                |
+ * |  Monitor 1   |    Monitor 2   |
+ * |              |                |
+ * +--------------+                |
+ *  Pixel --> X   |                |
+ *                |                |
+ *                +----------------+
+ * \endcode
+ *
+ * \return The Output data.
+ */
+const Xenium::Output& Xenium::output(const int16_t x         ///< The pixel's X location
+	, const int16_t                            y         ///< The pixel's Y location
+	, OutputId&                                output_id ///< The Output's ID
+	) noexcept
+{
+	for(const auto& iter : output_map)
+	{
+		const Output& output = iter.second;
+
+		if(x >= output.x
+			&& x < (output.x + output.width)
+			&& y >= output.y
+			&& y < (output.y + output.height)
+			)
+		{
+			output_id = iter.first;
+
+			return output;
+		}
+	}
+
+	uint64_t distance = std::numeric_limits<uint64_t>::max();
+
+	for(const auto& iter : output_map)
+	{
+		const Output& output = iter.second;
+
+		int64_t output_x = (std::abs(output.x) + output.width) / 2;
+		int64_t output_y = (std::abs(output.y) + output.height) / 2;
+		
+		uint64_t dist = std::abs(x - output_x) + std::abs(y - output_y);
+
+		if(dist < distance)
+		{
+			output_id = iter.first;
+		}
+	}
+
+	return output_map[output_id];
+}
+
+
+/**
  * \brief Initialize the Output objects.
  *
  * Query the XCB RandR interface to get all the currently known output devices 
@@ -3509,265 +3646,8 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
 	};
 }
 
-
-/**
- * \brief Initialize the XCB related data structures.
- *
- * All the needed XCB state and data structures will be initialized using the 
- * provided \p data.  Some of the generated values will be placed into \p data 
- * as well (such as any `error`s encountered).
- */
-void Xenium::xcbWindowInit(Xenium::WindowCreateData* data ///< The window data
-	) noexcept
-{
-	window_size_map[data->window_id] =
-	{	.mm              = data->size_mm
-	,	.mm_minimum      = {0, 0}
-	,	.mm_maximum      = {0, 0}
-	,	.mm_lambda       = LambdaSizeMm_DoNothing
-	,	.percent         = data->size_percent
-	,	.percent_minimum = {0, 0}
-	,	.percent_maximum = {0, 0}
-	,	.percent_lambda  = LambdaSizePercent_DoNothing
-	,	.pixel           = data->size_pixel
-	,	.pixel_minimum   = {0, 0}
-	,	.pixel_maximum   = {0, 0}
-	,	.pixel_lambda    = LambdaSizePixel_DoNothing
-	,	.unit            = data->size_unit
-	};
-
-	window_mode_map[data->window_id] = 
-	{	.window_mode = WindowMode::Normal
-	,	.lambda      = LambdaWindowMode_DoNothing
-	};
-
-	window_output_map[data->window_id] = data->output_id;
-
-	window_keyboard[data->window_id] =
-	{	.on_enter = Lambda_DoNothing
-	,	.on_leave = Lambda_DoNothing
-	};
-
-	window_on_key_map[data->window_id]   = LambdaKey_DoNothing;
-	window_on_leave_map[data->window_id] = Lambda_DoNothing;
-	window_on_axis_map[data->window_id]  = LambdaAxis_DoNothing;
-
-	window_on_motion_map[data->window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_on_button_map[data->window_id] =
-	{	.lambda_mm      = LambdaButtonMm_DoNothing
-	,	.lambda_percent = LambdaButtonPercent_DoNothing
-	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
-	};
-
-	window_on_enter_map[data->window_id] =
-	{	.lambda_mm      = LambdaPointMm_DoNothing
-	,	.lambda_percent = LambdaPointPercent_DoNothing
-	,	.lambda_pixel   = LambdaPointPixel_DoNothing
-	};
-
-	window_decorations_map[data->window_id] =
-	{	.window_decorations = WindowDecorations::Server_Side
-	,	.lambda             = LambdaWindowDecorations_DoNothing
-	};
-
-	window_focus_map[data->window_id] = LambdaBool_DoNothing;
-
-	window_delete_map[data->window_id] =
-	{	.close_request_lambda = Lambda_DoNothing
-	,	.atom                 = data->atom
-	};
-
-	window_ready_map[data->window_id] = false;
-}
-
-
-/**
- * \brief Mark a Window as "ready".
- *
- * The X11/XCB specification recommends that any drawing operations should be 
- * delayed until _after_ the first __expose__ event.  This method will mark the 
- * specified \p window_id as being ready for drawing operations.
- *
- * \see windowReadyWait()
- * \see xcbEvent(const xcb_expose_event_t* event)
- */
-void Xenium::windowReadySet(const WindowId window_id ///< The Window Id
-	) noexcept
-{
-	window_ready_map[window_id] = true;
-}
-
-
-/**
- * \brief Wait for a Window to be "ready".
- *
- * The X11/XCB specification recommends that any drawing operations should be 
- * delayed until _after_ the first __expose__ event.  This method will block 
- * until the Window has been marked as being "ready".
- *
- * \see windowReadySet()
- */
-void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
-	) noexcept
-{
-	xcb_map_window(this->connection, window_id);
-	xcb_flush(this->connection);
-
-	while(window_ready_map[window_id] == false)
-	{
-		usleep(42);
-	}
-}
-
 // }}}
 // {{{ Window
-// {{{ Window : Documentation
-
-/**
- * \enum Xenium::WindowDecorations
- *
- * \brief Who is responsible for rendering the decorations.
- */
-/* Disabled because Doxygen does not support "enum classes"
- *
- * \var Xenium::Client_Side
- * \brief The user app must draw the decorations.
- *
- * \var Xenium::Server_Side
- * \brief The X11 server will draw the decorations.
- */
-
-/**
- * \enum Xenium::WindowMode
- *
- * \brief All the available window modes.
- */
-/* Disabled because Doxygen does not support "enum classes"
- *
- * \var Xenium::Normal
- * \brief A normal window.
- *
- * \var Xenium::Fullscreen
- * \brief A window that uses the entire screen, no borders.
- *
- * \var Xenium::Maximized
- * \brief A window that uses as much of the screen as possible.
- */
-
-
-/**
- * \name Lambdas
- * \{
- */
-
-/**
- * \typedef Xenium::Lambda
- *
- * \brief A Lambda that has no parameters.
- */
-
-/**
- * \typedef Xenium::LambdaAxis
- *
- * \brief A Lambda that has parameters: PointerAxis and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaBool
- *
- * \brief A Lambda that has a parameter: bool.
- */
-
-/**
- * \typedef Xenium::LambdaButtonMm
- *
- * \brief A Lambda that has parameters: PointerButton, PointMm and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaButtonPercent
- *
- * \brief A Lambda that has parameters: PointerButton, PointPercent and 
- * KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaButtonPixel
- *
- * \brief A Lambda that has parameters: PointerButton, PointPixel and 
- * KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaKey
- *
- * \brief A Lambda that has parameters: Key and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaPointMm
- *
- * \brief A Lambda that has parameters: PointMm and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaPointPercent
- *
- * \brief A Lambda that has parameters: PointPercent and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaPointPixel
- *
- * \brief A Lambda that has parameters: PointPixel and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaSizeMm
- *
- * \brief A Lambda that has a parameter: SizeMm.
- */
-
-/**
- * \typedef Xenium::LambdaSizePercent
- *
- * \brief A Lambda that has a parameter: SizePercent.
- */
-
-/**
- * \typedef Xenium::LambdaSizePixel
- *
- * \brief A Lambda that has a parameter: SizePixel.
- */
-
-/**
- * \typedef Xenium::LambdaWindowDecorations
- *
- * \brief A Lambda that has a parameter: WindowDecorations.
- */
-
-/**
- * \typedef Xenium::LambdaWindowMode
- *
- * \brief A Lambda that has a parameter: WindowMode.
- */
-
-/**
- * \}
- */
-
-/**
- * \typedef Xenium::WindowId
- *
- * \brief A type for better readablity.
- */
-
-// }}}
 
 /**
  * \brief Create a window.
@@ -3852,87 +3732,6 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	windowReadyWait(data.window_id);
 
 	return window;
-}
-
-
-/**
- * \brief Create the backend window data.
- *
- * This method will fill in the gaps of the provided \p window_data then setup 
- * all the data structures.  Any errors will be placed in `window_data->error`.
- */
-void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window data
-	) noexcept
-{
-	window_data->output_id = output_map.begin()->first;
-	Output& output         = output_map.begin()->second;
-
-	if(window_data->size_unit == Xenium::SizeUnit::Millimeter)
-	{
-		auto pixel = convertMmToPixel(output
-			, window_data->size_mm.width
-			, window_data->size_mm.height
-			);
-		window_data->size_pixel = {pixel.first, pixel.second};
-
-		auto percent = convertPixelToPercent(output
-			, window_data->size_pixel.width
-			, window_data->size_pixel.height
-			);
-		window_data->size_percent = {percent.first, percent.second};
-	}
-	else if(window_data->size_unit == Xenium::SizeUnit::Percent)
-	{
-		auto pixel = convertPercentToPixel(output
-			, window_data->size_percent.width
-			, window_data->size_percent.height
-			);
-		window_data->size_pixel = {pixel.first, pixel.second};
-
-		auto mm = convertPixelToMm(output
-			, window_data->size_pixel.width
-			, window_data->size_pixel.height
-			);
-		window_data->size_mm = {mm.first, mm.second};
-	}
-	else if(window_data->size_unit == Xenium::SizeUnit::Pixel)
-	{
-		auto mm = convertPixelToMm(output
-			, window_data->size_pixel.width
-			, window_data->size_pixel.height
-			);
-		window_data->size_mm = {mm.first, mm.second};
-
-		auto percent = convertPixelToPercent(output
-			, window_data->size_pixel.width
-			, window_data->size_pixel.height
-			);
-		window_data->size_percent = {percent.first, percent.second};
-	}
-	else
-	{
-		window_data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
-
-		return;
-	}
-
-	if((window_data->size_pixel.width < Window_Size_Minimum)
-		|| (window_data->size_pixel.width < Window_Size_Minimum)
-		)
-	{
-		window_data->error = ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
-
-		return;
-	}
-
-	xcbWindowCreate(window_data);
-
-	if(window_data->error)
-	{
-		return;
-	}
-
-	xcbWindowInit(window_data);
 }
 
 
@@ -4108,28 +3907,250 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 
 
 /**
- * \brief Destroy the backend window data.
+ * \brief Window decorations.
+ *
+ * \todo After an X11 connection has been established, create the frequently 
+ * used Atoms so that they don't have to be created or retrieved every time.
+ *
+ * If \p enable is `true` then the X11 Server will be requested to render the 
+ * window decorations around the window.  If \p enable is false, then the 
+ * window will be borderless.
+ *
+ * \return A error code if there was a problem.
  */
-void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The window data
+std::error_code Xenium::windowBorder(const WindowId window_id ///< The window id
+	, const bool                                enable    ///< The border flag
 	) noexcept
 {
-	xcb_destroy_window(this->connection, window_data->window_id);
+	xcb_generic_error_t generic_error;
 
-	window_decorations_map.erase(window_data->window_id);
-	window_delete_map.erase(window_data->window_id);
-	window_focus_map.erase(window_data->window_id);
-	window_keyboard.erase(window_data->window_id);
-	window_map.erase(window_data->window_id);
-	window_mode_map.erase(window_data->window_id);
-	window_on_axis_map.erase(window_data->window_id);
-	window_on_button_map.erase(window_data->window_id);
-	window_on_enter_map.erase(window_data->window_id);
-	window_on_key_map.erase(window_data->window_id);
-	window_on_leave_map.erase(window_data->window_id);
-	window_on_motion_map.erase(window_data->window_id);
-	window_output_map.erase(window_data->window_id);
-	window_ready_map.erase(window_data->window_id);
-	window_size_map.erase(window_data->window_id);
+	xcb_atom_t motif_wm_hints_atom = internAtom("_MOTIF_WM_HINTS"
+		, true
+		, generic_error
+		);
+
+	if(motif_wm_hints_atom == XCB_ATOM_NONE)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	MotifWmHints hints_data =
+	{	.flags       = 2
+	,	.functions   = 0
+	,	.decorations = enable
+	,	.input_mode  = 0
+	,	.status      = 0
+	};
+
+	xcb_void_cookie_t void_cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE // mode
+			, window_id             // window
+			, motif_wm_hints_atom   // property
+			, motif_wm_hints_atom   // type
+			, 32                    // format : pointer to 32-bit data
+			, 5                     // data_len
+			, &hints_data           // data
+			);
+
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Add a create window request to the event loop.
+ */
+void Xenium::windowCreateAddToQueue(Xenium::WindowCreateData* window_data ///< The window data
+	) noexcept
+{
+	xenium_window_mutex.lock();
+
+	window_to_create.push_back(window_data);
+
+	xenium_window_mutex.unlock();
+}
+
+
+/**
+ * \brief Add a destroy window request to the event loop.
+ */
+void Xenium::windowDestroyAddToQueue(Xenium::WindowDestroyData* window_data ///< The window data
+	) noexcept
+{
+	xenium_window_mutex.lock();
+
+	window_to_destroy.push_back(window_data);
+
+	xenium_window_mutex.unlock();
+}
+
+
+/**
+ * \brief Set the window's location.
+ *
+ * Move the window (\p window_id) to the desired \p point on the screen.
+ *
+ * \note Not currently used.
+ *
+ * \return The error code if there was a problem.
+ */
+std::error_code Xenium::windowLocationSet(const WindowId window_id ///< The window id
+	, const Xenium::PointPixel&                      point     ///< The %Window size
+	) noexcept
+{
+	xcb_configure_window_value_list_t value_list =
+	{	.x            = point.x
+	,	.y            = point.y
+	,	.width        = 0
+	,	.height       = 0
+	,	.border_width = 0
+	,	.sibling      = 0
+	,	.stack_mode   = 0
+	};
+
+	xcb_void_cookie_t void_cookie =
+		xcb_configure_window_aux_checked(this->connection
+			, window_id
+			, 0
+				| XCB_CONFIG_WINDOW_X
+				| XCB_CONFIG_WINDOW_Y
+			, &value_list
+			);
+
+	xcb_generic_error_t generic_error;
+	if(requestCheckHasError(void_cookie, generic_error))
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
+	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Minimize a window.
+ *
+ * A minimize request will be sent to the X11 Server for the provided \p 
+ * window_id.
+ *
+ * \return The error code if there was a problem.
+ */
+std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id ///< The window id
+	) noexcept
+{
+	xcb_client_message_event_t event =
+	{	.response_type = XCB_CLIENT_MESSAGE
+	,	.format        = 32
+	,	.sequence      = 0
+	,	.window        = window_id
+	,	.type          = atom_wm_change_state
+	,	.data          = { }
+	};
+	event.data.data32[0] = XCB_ICCCM_WM_STATE_ICONIC;
+
+	xcb_send_event(this->connection
+		, 0 // do not propagate
+		, this->screen->root
+		, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+		, (const char*)&event
+		);
+
+	xcb_flush(this->connection);
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Send a mode change request.
+ *
+ * The mode of the window is stored as a series of properties.  This method 
+ * will modify the properties so that the X11 Server will change the window to 
+ * get the desired effect.
+ *
+ * \return An error code if there was a problem.
+ */
+std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id    ///< The window id
+	, const Xenium::WindowMode                           current_mode ///< The current window mode
+	, const Xenium::WindowMode                           new_mode     ///< The new window mode
+	) noexcept
+{
+	xcb_client_message_event_t event =
+	{	.response_type = XCB_CLIENT_MESSAGE
+	,	.format        = 32
+	,	.sequence      = 0
+	,	.window        = window_id
+	,	.type          = atom_net_wm_state
+	,	.data          = { }
+	};
+
+	if(current_mode == Xenium::WindowMode::Normal)
+	{
+		// Do nothing
+	}
+	else
+	{
+		event.data.data32[0] = _NET_WM_STATE_REMOVE;
+
+		if(current_mode == Xenium::WindowMode::Fullscreen)
+		{
+			event.data.data32[1] = atom_net_wm_state_fullscreen;
+			event.data.data32[2] = 0;
+		}
+		else // if(current_mode == Xenium::WindowMode::Maximized)
+		{
+			event.data.data32[1] = atom_net_wm_state_maximized_horz;
+			event.data.data32[2] = atom_net_wm_state_maximized_vert;
+		}
+
+		xcb_send_event(this->connection
+			, 0 // do not propagate
+			, this->screen->root
+			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+			, (const char*)&event
+			);
+	}
+
+	if(new_mode == Xenium::WindowMode::Normal)
+	{
+		// Do nothing
+	}
+	else
+	{
+		event.data.data32[0] = _NET_WM_STATE_ADD;
+
+		if(new_mode == Xenium::WindowMode::Fullscreen)
+		{
+			event.data.data32[1] = atom_net_wm_state_fullscreen;
+			event.data.data32[2] = 0;
+		}
+		else // if(current_mode == Xenium::WindowMode::Maximized)
+		{
+			event.data.data32[1] = atom_net_wm_state_maximized_horz;
+			event.data.data32[2] = atom_net_wm_state_maximized_vert;
+		}
+
+		xcb_send_event(this->connection
+			, 0 // do not propagate
+			, this->screen->root
+			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+			, (const char*)&event
+			);
+	}
+
+	xcb_flush(this->connection);
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
@@ -4207,547 +4228,270 @@ bool Xenium::windowPropertySet(WindowId window_id     ///< The Window ID
 	return true;
 }
 
-// }}}
-// {{{ Window : Documentation
 
 /**
- * \class Xenium::Window
+ * \brief Mark a Window as "ready".
  *
- * \brief A %Window
+ * The X11/XCB specification recommends that any drawing operations should be 
+ * delayed until _after_ the first __expose__ event.  This method will mark the 
+ * specified \p window_id as being ready for drawing operations.
  *
- * The %Window is the real work-horse of Xenium.  This is the object that the 
- * user sees and interacts with.  The %Window API is rather straight forward 
- * and unsurprising, but there are some details to be aware of.
- *
- * \par Decorations
- * \parblock
- * Decorations are the window border, the title, and other things like the 
- * close button.  These items are separate from the window itself in that a 
- * window is just a rectangular area on-screen.
- *
- * Currently, there are two schools of thought, each with pro's and con's:
- * -# __Client-Side Decorations__: The application should be responsible for 
- * rendering its own decorations.
- *    - Pro: The application knows best how to present decorations in a way 
- *    that best fits it User Interface.
- *    - Con: No consistent Look-And-Feel across all applications.
- *    <br><br>
- * -# __Server-Side Decorations__: The X11 Server is responsible for rendering 
- * the window decorations.
- *    - Pro: Interacting with windows in consistent across all applications and 
- *    windows are only responsible for there rectangular area on-screen.
- *    - Con: The X11 Server's window decorations may visually clash with the 
- *    application's User Interface and/or provide redundant controls (like have 
- *    two ways of closing the application).
- *
- * X11 has traditionally been __Server-Side Decorations__, but "modern" X11 
- * Servers have no problems with borderless (no decorations) windows.  Use what 
- * works best for your application.
- * \endparblock
- *
- * \par Rendering
- * \parblock
- * Updating the contents of the window is a two-step process.  The first step 
- * is to get an "image" from the window (Xenium::Window::imageNext()).  The 
- * %Window will provide a pointer to it's internal graphics buffer, which can 
- * then be used for rendering.
- *
- * How do you do this rendering?  Well that is up to you, _Zakero %Xenium_ does 
- * not provide any graphics API.  You can write your own graphics library (not 
- * that hard), or use one that can accept a pointer and use it.  For (a bad) 
- * example: Qt5's QImage can be used with a raw data pointer.
- *
- * After writing all the required data to the "image", the second step is to 
- * tell the %Window to present the image (Xenium::Window::imagePresent()).  The 
- * %Window will then tell the X11 server to update the window contents 
- * on-screen.
- *
- * Why the method names "imageNext()" and "imagePresent()"?  That is to match 
- * the same terminology that the _Vulkan_ API uses.  _Zakero %Xenium_ is not 
- * compatible with _Vulkan_ at this point in time.
- * \endparblock
- *
- * \par Cursors
- * \parblock
- * _future_
- * \endparblock
- *
- * \par Focus
- * \parblock
- * X11 focus works very simply: either your window has focus or it doesn't.  If 
- * the window has focus, then both keyboard and mouse (pointer) events will be 
- * set to the window.
- * \endparblock
- *
- * \internal
- *
- * The %Window object just binds together data that is in the Xenium object.  
- * Since %Window is a sub-class of Xenium, it has full access to Xenium's 
- * private methods.
+ * \see windowReadyWait()
+ * \see xcbEvent(const xcb_expose_event_t* event)
  */
-
-// }}}
-// {{{ Window : Constructor / Destructor
-
-/**
- * \brief Construct a %Window.
- *
- * Using the data pointed to by \p ptr, create a new %Window instance.
- *
- * __This constructor is not intended to be used.  The correct way to create a 
- * %Window is to use one of these methods:__
- * - Xenium::windowCreate(const Xenium::SizeMm&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizeMm&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
- * - Xenium::windowCreate(const Xenium::SizePercent&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizePercent&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
- * - Xenium::windowCreate(const Xenium::SizePixel&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizePixel&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
- *
- * \internal
- *
- * The \p ptr is the Xenium::WindowCreateData in disguise.  The constructor 
- * will use the WindowCreateData to set internal values.
- */
-Xenium::Window::Window(Xenium* xenium ///< The owning Xenium instance
-	, void*                data   ///< The data to use
-	)
-	: xenium(xenium)
-	, frame_buffer(nullptr)
-	, frame_buffer_size{0, 0}
-	, window_id(((WindowCreateData*)data)->window_id)
-	, gc(((WindowCreateData*)data)->gc)
-	, frame_buffer_length(0)
-	, frame_time(0)
+void Xenium::windowReadySet(const WindowId window_id ///< The Window Id
+	) noexcept
 {
+	window_ready_map[window_id] = true;
 }
 
 
 /**
- * \brief Destroy a %Window.
+ * \brief Wait for a Window to be "ready".
+ *
+ * The X11/XCB specification recommends that any drawing operations should be 
+ * delayed until _after_ the first __expose__ event.  This method will block 
+ * until the Window has been marked as being "ready".
+ *
+ * \see windowReadySet()
  */
-Xenium::Window::~Window()
+void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
+	) noexcept
 {
-	Xenium::WindowDestroyData data =
-	{	.barrier   = {}
-	,	.window_id = this->window_id
+	xcb_map_window(this->connection, window_id);
+	xcb_flush(this->connection);
+
+	while(window_ready_map[window_id] == false)
+	{
+		usleep(42);
+	}
+}
+
+
+/**
+ * \brief Set the window's size.
+ *
+ * Using the window's size configuration and the output information, resize the 
+ * window.
+ *
+ * \return The error code if there was a problem.
+ */
+void Xenium::windowResizeTo(const Output&     output      ///< The output information
+	, Xenium::WindowSizeData&             window_size ///< The size configuration
+	, const xcb_configure_notify_event_t* event       ///< XCB Event
+	) noexcept
+{
+	bool update_size = false;
+
+	if(window_size.unit == SizeUnit::Millimeter)
+	{
+		auto pixel = convertMmToPixel(output
+			, window_size.mm.width
+			, window_size.mm.height
+			);
+
+		if(pixel.first != window_size.pixel.width
+			|| pixel.second != window_size.pixel.height
+			)
+		{
+			update_size = true;
+		}
+
+		window_size.pixel = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+		window_size.percent = {percent.first, percent.second};
+	}
+	else if(window_size.unit == SizeUnit::Percent)
+	{
+		auto pixel = convertPercentToPixel(output
+			, window_size.percent.width
+			, window_size.percent.height
+			);
+
+		if(pixel.first != window_size.pixel.width
+			|| pixel.second != window_size.pixel.height
+			)
+		{
+			update_size = true;
+			window_size.pixel = {pixel.first, pixel.second};
+		}
+
+		auto mm = convertPixelToMm(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+
+		window_size.mm = {mm.first, mm.second};
+	}
+	else
+	{
+		if(event->width != window_size.pixel.width
+			|| event->height != window_size.pixel.height
+			)
+		{
+			update_size = true;
+		}
+
+		window_size.pixel = {event->width, event->height};
+
+		auto mm = convertPixelToMm(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+		window_size.mm = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_size.pixel.width
+			, window_size.pixel.height
+			);
+		window_size.percent = {percent.first, percent.second};
+	}
+
+	windowSizeSetMinMax(output, event->window, window_size);
+
+	if(update_size)
+	{
+		window_size.pixel_lambda(window_size.pixel);
+		window_size.percent_lambda(window_size.percent);
+		window_size.mm_lambda(window_size.mm);
+
+		windowSizeSet(event->window, window_size.pixel);
+	}
+}
+
+
+/**
+ * \brief Set the window's size.
+ *
+ * Resize the window (\p window_id) to the desired pixel \p size.
+ *
+ * \return The error code if there was a problem.
+ */
+std::error_code Xenium::windowSizeSet(const WindowId window_id ///< The window id
+	, const Xenium::SizePixel&                   size      ///< The %Window size
+	) noexcept
+{
+	xcb_configure_window_value_list_t value_list =
+	{	.x            = 0
+	,	.y            = 0
+	,	.width        = (uint32_t)size.width
+	,	.height       = (uint32_t)size.height
+	,	.border_width = 0
+	,	.sibling      = 0
+	,	.stack_mode   = 0
 	};
 
-	std::future<void> barrier = data.barrier.get_future();
+	xcb_void_cookie_t void_cookie =
+		xcb_configure_window_aux_checked(this->connection
+			, window_id
+			, 0
+				| XCB_CONFIG_WINDOW_WIDTH
+				| XCB_CONFIG_WINDOW_HEIGHT
+			, &value_list
+			);
 
-	xenium->windowDestroyAddToQueue(&data);
-
-	barrier.wait();
-
-	xcb_free_gc(xenium->connection, gc);
-
-	ZAKERO_FREE(frame_buffer);
-
-	window_id = 0;
-	xenium    = nullptr;
-}
-
-// }}}
-// {{{ Window : Cursor
-
-// }}}
-// {{{ Window : Settings
-
-/**
- * \brief Change the window class.
- *
- * The \p class_name of a window is a name that is used to group windows which 
- * the Desktop Environment may be able to use.  An example of this grouping 
- * would be give all the windows a \p class_name of the application name.  
- * Another example would be to give a "file browser" \p class_name to a window 
- * that allows the user to navigate the file system.
- *
- * It is suggested to use a \p class_name that matches the basename of the 
- * application's .desktop file.  For example, "org.freedesktop.FooViewer" where 
- * the .desktop file is "org.freedesktop.FooViewer.desktop".
- *
- * \note See http://standards.freedesktop.org/desktop-entry-spec for more 
- * details.
- */
-void Xenium::Window::classSet(const std::string& class_name ///< The class name
-	) noexcept
-{
-	bool                success;
 	xcb_generic_error_t generic_error;
-
-	success = xenium->windowPropertySet(window_id
-		, XCB_ATOM_WM_CLASS
-		, class_name
-		, generic_error
-		);
-
-	if(success == false)
+	if(requestCheckHasError(void_cookie, generic_error))
 	{
 		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
 /**
- * \brief Change the window title.
+ * \brief Set the min/max size of a window.
  *
- * The window's title can be changed by using this method.  Changing the title 
- * does not change the window's name.
+ * This method will notify the X11 Server of the Window's desired minimum and 
+ * maximum size.  All values are assumed to be valid.
+ *
+ * \return An error code if there was a problem.
  */
-void Xenium::Window::titleSet(const std::string& title ///< The window title
+std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id  ///< The window id
+	, const int32_t                                    min_width  ///< The minimum width
+	, const int32_t                                    min_height ///< The minimum height
+	, const int32_t                                    max_width  ///< The maximum width
+	, const int32_t                                    max_height ///< The maximum height
 	) noexcept
 {
-	bool                success;
-	xcb_generic_error_t generic_error;
+	xcb_get_property_cookie_t property_cookie =
+		xcb_get_property(this->connection
+			, 0                        // delete
+			, window_id                // window
+			, XCB_ATOM_WM_NORMAL_HINTS // property
+			, XCB_ATOM_WM_SIZE_HINTS   // type
+			, 0                        // offset to data (32-bit)
+			, 18                       // number of 32-bit values
+			);
 
-	success = xenium->windowPropertySet(window_id
-		, XCB_ATOM_WM_NAME
-		, title
-		, generic_error
-		);
-
-	if(success == false)
+	xcb_generic_error_t* error_ptr = nullptr;
+	xcb_get_property_reply_t* property_reply =
+		xcb_get_property_reply(this->connection
+			, property_cookie
+			, &error_ptr
+			);
+	if(error_ptr)
 	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(*error_ptr) << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
-}
 
+	xcb_size_hints_t* size_hints =
+		(xcb_size_hints_t*)xcb_get_property_value(property_reply);
 
-/**
- * \brief Use the Desktop Environment borders.
- *
- * Using this method will inform the X11 Server that the window would like to 
- * use the "system borders" of the desktop environment by setting \p 
- * use_system_borders to `true`.  Or by setting \p use_system_borders to 
- * `false' the Compositor expect the window to provide its own title and 
- * borders or just be a borderlass window.
- * 
- * Even if \p use_system_borders is `true`, it may be possible for the Desktop 
- * Environment to hide the title and borders of the window.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- */
-std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations decorations ///< The requested decorations
-	) noexcept
-{
-	std::error_code error = ZAKERO_XENIUM__ERROR(Error_None);
-
-	if(decorations == WindowDecorations::Client_Side)
+	if(min_width == 0 && min_height == 0)
 	{
-		// The application will render the borders
-		error = xenium->windowBorder(window_id, false);
+		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MIN_SIZE);
 	}
 	else
 	{
-		// The X11 will render the borders
-		error = xenium->windowBorder(window_id, true);
+		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MIN_SIZE;
 	}
 
-	return error;
-}
+	size_hints->min_width  = min_width;
+	size_hints->min_height = min_height;
 
-
-/**
- * \brief Respond to "Decoration Change" events.
- *
- * The X11 Server will notify a %Window whether or not it should render its own 
- * decorations.  An example of this would be a user requesting for a %Window to 
- * be border-less.  This lambda will be called when that event happens.
- */
-void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda ///< The lambda
-	) noexcept
-{
-	WindowDecorationsData& window_decorations = xenium->window_decorations_map[window_id];
-
-	if(lambda)
+	if(max_width == 0 && max_height == 0)
 	{
-		window_decorations.lambda = lambda;
+		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MAX_SIZE);
 	}
 	else
 	{
-		window_decorations.lambda = LambdaWindowDecorations_DoNothing;
+		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MAX_SIZE;
 	}
-}
 
-// }}}
-// {{{ Window : Size
+	size_hints->max_width  = max_width;
+	size_hints->max_height = max_height;
 
-/**
- * \brief Set the window size.
- *
- * The window will be resized to the requested \p size.
- * 
- * Changing the size in this manner ignores the %Window's minimum and maximum 
- * size settings.  This can result in strange behavior when a user then 
- * attempts to manually resize the %Window.
- *
- * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
- * after millimeter conversion.
- *
- * \note This method does __will__ trigger the Resize Event.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
-	) noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
+	xcb_void_cookie_t cookie =
+		xcb_change_property_checked(this->connection
+			, XCB_PROP_MODE_REPLACE
+			, window_id
+			, XCB_ATOM_WM_NORMAL_HINTS
+			, XCB_ATOM_WM_SIZE_HINTS
+			, 32 // 32-bit values
+			, 18 // 18 values
+			, size_hints
+			);
 
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+	xcb_generic_error_t generic_error;
 
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-	window_size.unit = SizeUnit::Millimeter;
-
-	auto pixel = xenium->convertMmToPixel(output
-		, size.width
-		, size.height
-		);
-
-	if(pixel.first < Window_Size_Minimum
-		|| pixel.second < Window_Size_Minimum
-		)
+	if(requestCheckHasError(cookie, generic_error))
 	{
-		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
+
+		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	if(pixel.first == window_size.pixel.width
-		&& pixel.second == window_size.pixel.height
-		)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_None);
-	}
-
-	SizePixel size_pixel = {pixel.first, pixel.second};
-
-	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
-
-	return error;
-}
-
-
-/**
- * \brief Set the window size.
- *
- * The window will be resized to the requested \p size.
- * 
- * Changing the size in this manner ignores the %Window's minimum and maximum 
- * size settings.  This can result in strange behavior when a user then 
- * attempts to manually resize the %Window.
- *
- * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
- * after percentage conversion.
- *
- * \note This method does __will__ trigger the Resize Event.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
-	) noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-	window_size.unit = SizeUnit::Percent;
-
-	auto pixel = xenium->convertPercentToPixel(output
-		, size.width
-		, size.height
-		);
-
-	if(pixel.first < Window_Size_Minimum
-		|| pixel.second < Window_Size_Minimum
-		)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
-	}
-
-	if(pixel.first == window_size.pixel.width
-		&& pixel.second == window_size.pixel.height
-		)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_None);
-	}
-
-	SizePixel size_pixel = {pixel.first, pixel.second};
-
-	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
-
-	return error;
-}
-
-
-/**
- * \brief Set the window size.
- *
- * The window will be resized to the requested \p size.
- * 
- * Changing the size in this manner ignores the %Window's minimum and maximum 
- * size settings.  This can result in strange behavior when a user then 
- * attempts to manually resize the %Window.
- *
- * \note The size of a window __must__ be greater than `Window_Size_Minimum`.
- *
- * \note This method __will__ trigger a Resize Event.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %Window size
-	) noexcept
-{
-	if(size.width < Window_Size_Minimum
-		|| size.height < Window_Size_Minimum
-		)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
-	}
-
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-	window_size.unit = Xenium::SizeUnit::Pixel;
-
-	if(window_size.pixel.width == size.width
-		&& window_size.pixel.height == size.height
-		)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_None);
-	}
-
-	std::error_code error = xenium->windowSizeSet(window_id, size);
-
-	return error;
-}
-
-
-/**
- * \brief Set the minimum window size.
- *
- * The window will be restricted to the provided \p size_min and \p size_max.
- *
- * If either the width or height values in \p size_min or \p size_max are `0`, 
- * then the size restriction for that dimension will be disabled.
- *
- * \return An error code.  If there was no error, then `error_code.value() == 
- * 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///< The minimum size
-	, const Xenium::SizeMm&                                     size_max ///< The maximum size
-	) noexcept
-{
-	std::error_code error;
-
-	error = validateMinMax<Xenium::SizeMm>(size_min, size_max);
-	if(error)
-	{
-		return error;
-	}
-
-	std::lock_guard lock(xenium->output_mutex);
-
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	window_size.unit       = Xenium::SizeUnit::Millimeter;
-	window_size.mm_minimum = size_min;
-	window_size.mm_maximum = size_max;
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
-
-	return error;
-}
-
-
-/**
- * \brief Set the minimum window size.
- *
- * The window will be restricted to the provided \p size_min and \p size_max.
- *
- * If either the width or height values in \p size_min or \p size_max are `0`, 
- * then the size restriction for that dimension will be disabled.
- *
- * \return An error condition.  If there was no error, then 
- * `error_code.value() == 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_min ///< The minimum size
-	, const Xenium::SizePercent&                                     size_max ///< The maximum size
-	) noexcept
-{
-	std::error_code error;
-
-	error = validateMinMax<Xenium::SizePercent>(size_min, size_max);
-	if(error)
-	{
-		return error;
-	}
-
-	std::lock_guard lock(xenium->output_mutex);
-
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	window_size.unit            = Xenium::SizeUnit::Percent;
-	window_size.percent_minimum = size_min;
-	window_size.percent_maximum = size_max;
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
-
-	return error;
-}
-
-
-/**
- * \brief Set the minimum window size.
- *
- * The window will be restricted to the provided \p size_min and \p size_max.
- *
- * If either the width or height values in \p size_min or \p size_max are `0`, 
- * then the size restriction for that dimension will be disabled.
- *
- * \return An error condition.  If there was no error, then 
- * `error_code.value() == 0`.
- *
- * \thread_user
- */
-std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min ///< The minimum size
-	, const Xenium::SizePixel&                                     size_max ///< The maximum size
-	) noexcept
-{
-	std::error_code error;
-
-	error = validateMinMax<Xenium::SizePixel>(size_min, size_max);
-	if(error)
-	{
-		return error;
-	}
-
-	std::lock_guard lock(xenium->output_mutex);
-
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	window_size.unit          = Xenium::SizeUnit::Pixel;
-	window_size.pixel_minimum = size_min;
-	window_size.pixel_maximum = size_max;
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
-
-	return error;
+	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
@@ -4870,1283 +4614,8 @@ std::error_code Xenium::windowSizeSetMinMax(const Xenium::Output& output      //
 	return error;
 }
 
-
-/**
- * \brief Set the min/max size of a window.
- *
- * This method will notify the X11 Server of the Window's desired minimum and 
- * maximum size.  All values are assumed to be valid.
- *
- * \return An error code if there was a problem.
- */
-std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id  ///< The window id
-	, const int32_t                                    min_width  ///< The minimum width
-	, const int32_t                                    min_height ///< The minimum height
-	, const int32_t                                    max_width  ///< The maximum width
-	, const int32_t                                    max_height ///< The maximum height
-	) noexcept
-{
-	xcb_get_property_cookie_t property_cookie =
-		xcb_get_property(this->connection
-			, 0                        // delete
-			, window_id                // window
-			, XCB_ATOM_WM_NORMAL_HINTS // property
-			, XCB_ATOM_WM_SIZE_HINTS   // type
-			, 0                        // offset to data (32-bit)
-			, 18                       // number of 32-bit values
-			);
-
-	xcb_generic_error_t* error_ptr = nullptr;
-	xcb_get_property_reply_t* property_reply =
-		xcb_get_property_reply(this->connection
-			, property_cookie
-			, &error_ptr
-			);
-	if(error_ptr)
-	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(*error_ptr) << '\n';
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	xcb_size_hints_t* size_hints =
-		(xcb_size_hints_t*)xcb_get_property_value(property_reply);
-
-	if(min_width == 0 && min_height == 0)
-	{
-		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MIN_SIZE);
-	}
-	else
-	{
-		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MIN_SIZE;
-	}
-
-	size_hints->min_width  = min_width;
-	size_hints->min_height = min_height;
-
-	if(max_width == 0 && max_height == 0)
-	{
-		size_hints->flags &= (~XCB_ICCCM_SIZE_HINT_P_MAX_SIZE);
-	}
-	else
-	{
-		size_hints->flags |= XCB_ICCCM_SIZE_HINT_P_MAX_SIZE;
-	}
-
-	size_hints->max_width  = max_width;
-	size_hints->max_height = max_height;
-
-	xcb_void_cookie_t cookie =
-		xcb_change_property_checked(this->connection
-			, XCB_PROP_MODE_REPLACE
-			, window_id
-			, XCB_ATOM_WM_NORMAL_HINTS
-			, XCB_ATOM_WM_SIZE_HINTS
-			, 32 // 32-bit values
-			, 18 // 18 values
-			, size_hints
-			);
-
-	xcb_generic_error_t generic_error;
-
-	if(requestCheckHasError(cookie, generic_error))
-	{
-		ZAKERO_XENIUM__DEBUG << "Error: " << to_string(generic_error) << '\n';
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
-	) noexcept
-{
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	if(lambda)
-	{
-		window_size.mm_lambda = lambda;
-	}
-	else
-	{
-		window_size.mm_lambda = LambdaSizeMm_DoNothing;
-	}
-}
-
-
-/**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lambda
-	) noexcept
-{
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	if(lambda)
-	{
-		window_size.percent_lambda = lambda;
-	}
-	else
-	{
-		window_size.percent_lambda = LambdaSizePercent_DoNothing;
-	}
-}
-
-
-/**
- * \brief Respond to "Resize" events.
- *
- * "Resize" events are unique to Xenium.  After a window has been resized, the 
- * provided \p lambda will be called.  This event is triggered by the user 
- * manually resizing the %Window.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
-	) noexcept
-{
-	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
-
-	if(lambda)
-	{
-		window_size.pixel_lambda = lambda;
-	}
-	else
-	{
-		window_size.pixel_lambda = LambdaSizePixel_DoNothing;
-	}
-}
-
-// }}}
-// {{{ Window : Window Mode
-
-/**
- * \brief Get the current WindowMode
- *
- * Provides the current WindowMode of the %Window.
- *
- * \return Xenium::WindowMode
- */
-Xenium::WindowMode Xenium::Window::windowMode(
-	) const noexcept
-{
-	return xenium->window_mode_map[window_id].window_mode;
-}
-
-
-/**
- * \brief Check the WindowMode
- *
- * Compare the provided \p window_mode with the current window mode.
- *
- * \retval true  The WindowMode matches
- * \retval false The WindowMode's are different
- */
-bool Xenium::Window::windowModeIs(const Xenium::WindowMode window_mode ///< The WindowMode
-	) const noexcept
-{
-	return (window_mode == this->windowMode());
-}
-
-
-/**
- * \brief Change the window mode.
- *
- * The current mode of a window can be changed programmatically by using this 
- * method.
- *
- * \see Xenium::WindowMode
- */
-std::error_code Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The WindowMode
-	) noexcept
-{
-	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
-
-	if(data.window_mode == window_mode)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_None);
-	}
-
-	std::error_code error = xenium->windowModeSet(window_id
-		, data.window_mode // current window mode
-		, window_mode      // new window mode
-		);
-
-	if(error)
-	{
-		return error;
-	}
-
-	data.window_mode = window_mode;
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Respond to "Window Mode" events.
- *
- * The Desktop Environment is able to change the %Window's mode.  When that 
- * event happens, the provided \p lambda will be called.
- */
-void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The lambda
-	) noexcept
-{
-	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		data.lambda = LambdaWindowMode_DoNothing;
-	}
-	else
-	{
-		data.lambda = lambda;
-	}
-}
-
-// }}}
-// {{{ Window : Rendering
-
-/**
- * \brief Get an image buffer.
- *
- * To change the contents of the %Window, the image data must be updated.  This 
- * method will provide access to the %Windows image data via the \p image 
- * pointer.  The image data will have the same pixel format that was used when 
- * the %Window was created.  If the source graphic data is in a different pixel 
- * format, it must be translated to the %Window's pixel format.
- *
- * The \p size parameter is the width and height of the image data in pixels.  
- * The total length of the \p image data in bytes is:
- * > `size.width * size.height * Window->bytesPerPixel()`
- *
- * To index into the \p image data the following formula is used:
- * > `image[(size.width * y) + x] = pixel_color`
- * 
- * The contents of the data pointed to by \p image is undefined and may contain 
- * "garbage".
- *
- * \parcode
- * // Pixel Format: ARGB8888 -- 32-bit, 4 bytes per pixel
- * uint32_t* image = nullptr;
- * Xenium::SizePixel size;
- *
- * window->imageNext((uint8_t*)image, size);
- *
- * uint32_t color = 0x00ffffff; // White
- * uint32_t x = 44;
- * uint32_t y = 22;
- *
- * uint32_t pixel = (y * size.width) + x;
- * image[pixel] = color;
- * \endparcode
- *
- * \return An error code.
- */
-std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
-	, Xenium::SizePixel&                        size  ///< The image size
-	) noexcept
-{
-	if(frame_buffer)
-	{
-		free(frame_buffer);
-	}
-
-	frame_buffer_size   = xenium->window_size_map[window_id].pixel;
-	frame_buffer_length = frame_buffer_size.width * frame_buffer_size.height * 4;
-	frame_buffer        = (uint8_t*)malloc(sizeof(uint8_t) * frame_buffer_length);
-
-	image = frame_buffer;
-	size  = frame_buffer_size;
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Render the image.
- *
- * Once the image data has been updated, this method will schedule the data to 
- * be rendered.
- */
-void Xenium::Window::imagePresent() noexcept
-{
-	xcb_put_image(xenium->connection
-		, XCB_IMAGE_FORMAT_Z_PIXMAP
-		, window_id
-		, gc
-		, frame_buffer_size.width
-		, frame_buffer_size.height
-		, 0
-		, 0
-		, 0
-		, xenium->screen->root_depth
-		, frame_buffer_length
-		, frame_buffer
-		);
-
-	frame_time = ZAKERO_STEADY_TIME_NOW(milliseconds);
-}
-
-
-/**
- * \brief When the last frame was rendered.
- *
- * Access the time, in milliseconds, of most recent window update.  The delta 
- * between two window timestamps can be used to determine the 
- * Frames-Per-Second.
- *
- * \note This is not based on wall-time.
- *
- * \return The time.
- */
-uint32_t Xenium::Window::time() const noexcept
-{
-	return frame_time;
-}
-
-// }}}
-// {{{ Window : Misc
-
-/**
- * \brief Get the number of bytes per pixel.
- *
- * The number of bytes required to represent one pixel is provided by this 
- * method.
- *
- * \return The number of bytes per pixel.
- */
-uint8_t Xenium::Window::bytesPerPixel() const noexcept
-{
-	return 4; // ARGB8888
-}
-
-
-/**
- * \brief Minimize the window.
- *
- * Using this method will remove the window from view.  The user will have to 
- * use the Desktop Environment to have the window redisplayed, perhaps using 
- * the task viewer.
- */
-std::error_code Xenium::Window::minimize() noexcept
-{
-	std::error_code error = xenium->windowMinimize(window_id);
-
-	return error;
-}
-
-// }}}
-// {{{ Window : Conversion
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p point will be converted to millimeters.
- *
- * \return The converted point.
- *
- * \thread_user
- */
-Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///< The point to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPixelToMm(output, point.x, point.y);
-
-	return {0, value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p point will be converted to a percentage.
- *
- * \return The converted point.
- *
- * \thread_user
- */
-Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& point ///< The point to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPixelToPercent(output, point.x, point.y);
-
-	return {0, value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p point will be converted to pixels.
- *
- * \return The converted point.
- *
- * \thread_user
- */
-Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point ///< The point to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertMmToPixel(output, point.x, point.y);
-
-	return {0, value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p point will be converted to pixels.
- *
- * \return The converted point.
- *
- * \thread_user
- */
-Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& point ///< The point to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPercentToPixel(output, point.x, point.y);
-
-	return {0, value.first, value.second};
-
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p size will be converted to millimeters.
- *
- * \return The converted size.
- *
- * \thread_user
- */
-Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< The size to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPixelToMm(output, size.width, size.height);
-
-	return {value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p size will be converted to a percentage.
- *
- * \return The converted size.
- *
- * \thread_user
- */
-Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& size ///< The size to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPixelToPercent(output, size.width, size.height);
-
-	return {value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p size will be converted to pixels.
- *
- * \return The converted size.
- *
- * \thread_user
- */
-Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///< The size to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertMmToPixel(output, size.width, size.height);
-
-	return {value.first, value.second};
-}
-
-
-/**
- * \brief Unit conversion.
- *
- * The provided \p size will be converted to pixels.
- *
- * \return The converted size.
- *
- * \thread_user
- */
-Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size ///< The size to convert
-	) const noexcept
-{
-	std::lock_guard lock(xenium->output_mutex);
-
-	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
-
-	auto value = xenium->convertPercentToPixel(output, size.width, size.height);
-
-	return {value.first, value.second};
-}
-
-// }}}
-// {{{ Window : Event Handling
-
-/**
- * \brief Respond to "Close Request" events.
- *
- * When a user requests a %Window to be close via the Desktop Environment, the 
- * Desktop Environment __may__ send an event to the window so that the 
- * application can decide how to handle the request.  The provided \p lambda 
- * will be called when the window receives a "Close Request" event.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- */
-void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	WindowDeleteData& window_delete = xenium->window_delete_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		window_delete.close_request_lambda = Lambda_DoNothing;
-	}
-	else
-	{
-		window_delete.close_request_lambda = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Active" change events.
- *
- * When a window becomes active (gains focus) or becomes inactive (loses 
- * focus), an "Active" event is emitted.  The provided \p lambda will be called 
- * to handle the change of the "Active" status.
- *
- * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
- *
- * \note Execution of the lambda will block the Xenium object's event handling.  
- * So keep the lambda as small and simple as possible for best performance.
- */
-void Xenium::Window::onFocusChange(Xenium::LambdaBool lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_focus_map[window_id] = LambdaBool_DoNothing;
-	}
-	else
-	{
-		xenium->window_focus_map[window_id] = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Keyboard Enter" events.
- *
- * When a window gains keyboard focus, the provided \p lambda will be called.
- */
-void Xenium::Window::keyboardOnEnter(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_keyboard[window_id].on_enter = Lambda_DoNothing;
-	}
-	else
-	{
-		xenium->window_keyboard[window_id].on_enter = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Keyboard Leave" events.
- *
- * When a window loses keyboard focus, the provided \p lambda will be called.
- */
-void Xenium::Window::keyboardOnLeave(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_keyboard[window_id].on_leave = Lambda_DoNothing;
-	}
-	else
-	{
-		xenium->window_keyboard[window_id].on_leave = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Keyboard Key" events.
- *
- * When a Window has _Keyboard Focus_, it will be notified of key press, key 
- * repeat, and key release events.  The provided \p lambda will be called when 
- * these events happen.
- */
-void Xenium::Window::keyboardOnKey(Xenium::LambdaKey lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_on_key_map[window_id] = LambdaKey_DoNothing;
-	}
-	else
-	{
-		xenium->window_on_key_map[window_id] = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Button" events.
- *
- * When the user clicks on a _mouse button_ or some other pointer device, it 
- * generates a "Pointer Button" event.  The provided \p lambda will be called 
- * when that event occurs.
- */
-void Xenium::Window::pointerOnButton(Xenium::LambdaButtonMm lambda ///< The lambda
-	) noexcept
-{
-	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_button.lambda_mm = LambdaButtonMm_DoNothing;
-	}
-	else
-	{
-		on_button.lambda_mm = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Button" events.
- *
- * When the user clicks on a _mouse button_ or some other pointer device, it 
- * generates a "Pointer Button" event.  The provided \p lambda will be called 
- * when that event occurs.
- */
-void Xenium::Window::pointerOnButton(Xenium::LambdaButtonPercent lambda ///< The lambda
-	) noexcept
-{
-	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_button.lambda_percent = LambdaButtonPercent_DoNothing;
-	}
-	else
-	{
-		on_button.lambda_percent = lambda;
-	}
-
-}
-
-
-/**
- * \brief Respond to "Pointer Button" events.
- *
- * When the user clicks on a _mouse button_ or some other pointer device, it 
- * generates a "Pointer Button" event.  The provided \p lambda will be called 
- * when that event occurs.
- */
-void Xenium::Window::pointerOnButton(Xenium::LambdaButtonPixel lambda ///< The lambda
-	) noexcept
-{
-	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_button.lambda_pixel = LambdaButtonPixel_DoNothing;
-	}
-	else
-	{
-		on_button.lambda_pixel = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Enter" events.
- *
- * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
- * Enter" event occurs.  The provided \p lambda will be called when that event 
- * happens.
- *
- * This event does not occur when the pointer enters the boarder/decoration 
- * area, but the %Window (content) itself.
- */
-void Xenium::Window::pointerOnEnter(Xenium::LambdaPointMm lambda ///< The lambda
-	) noexcept
-{
-	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_enter.lambda_mm = LambdaPointMm_DoNothing;
-	}
-	else
-	{
-		on_enter.lambda_mm = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Enter" events.
- *
- * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
- * Enter" event occurs.  The provided \p lambda will be called when that event 
- * happens.
- *
- * This event does not occur when the pointer enters the boarder/decoration 
- * area, but the %Window (content) itself.
- */
-void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPercent lambda ///< The lambda
-	) noexcept
-{
-	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_enter.lambda_percent = LambdaPointPercent_DoNothing;
-	}
-	else
-	{
-		on_enter.lambda_percent = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Enter" events.
- *
- * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
- * Enter" event occurs.  The provided \p lambda will be called when that event 
- * happens.
- *
- * This event does not occur when the pointer enters the boarder/decoration 
- * area, but the %Window (content) itself.
- */
-void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPixel lambda ///< The lambda
-	) noexcept
-{
-	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_enter.lambda_pixel = LambdaPointPixel_DoNothing;
-	}
-	else
-	{
-		on_enter.lambda_pixel = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Leave" events.
- *
- * When the _mouse_ or some other pointer device leave the %Window, a "Pointer 
- * Leave" event occurs.  The provided \p lambda will be called when that event 
- * happens.
- */
-void Xenium::Window::pointerOnLeave(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_on_leave_map[window_id] = Lambda_DoNothing;
-	}
-	else
-	{
-		xenium->window_on_leave_map[window_id] = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Motion" events.
- *
- * When the _mouse_ or some other pointer device moves in the %Window, a 
- * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
- * that event happens.
- */
-void Xenium::Window::pointerOnMotion(Xenium::LambdaPointMm lambda ///< The lambda
-	) noexcept
-{
-	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_motion.lambda_mm = LambdaPointMm_DoNothing;
-	}
-	else
-	{
-		on_motion.lambda_mm = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Motion" events.
- *
- * When the _mouse_ or some other pointer device moves in the %Window, a 
- * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
- * that event happens.
- */
-void Xenium::Window::pointerOnMotion(Xenium::LambdaPointPercent lambda ///< The lambda
-	) noexcept
-{
-	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_motion.lambda_percent = LambdaPointPercent_DoNothing;
-	}
-	else
-	{
-		on_motion.lambda_percent = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Motion" events.
- *
- * When the _mouse_ or some other pointer device moves in the %Window, a 
- * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
- * that event happens.
- */
-void Xenium::Window::pointerOnMotion(Xenium::LambdaPointPixel lambda ///< The lambda
-	) noexcept
-{
-	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
-
-	if(lambda == nullptr)
-	{
-		on_motion.lambda_pixel = LambdaPointPixel_DoNothing;
-	}
-	else
-	{
-		on_motion.lambda_pixel = lambda;
-	}
-}
-
-
-/**
- * \brief Respond to "Pointer Axis" events.
- *
- * Some pointer devices have a "wheel" that can be rotated.  The provided \p 
- * lambda will be called when these "Pointer Axis" events happen.
- */
-void Xenium::Window::pointerOnAxis(Xenium::LambdaAxis lambda ///< The lambda
-	) noexcept
-{
-	if(lambda == nullptr)
-	{
-		xenium->window_on_axis_map[window_id] = LambdaAxis_DoNothing;
-	}
-	else
-	{
-		xenium->window_on_axis_map[window_id] = lambda;
-	}
-}
-
-
-/*
- * \brief Respond to "Pointer Axis Source" events.
- *
- * The provided \p lambda will be called when the "Pointer Axis Source" events 
- * occur.
-void Xenium::Window::pointerOnAxisSource(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
- */
-
-
-/*
- * \brief Respond to "Pointer Axis Stop" events.
- *
- * The provided \p lambda will be called when the "Pointer Axis Stop" events 
- * occur.
-void Xenium::Window::pointerOnAxisStop(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
- */
-
-
-/*
- * \brief Respond to "Pointer Axis Discrete" events.
- *
- * The provided \p lambda will be called when the "Pointer Axis Discrete" 
- * events occur.
-void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
-	) noexcept
-{
-	ZAKERO_UNUSED(lambda);
-}
- */
-
-// }}}
-// {{{ Window : Helpers
-
-/**
- * \brief Add a create window request to the event loop.
- */
-void Xenium::windowCreateAddToQueue(Xenium::WindowCreateData* window_data ///< The window data
-	) noexcept
-{
-	xenium_window_mutex.lock();
-
-	window_to_create.push_back(window_data);
-
-	xenium_window_mutex.unlock();
-}
-
-
-/**
- * \brief Add a destroy window request to the event loop.
- */
-void Xenium::windowDestroyAddToQueue(Xenium::WindowDestroyData* window_data ///< The window data
-	) noexcept
-{
-	xenium_window_mutex.lock();
-
-	window_to_destroy.push_back(window_data);
-
-	xenium_window_mutex.unlock();
-}
-
-
-/**
- * \brief Window decorations.
- *
- * \todo After an X11 connection has been established, create the frequently 
- * used Atoms so that they don't have to be created or retrieved every time.
- *
- * If \p enable is `true` then the X11 Server will be requested to render the 
- * window decorations around the window.  If \p enable is false, then the 
- * window will be borderless.
- *
- * \return A error code if there was a problem.
- */
-std::error_code Xenium::windowBorder(const WindowId window_id ///< The window id
-	, const bool                                enable    ///< The border flag
-	) noexcept
-{
-	xcb_generic_error_t generic_error;
-
-	xcb_atom_t motif_wm_hints_atom = internAtom("_MOTIF_WM_HINTS"
-		, true
-		, generic_error
-		);
-
-	if(motif_wm_hints_atom == XCB_ATOM_NONE)
-	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	MotifWmHints hints_data =
-	{	.flags       = 2
-	,	.functions   = 0
-	,	.decorations = enable
-	,	.input_mode  = 0
-	,	.status      = 0
-	};
-
-	xcb_void_cookie_t void_cookie =
-		xcb_change_property_checked(this->connection
-			, XCB_PROP_MODE_REPLACE // mode
-			, window_id             // window
-			, motif_wm_hints_atom   // property
-			, motif_wm_hints_atom   // type
-			, 32                    // format : pointer to 32-bit data
-			, 5                     // data_len
-			, &hints_data           // data
-			);
-
-	if(requestCheckHasError(void_cookie, generic_error))
-	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Set the window's location.
- *
- * Move the window (\p window_id) to the desired \p point on the screen.
- *
- * \note Not currently used.
- *
- * \return The error code if there was a problem.
- */
-std::error_code Xenium::windowLocationSet(const WindowId window_id ///< The window id
-	, const Xenium::PointPixel&                      point     ///< The %Window size
-	) noexcept
-{
-	xcb_configure_window_value_list_t value_list =
-	{	.x            = point.x
-	,	.y            = point.y
-	,	.width        = 0
-	,	.height       = 0
-	,	.border_width = 0
-	,	.sibling      = 0
-	,	.stack_mode   = 0
-	};
-
-	xcb_void_cookie_t void_cookie =
-		xcb_configure_window_aux_checked(this->connection
-			, window_id
-			, 0
-				| XCB_CONFIG_WINDOW_X
-				| XCB_CONFIG_WINDOW_Y
-			, &value_list
-			);
-
-	xcb_generic_error_t generic_error;
-	if(requestCheckHasError(void_cookie, generic_error))
-	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Set the window's size.
- *
- * Resize the window (\p window_id) to the desired pixel \p size.
- *
- * \return The error code if there was a problem.
- */
-std::error_code Xenium::windowSizeSet(const WindowId window_id ///< The window id
-	, const Xenium::SizePixel&                   size      ///< The %Window size
-	) noexcept
-{
-	xcb_configure_window_value_list_t value_list =
-	{	.x            = 0
-	,	.y            = 0
-	,	.width        = (uint32_t)size.width
-	,	.height       = (uint32_t)size.height
-	,	.border_width = 0
-	,	.sibling      = 0
-	,	.stack_mode   = 0
-	};
-
-	xcb_void_cookie_t void_cookie =
-		xcb_configure_window_aux_checked(this->connection
-			, window_id
-			, 0
-				| XCB_CONFIG_WINDOW_WIDTH
-				| XCB_CONFIG_WINDOW_HEIGHT
-			, &value_list
-			);
-
-	xcb_generic_error_t generic_error;
-	if(requestCheckHasError(void_cookie, generic_error))
-	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Set the window's size.
- *
- * Using the window's size configuration and the output information, resize the 
- * window.
- *
- * \return The error code if there was a problem.
- */
-void Xenium::windowResizeTo(const Output&     output      ///< The output information
-	, Xenium::WindowSizeData&             window_size ///< The size configuration
-	, const xcb_configure_notify_event_t* event       ///< XCB Event
-	) noexcept
-{
-	bool update_size = false;
-
-	if(window_size.unit == SizeUnit::Millimeter)
-	{
-		auto pixel = convertMmToPixel(output
-			, window_size.mm.width
-			, window_size.mm.height
-			);
-
-		if(pixel.first != window_size.pixel.width
-			|| pixel.second != window_size.pixel.height
-			)
-		{
-			update_size = true;
-		}
-
-		window_size.pixel = {pixel.first, pixel.second};
-
-		auto percent = convertPixelToPercent(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-		window_size.percent = {percent.first, percent.second};
-	}
-	else if(window_size.unit == SizeUnit::Percent)
-	{
-		auto pixel = convertPercentToPixel(output
-			, window_size.percent.width
-			, window_size.percent.height
-			);
-
-		if(pixel.first != window_size.pixel.width
-			|| pixel.second != window_size.pixel.height
-			)
-		{
-			update_size = true;
-			window_size.pixel = {pixel.first, pixel.second};
-		}
-
-		auto mm = convertPixelToMm(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-
-		window_size.mm = {mm.first, mm.second};
-	}
-	else
-	{
-		if(event->width != window_size.pixel.width
-			|| event->height != window_size.pixel.height
-			)
-		{
-			update_size = true;
-		}
-
-		window_size.pixel = {event->width, event->height};
-
-		auto mm = convertPixelToMm(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-		window_size.mm = {mm.first, mm.second};
-
-		auto percent = convertPixelToPercent(output
-			, window_size.pixel.width
-			, window_size.pixel.height
-			);
-		window_size.percent = {percent.first, percent.second};
-	}
-
-	windowSizeSetMinMax(output, event->window, window_size);
-
-	if(update_size)
-	{
-		window_size.pixel_lambda(window_size.pixel);
-		window_size.percent_lambda(window_size.percent);
-		window_size.mm_lambda(window_size.mm);
-
-		windowSizeSet(event->window, window_size.pixel);
-	}
-}
-
 // }}}
 // {{{ XCB
-
-/**
- * \brief XCB event handler.
- */
-void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
-	) noexcept
-{
-//std::cout << "Client Message:  " << to_string(*event) << '\n';
-	if(window_delete_map.contains(event->window))
-	{
-		WindowDeleteData& window_delete = window_delete_map[event->window];
-		if(event->data.data32[0] == window_delete.atom)
-		{
-			window_delete.close_request_lambda();
-		}
-	}
-}
-
 
 /**
  * \brief XCB event handler.
@@ -6229,6 +4698,24 @@ void Xenium::xcbEvent(const xcb_button_press_event_t* event ///< The XCB Event
 			};
 
 			window_on_axis_map[window_id](pointer_axis, key_modifier);
+		}
+	}
+}
+
+
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
+	) noexcept
+{
+//std::cout << "Client Message:  " << to_string(*event) << '\n';
+	if(window_delete_map.contains(event->window))
+	{
+		WindowDeleteData& window_delete = window_delete_map[event->window];
+		if(event->data.data32[0] == window_delete.atom)
+		{
+			window_delete.close_request_lambda();
 		}
 	}
 }
@@ -6794,6 +5281,89 @@ void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event ///< The XCB Event
 
 
 /**
+ * \brief Create the backend window data.
+ *
+ * \todo Rename to xcbWindowCreate()
+ *
+ * This method will fill in the gaps of the provided \p window_data then setup 
+ * all the data structures.  Any errors will be placed in `window_data->error`.
+ */
+void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window data
+	) noexcept
+{
+	window_data->output_id = output_map.begin()->first;
+	Output& output         = output_map.begin()->second;
+
+	if(window_data->size_unit == Xenium::SizeUnit::Millimeter)
+	{
+		auto pixel = convertMmToPixel(output
+			, window_data->size_mm.width
+			, window_data->size_mm.height
+			);
+		window_data->size_pixel = {pixel.first, pixel.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_percent = {percent.first, percent.second};
+	}
+	else if(window_data->size_unit == Xenium::SizeUnit::Percent)
+	{
+		auto pixel = convertPercentToPixel(output
+			, window_data->size_percent.width
+			, window_data->size_percent.height
+			);
+		window_data->size_pixel = {pixel.first, pixel.second};
+
+		auto mm = convertPixelToMm(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_mm = {mm.first, mm.second};
+	}
+	else if(window_data->size_unit == Xenium::SizeUnit::Pixel)
+	{
+		auto mm = convertPixelToMm(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_mm = {mm.first, mm.second};
+
+		auto percent = convertPixelToPercent(output
+			, window_data->size_pixel.width
+			, window_data->size_pixel.height
+			);
+		window_data->size_percent = {percent.first, percent.second};
+	}
+	else
+	{
+		window_data->error = ZAKERO_XENIUM__ERROR(Error_Unknown);
+
+		return;
+	}
+
+	if((window_data->size_pixel.width < Window_Size_Minimum)
+		|| (window_data->size_pixel.width < Window_Size_Minimum)
+		)
+	{
+		window_data->error = ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+
+		return;
+	}
+
+	xcbWindowCreate(window_data);
+
+	if(window_data->error)
+	{
+		return;
+	}
+
+	xcbWindowInit(window_data);
+}
+
+
+/**
  * \brief Create an XCB Window
  *
  * This method will create the XCB Window and the other data directly related.
@@ -6889,119 +5459,104 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 
 
 /**
- * \brief Minimize a window.
- *
- * A minimize request will be sent to the X11 Server for the provided \p 
- * window_id.
- *
- * \return The error code if there was a problem.
+ * \brief Destroy the backend window data.
  */
-std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id ///< The window id
+void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The window data
 	) noexcept
 {
-	xcb_client_message_event_t event =
-	{	.response_type = XCB_CLIENT_MESSAGE
-	,	.format        = 32
-	,	.sequence      = 0
-	,	.window        = window_id
-	,	.type          = atom_wm_change_state
-	,	.data          = { }
-	};
-	event.data.data32[0] = XCB_ICCCM_WM_STATE_ICONIC;
+	xcb_destroy_window(this->connection, window_data->window_id);
 
-	xcb_send_event(this->connection
-		, 0 // do not propagate
-		, this->screen->root
-		, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-		, (const char*)&event
-		);
-
-	xcb_flush(this->connection);
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	window_decorations_map.erase(window_data->window_id);
+	window_delete_map.erase(window_data->window_id);
+	window_focus_map.erase(window_data->window_id);
+	window_keyboard.erase(window_data->window_id);
+	window_map.erase(window_data->window_id);
+	window_mode_map.erase(window_data->window_id);
+	window_on_axis_map.erase(window_data->window_id);
+	window_on_button_map.erase(window_data->window_id);
+	window_on_enter_map.erase(window_data->window_id);
+	window_on_key_map.erase(window_data->window_id);
+	window_on_leave_map.erase(window_data->window_id);
+	window_on_motion_map.erase(window_data->window_id);
+	window_output_map.erase(window_data->window_id);
+	window_ready_map.erase(window_data->window_id);
+	window_size_map.erase(window_data->window_id);
 }
 
 
 /**
- * \brief Send a mode change request.
+ * \brief Initialize the XCB related data structures.
  *
- * The mode of the window is stored as a series of properties.  This method 
- * will modify the properties so that the X11 Server will change the window to 
- * get the desired effect.
- *
- * \return An error code if there was a problem.
+ * All the needed XCB state and data structures will be initialized using the 
+ * provided \p data.  Some of the generated values will be placed into \p data 
+ * as well (such as any `error`s encountered).
  */
-std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id    ///< The window id
-	, const Xenium::WindowMode                           current_mode ///< The current window mode
-	, const Xenium::WindowMode                           new_mode     ///< The new window mode
+void Xenium::xcbWindowInit(Xenium::WindowCreateData* data ///< The window data
 	) noexcept
 {
-	xcb_client_message_event_t event =
-	{	.response_type = XCB_CLIENT_MESSAGE
-	,	.format        = 32
-	,	.sequence      = 0
-	,	.window        = window_id
-	,	.type          = atom_net_wm_state
-	,	.data          = { }
+	window_size_map[data->window_id] =
+	{	.mm              = data->size_mm
+	,	.mm_minimum      = {0, 0}
+	,	.mm_maximum      = {0, 0}
+	,	.mm_lambda       = LambdaSizeMm_DoNothing
+	,	.percent         = data->size_percent
+	,	.percent_minimum = {0, 0}
+	,	.percent_maximum = {0, 0}
+	,	.percent_lambda  = LambdaSizePercent_DoNothing
+	,	.pixel           = data->size_pixel
+	,	.pixel_minimum   = {0, 0}
+	,	.pixel_maximum   = {0, 0}
+	,	.pixel_lambda    = LambdaSizePixel_DoNothing
+	,	.unit            = data->size_unit
 	};
 
-	if(current_mode == Xenium::WindowMode::Normal)
-	{
-		// Do nothing
-	}
-	else
-	{
-		event.data.data32[0] = _NET_WM_STATE_REMOVE;
+	window_mode_map[data->window_id] = 
+	{	.window_mode = WindowMode::Normal
+	,	.lambda      = LambdaWindowMode_DoNothing
+	};
 
-		if(current_mode == Xenium::WindowMode::Fullscreen)
-		{
-			event.data.data32[1] = atom_net_wm_state_fullscreen;
-			event.data.data32[2] = 0;
-		}
-		else // if(current_mode == Xenium::WindowMode::Maximized)
-		{
-			event.data.data32[1] = atom_net_wm_state_maximized_horz;
-			event.data.data32[2] = atom_net_wm_state_maximized_vert;
-		}
+	window_output_map[data->window_id] = data->output_id;
 
-		xcb_send_event(this->connection
-			, 0 // do not propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-	}
+	window_keyboard[data->window_id] =
+	{	.on_enter = Lambda_DoNothing
+	,	.on_leave = Lambda_DoNothing
+	};
 
-	if(new_mode == Xenium::WindowMode::Normal)
-	{
-		// Do nothing
-	}
-	else
-	{
-		event.data.data32[0] = _NET_WM_STATE_ADD;
+	window_on_key_map[data->window_id]   = LambdaKey_DoNothing;
+	window_on_leave_map[data->window_id] = Lambda_DoNothing;
+	window_on_axis_map[data->window_id]  = LambdaAxis_DoNothing;
 
-		if(new_mode == Xenium::WindowMode::Fullscreen)
-		{
-			event.data.data32[1] = atom_net_wm_state_fullscreen;
-			event.data.data32[2] = 0;
-		}
-		else // if(current_mode == Xenium::WindowMode::Maximized)
-		{
-			event.data.data32[1] = atom_net_wm_state_maximized_horz;
-			event.data.data32[2] = atom_net_wm_state_maximized_vert;
-		}
+	window_on_motion_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
 
-		xcb_send_event(this->connection
-			, 0 // do not propagate
-			, this->screen->root
-			, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
-			, (const char*)&event
-			);
-	}
+	window_on_button_map[data->window_id] =
+	{	.lambda_mm      = LambdaButtonMm_DoNothing
+	,	.lambda_percent = LambdaButtonPercent_DoNothing
+	,	.lambda_pixel   = LambdaButtonPixel_DoNothing
+	};
 
-	xcb_flush(this->connection);
+	window_on_enter_map[data->window_id] =
+	{	.lambda_mm      = LambdaPointMm_DoNothing
+	,	.lambda_percent = LambdaPointPercent_DoNothing
+	,	.lambda_pixel   = LambdaPointPixel_DoNothing
+	};
 
-	return ZAKERO_XENIUM__ERROR(Error_None);
+	window_decorations_map[data->window_id] =
+	{	.window_decorations = WindowDecorations::Server_Side
+	,	.lambda             = LambdaWindowDecorations_DoNothing
+	};
+
+	window_focus_map[data->window_id] = LambdaBool_DoNothing;
+
+	window_delete_map[data->window_id] =
+	{	.close_request_lambda = Lambda_DoNothing
+	,	.atom                 = data->atom
+	};
+
+	window_ready_map[data->window_id] = false;
 }
 
 // }}}
@@ -7424,179 +5979,6 @@ xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_co
 }
 
 // }}}
-// {{{ XCB : XKB
-
-/**
- * \brief Clear the key state.
- *
- * This method will check all current key states and emit a key release event 
- * if the key is pressed.  The time stamp of the key state will be reset to `0` 
- * to signal that the key no longer has state.
- */
-void Xenium::keyDataArrayClear() noexcept
-{
-	const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
-
-	for(auto& key_data : key_data_array)
-	{
-		Key& key = key_data.key;
-
-		if(key.time == 0)
-		{
-			continue;
-		}
-
-		key.state = KeyState::Released;
-		key.time  = time_now;
-
-		const KeyModifier& modifier  = key_data.modifier;
-		const WindowId&    window_id = key_data.window_id;
-
-		window_on_key_map[window_id](key, modifier);
-
-		key.time = 0;
-	}
-}
-
-
-/**
- * \brief Process key state.
- *
- * This method will check all the current key state checking its time stamp.  
- * If the key has remained pressed for the required amount of time, a key 
- * repeat event will be emitted.  If a was released, the key release event will 
- * be emitted and the key's time value will be reset to `0`.
- */
-void Xenium::keyDataArrayProcess() noexcept
-{
-	for(auto& key_data : key_data_array)
-	{
-		Key& key = key_data.key;
-
-		if(key.time == 0)
-		{
-			continue;
-		}
-
-		if(key.state == KeyState::Pressed)
-		{
-			key.state = KeyState::Repeat;
-
-			continue;
-		}
-
-		const WindowId& window_id = key_data.window_id;
-
-		if(key.state == KeyState::Released)
-		{
-			window_on_key_map[window_id](key, key_data.modifier);
-			key.time = 0;
-
-			continue;
-		}
-
-		auto& repeat_time = key_data.repeat_time;
-
-		const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
-
-		if(key.state == KeyState::Repeat
-			&& repeat_time < time_now
-			)
-		{
-			window_on_key_map[window_id](key, key_modifier);
-			key.time = repeat_time;
-			repeat_time += xkb_controls.repeat_interval_ms;
-
-			continue;
-		}
-	}
-}
-
-
-/**
- * \brief Initialize the XCB XKB extension.
- *
- * Initialize the XCB XKB extension.
- *
- * \return An error code if the extension does not exist.
- */
-std::error_code Xenium::xkbInit() noexcept
-{
-	xcb_xkb_use_extension_reply_t* extension_reply =
-		xcb_xkb_use_extension_reply(this->connection
-			, xcb_xkb_use_extension(this->connection, 1, 0)
-			, nullptr
-			);
-
-	if(extension_reply == nullptr)
-	{
-		return ZAKERO_XENIUM__ERROR(Error_Xcb_Xkb_Not_Available);
-	}
-
-	free(extension_reply);
-
-	return ZAKERO_XENIUM__ERROR(Error_None);
-}
-
-
-/**
- * \brief Update the XKB Controls structure.
- */
-void Xenium::xkbControlsUpdate() noexcept
-{
-	xcb_xkb_get_controls_reply_t* controls_reply =
-		xcb_xkb_get_controls_reply(this->connection
-			, xcb_xkb_get_controls(this->connection
-				, XCB_XKB_ID_USE_CORE_KBD
-				)
-			, nullptr
-			);
-
-	if(controls_reply == nullptr)
-	{
-		return;
-	}
-
-	xkb_controls.repeat_delay_ms    = controls_reply->repeatDelay;
-	xkb_controls.repeat_interval_ms = controls_reply->repeatInterval;
-
-	free(controls_reply);
-}
-
-
-/**
- * \brief Get the states of "lockable" keys.
- */
-void Xenium::xkbIndicatorStateUpdate() noexcept
-{
-	xcb_xkb_get_indicator_state_reply_t* reply =
-		xcb_xkb_get_indicator_state_reply(this->connection
-			, xcb_xkb_get_indicator_state(this->connection
-				, XCB_XKB_ID_USE_CORE_KBD
-				)
-			, nullptr
-			);
-
-	if(reply == nullptr)
-	{
-		return;
-	}
-
-	const uint32_t state     = reply->state;
-	const uint32_t caps_lock = KeyModifier_CapsLock;
-	const uint32_t num_lock  = KeyModifier_NumLock;
-
-	key_modifier.locked = 0
-		| (bool(state & XCB_XKB_INDICATOR_STATE_CAPSLOCK) * caps_lock)
-		| (bool(state & XCB_XKB_INDICATOR_STATE_NUMLOCK)  * num_lock)
-		;
-
-	free(reply);
-
-	return;
-}
-
-// }}}
 // {{{ XCB : RandR
 
 /**
@@ -7811,6 +6193,179 @@ void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///<
 }
 
 // }}}
+// {{{ XCB : XKB
+
+/**
+ * \brief Initialize the XCB XKB extension.
+ *
+ * Initialize the XCB XKB extension.
+ *
+ * \return An error code if the extension does not exist.
+ */
+std::error_code Xenium::xkbInit() noexcept
+{
+	xcb_xkb_use_extension_reply_t* extension_reply =
+		xcb_xkb_use_extension_reply(this->connection
+			, xcb_xkb_use_extension(this->connection, 1, 0)
+			, nullptr
+			);
+
+	if(extension_reply == nullptr)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Xcb_Xkb_Not_Available);
+	}
+
+	free(extension_reply);
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Clear the key state.
+ *
+ * This method will check all current key states and emit a key release event 
+ * if the key is pressed.  The time stamp of the key state will be reset to `0` 
+ * to signal that the key no longer has state.
+ */
+void Xenium::keyDataArrayClear() noexcept
+{
+	const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+
+	for(auto& key_data : key_data_array)
+	{
+		Key& key = key_data.key;
+
+		if(key.time == 0)
+		{
+			continue;
+		}
+
+		key.state = KeyState::Released;
+		key.time  = time_now;
+
+		const KeyModifier& modifier  = key_data.modifier;
+		const WindowId&    window_id = key_data.window_id;
+
+		window_on_key_map[window_id](key, modifier);
+
+		key.time = 0;
+	}
+}
+
+
+/**
+ * \brief Process key state.
+ *
+ * This method will check all the current key state checking its time stamp.  
+ * If the key has remained pressed for the required amount of time, a key 
+ * repeat event will be emitted.  If a was released, the key release event will 
+ * be emitted and the key's time value will be reset to `0`.
+ */
+void Xenium::keyDataArrayProcess() noexcept
+{
+	for(auto& key_data : key_data_array)
+	{
+		Key& key = key_data.key;
+
+		if(key.time == 0)
+		{
+			continue;
+		}
+
+		if(key.state == KeyState::Pressed)
+		{
+			key.state = KeyState::Repeat;
+
+			continue;
+		}
+
+		const WindowId& window_id = key_data.window_id;
+
+		if(key.state == KeyState::Released)
+		{
+			window_on_key_map[window_id](key, key_data.modifier);
+			key.time = 0;
+
+			continue;
+		}
+
+		auto& repeat_time = key_data.repeat_time;
+
+		const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
+
+		if(key.state == KeyState::Repeat
+			&& repeat_time < time_now
+			)
+		{
+			window_on_key_map[window_id](key, key_modifier);
+			key.time = repeat_time;
+			repeat_time += xkb_controls.repeat_interval_ms;
+
+			continue;
+		}
+	}
+}
+
+
+/**
+ * \brief Update the XKB Controls structure.
+ */
+void Xenium::xkbControlsUpdate() noexcept
+{
+	xcb_xkb_get_controls_reply_t* controls_reply =
+		xcb_xkb_get_controls_reply(this->connection
+			, xcb_xkb_get_controls(this->connection
+				, XCB_XKB_ID_USE_CORE_KBD
+				)
+			, nullptr
+			);
+
+	if(controls_reply == nullptr)
+	{
+		return;
+	}
+
+	xkb_controls.repeat_delay_ms    = controls_reply->repeatDelay;
+	xkb_controls.repeat_interval_ms = controls_reply->repeatInterval;
+
+	free(controls_reply);
+}
+
+
+/**
+ * \brief Get the states of "lockable" keys.
+ */
+void Xenium::xkbIndicatorStateUpdate() noexcept
+{
+	xcb_xkb_get_indicator_state_reply_t* reply =
+		xcb_xkb_get_indicator_state_reply(this->connection
+			, xcb_xkb_get_indicator_state(this->connection
+				, XCB_XKB_ID_USE_CORE_KBD
+				)
+			, nullptr
+			);
+
+	if(reply == nullptr)
+	{
+		return;
+	}
+
+	const uint32_t state     = reply->state;
+	const uint32_t caps_lock = KeyModifier_CapsLock;
+	const uint32_t num_lock  = KeyModifier_NumLock;
+
+	key_modifier.locked = 0
+		| (bool(state & XCB_XKB_INDICATOR_STATE_CAPSLOCK) * caps_lock)
+		| (bool(state & XCB_XKB_INDICATOR_STATE_NUMLOCK)  * num_lock)
+		;
+
+	free(reply);
+
+	return;
+}
+
+// }}}
 // {{{ XCB : Utility
 
 /**
@@ -7842,6 +6397,1450 @@ bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie   ///< Th
 	}
 
 	return false;
+}
+
+// }}}
+// {{{ Class Window : Documentation
+
+/**
+ * \class Xenium::Window
+ *
+ * \brief A %Window
+ *
+ * The %Window is the real work-horse of Xenium.  This is the object that the 
+ * user sees and interacts with.  The %Window API is rather straight forward 
+ * and unsurprising, but there are some details to be aware of.
+ *
+ * \par Decorations
+ * \parblock
+ * Decorations are the window border, the title, and other things like the 
+ * close button.  These items are separate from the window itself in that a 
+ * window is just a rectangular area on-screen.
+ *
+ * Currently, there are two schools of thought, each with pro's and con's:
+ * -# __Client-Side Decorations__: The application should be responsible for 
+ * rendering its own decorations.
+ *    - Pro: The application knows best how to present decorations in a way 
+ *    that best fits it User Interface.
+ *    - Con: No consistent Look-And-Feel across all applications.
+ *    <br><br>
+ * -# __Server-Side Decorations__: The X11 Server is responsible for rendering 
+ * the window decorations.
+ *    - Pro: Interacting with windows in consistent across all applications and 
+ *    windows are only responsible for there rectangular area on-screen.
+ *    - Con: The X11 Server's window decorations may visually clash with the 
+ *    application's User Interface and/or provide redundant controls (like have 
+ *    two ways of closing the application).
+ *
+ * X11 has traditionally been __Server-Side Decorations__, but "modern" X11 
+ * Servers have no problems with borderless (no decorations) windows.  Use what 
+ * works best for your application.
+ * \endparblock
+ *
+ * \par Rendering
+ * \parblock
+ * Updating the contents of the window is a two-step process.  The first step 
+ * is to get an "image" from the window (Xenium::Window::imageNext()).  The 
+ * %Window will provide a pointer to it's internal graphics buffer, which can 
+ * then be used for rendering.
+ *
+ * How do you do this rendering?  Well that is up to you, _Zakero %Xenium_ does 
+ * not provide any graphics API.  You can write your own graphics library (not 
+ * that hard), or use one that can accept a pointer and use it.  For (a bad) 
+ * example: Qt5's QImage can be used with a raw data pointer.
+ *
+ * After writing all the required data to the "image", the second step is to 
+ * tell the %Window to present the image (Xenium::Window::imagePresent()).  The 
+ * %Window will then tell the X11 server to update the window contents 
+ * on-screen.
+ *
+ * Why the method names "imageNext()" and "imagePresent()"?  That is to match 
+ * the same terminology that the _Vulkan_ API uses.  _Zakero %Xenium_ is not 
+ * compatible with _Vulkan_ at this point in time.
+ * \endparblock
+ *
+ * \par Cursors
+ * \parblock
+ * _future_
+ * \endparblock
+ *
+ * \par Focus
+ * \parblock
+ * X11 focus works very simply: either your window has focus or it doesn't.  If 
+ * the window has focus, then both keyboard and mouse (pointer) events will be 
+ * set to the window.
+ * \endparblock
+ *
+ * \internal
+ *
+ * The %Window object just binds together data that is in the Xenium object.  
+ * Since %Window is a sub-class of Xenium, it has full access to Xenium's 
+ * private methods.
+ */
+
+// }}}
+// {{{ Class Window : Constructor / Destructor
+
+/**
+ * \brief Construct a %Window.
+ *
+ * Using the data pointed to by \p ptr, create a new %Window instance.
+ *
+ * __This constructor is not intended to be used.  The correct way to create a 
+ * %Window is to use one of these methods:__
+ * - Xenium::windowCreate(const Xenium::SizeMm&, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizeMm&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
+ * - Xenium::windowCreate(const Xenium::SizePercent&, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizePercent&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
+ * - Xenium::windowCreate(const Xenium::SizePixel&, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizePixel&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
+ *
+ * \internal
+ *
+ * The \p ptr is the Xenium::WindowCreateData in disguise.  The constructor 
+ * will use the WindowCreateData to set internal values.
+ */
+Xenium::Window::Window(Xenium* xenium ///< The owning Xenium instance
+	, void*                data   ///< The data to use
+	)
+	: xenium(xenium)
+	, frame_buffer(nullptr)
+	, frame_buffer_size{0, 0}
+	, window_id(((WindowCreateData*)data)->window_id)
+	, gc(((WindowCreateData*)data)->gc)
+	, frame_buffer_length(0)
+	, frame_time(0)
+{
+}
+
+
+/**
+ * \brief Destroy a %Window.
+ */
+Xenium::Window::~Window()
+{
+	Xenium::WindowDestroyData data =
+	{	.barrier   = {}
+	,	.window_id = this->window_id
+	};
+
+	std::future<void> barrier = data.barrier.get_future();
+
+	xenium->windowDestroyAddToQueue(&data);
+
+	barrier.wait();
+
+	xcb_free_gc(xenium->connection, gc);
+
+	ZAKERO_FREE(frame_buffer);
+
+	window_id = 0;
+	xenium    = nullptr;
+}
+
+// }}}
+// {{{ Class Window : Configuration
+
+/**
+ * \brief Change the window class.
+ *
+ * The \p class_name of a window is a name that is used to group windows which 
+ * the Desktop Environment may be able to use.  An example of this grouping 
+ * would be give all the windows a \p class_name of the application name.  
+ * Another example would be to give a "file browser" \p class_name to a window 
+ * that allows the user to navigate the file system.
+ *
+ * It is suggested to use a \p class_name that matches the basename of the 
+ * application's .desktop file.  For example, "org.freedesktop.FooViewer" where 
+ * the .desktop file is "org.freedesktop.FooViewer.desktop".
+ *
+ * \note See http://standards.freedesktop.org/desktop-entry-spec for more 
+ * details.
+ */
+void Xenium::Window::classSet(const std::string& class_name ///< The class name
+	) noexcept
+{
+	bool                success;
+	xcb_generic_error_t generic_error;
+
+	success = xenium->windowPropertySet(window_id
+		, XCB_ATOM_WM_CLASS
+		, class_name
+		, generic_error
+		);
+
+	if(success == false)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+	}
+}
+
+
+/**
+ * \brief Change the window title.
+ *
+ * The window's title can be changed by using this method.  Changing the title 
+ * does not change the window's name.
+ */
+void Xenium::Window::titleSet(const std::string& title ///< The window title
+	) noexcept
+{
+	bool                success;
+	xcb_generic_error_t generic_error;
+
+	success = xenium->windowPropertySet(window_id
+		, XCB_ATOM_WM_NAME
+		, title
+		, generic_error
+		);
+
+	if(success == false)
+	{
+		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+	}
+}
+
+// }}}
+// {{{ Class Window : Events
+
+/**
+ * \brief Respond to "Close Request" events.
+ *
+ * When a user requests a %Window to be close via the Desktop Environment, the 
+ * Desktop Environment __may__ send an event to the window so that the 
+ * application can decide how to handle the request.  The provided \p lambda 
+ * will be called when the window receives a "Close Request" event.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ */
+void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	WindowDeleteData& window_delete = xenium->window_delete_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		window_delete.close_request_lambda = Lambda_DoNothing;
+	}
+	else
+	{
+		window_delete.close_request_lambda = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Active" change events.
+ *
+ * When a window becomes active (gains focus) or becomes inactive (loses 
+ * focus), an "Active" event is emitted.  The provided \p lambda will be called 
+ * to handle the change of the "Active" status.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::onFocusChange(Xenium::LambdaBool lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_focus_map[window_id] = LambdaBool_DoNothing;
+	}
+	else
+	{
+		xenium->window_focus_map[window_id] = lambda;
+	}
+}
+
+// }}}
+// {{{ Class Window : Decorations
+
+/**
+ * \brief Use the Desktop Environment borders.
+ *
+ * Using this method will inform the X11 Server that the window would like to 
+ * use the "system borders" of the desktop environment by setting \p 
+ * use_system_borders to `true`.  Or by setting \p use_system_borders to 
+ * `false' the Compositor expect the window to provide its own title and 
+ * borders or just be a borderlass window.
+ * 
+ * Even if \p use_system_borders is `true`, it may be possible for the Desktop 
+ * Environment to hide the title and borders of the window.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ */
+std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations decorations ///< The requested decorations
+	) noexcept
+{
+	std::error_code error = ZAKERO_XENIUM__ERROR(Error_None);
+
+	if(decorations == WindowDecorations::Client_Side)
+	{
+		// The application will render the borders
+		error = xenium->windowBorder(window_id, false);
+	}
+	else
+	{
+		// The X11 will render the borders
+		error = xenium->windowBorder(window_id, true);
+	}
+
+	return error;
+}
+
+
+/**
+ * \brief Respond to "Decoration Change" events.
+ *
+ * The X11 Server will notify a %Window whether or not it should render its own 
+ * decorations.  An example of this would be a user requesting for a %Window to 
+ * be border-less.  This lambda will be called when that event happens.
+ */
+void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda ///< The lambda
+	) noexcept
+{
+	WindowDecorationsData& window_decorations = xenium->window_decorations_map[window_id];
+
+	if(lambda)
+	{
+		window_decorations.lambda = lambda;
+	}
+	else
+	{
+		window_decorations.lambda = LambdaWindowDecorations_DoNothing;
+	}
+}
+
+// }}}
+// {{{ Class Window : Size
+
+/**
+ * \brief Set the window size.
+ *
+ * The window will be resized to the requested \p size.
+ * 
+ * Changing the size in this manner ignores the %Window's minimum and maximum 
+ * size settings.  This can result in strange behavior when a user then 
+ * attempts to manually resize the %Window.
+ *
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
+ * after millimeter conversion.
+ *
+ * \note This method does __will__ trigger the Resize Event.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
+	) noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+	window_size.unit = SizeUnit::Millimeter;
+
+	auto pixel = xenium->convertMmToPixel(output
+		, size.width
+		, size.height
+		);
+
+	if(pixel.first < Window_Size_Minimum
+		|| pixel.second < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	if(pixel.first == window_size.pixel.width
+		&& pixel.second == window_size.pixel.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	SizePixel size_pixel = {pixel.first, pixel.second};
+
+	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the window size.
+ *
+ * The window will be resized to the requested \p size.
+ * 
+ * Changing the size in this manner ignores the %Window's minimum and maximum 
+ * size settings.  This can result in strange behavior when a user then 
+ * attempts to manually resize the %Window.
+ *
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
+ * after percentage conversion.
+ *
+ * \note This method does __will__ trigger the Resize Event.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
+	) noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+	window_size.unit = SizeUnit::Percent;
+
+	auto pixel = xenium->convertPercentToPixel(output
+		, size.width
+		, size.height
+		);
+
+	if(pixel.first < Window_Size_Minimum
+		|| pixel.second < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	if(pixel.first == window_size.pixel.width
+		&& pixel.second == window_size.pixel.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	SizePixel size_pixel = {pixel.first, pixel.second};
+
+	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the window size.
+ *
+ * The window will be resized to the requested \p size.
+ * 
+ * Changing the size in this manner ignores the %Window's minimum and maximum 
+ * size settings.  This can result in strange behavior when a user then 
+ * attempts to manually resize the %Window.
+ *
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum`.
+ *
+ * \note This method __will__ trigger a Resize Event.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %Window size
+	) noexcept
+{
+	if(size.width < Window_Size_Minimum
+		|| size.height < Window_Size_Minimum
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+	}
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+	window_size.unit = Xenium::SizeUnit::Pixel;
+
+	if(window_size.pixel.width == size.width
+		&& window_size.pixel.height == size.height
+		)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	std::error_code error = xenium->windowSizeSet(window_id, size);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the minimum window size.
+ *
+ * The window will be restricted to the provided \p size_min and \p size_max.
+ *
+ * If either the width or height values in \p size_min or \p size_max are `0`, 
+ * then the size restriction for that dimension will be disabled.
+ *
+ * \return An error code.  If there was no error, then `error_code.value() == 
+ * 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///< The minimum size
+	, const Xenium::SizeMm&                                     size_max ///< The maximum size
+	) noexcept
+{
+	std::error_code error;
+
+	error = validateMinMax<Xenium::SizeMm>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	std::lock_guard lock(xenium->output_mutex);
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	window_size.unit       = Xenium::SizeUnit::Millimeter;
+	window_size.mm_minimum = size_min;
+	window_size.mm_maximum = size_max;
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the minimum window size.
+ *
+ * The window will be restricted to the provided \p size_min and \p size_max.
+ *
+ * If either the width or height values in \p size_min or \p size_max are `0`, 
+ * then the size restriction for that dimension will be disabled.
+ *
+ * \return An error condition.  If there was no error, then 
+ * `error_code.value() == 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_min ///< The minimum size
+	, const Xenium::SizePercent&                                     size_max ///< The maximum size
+	) noexcept
+{
+	std::error_code error;
+
+	error = validateMinMax<Xenium::SizePercent>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	std::lock_guard lock(xenium->output_mutex);
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	window_size.unit            = Xenium::SizeUnit::Percent;
+	window_size.percent_minimum = size_min;
+	window_size.percent_maximum = size_max;
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+	return error;
+}
+
+
+/**
+ * \brief Set the minimum window size.
+ *
+ * The window will be restricted to the provided \p size_min and \p size_max.
+ *
+ * If either the width or height values in \p size_min or \p size_max are `0`, 
+ * then the size restriction for that dimension will be disabled.
+ *
+ * \return An error condition.  If there was no error, then 
+ * `error_code.value() == 0`.
+ *
+ * \thread_user
+ */
+std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min ///< The minimum size
+	, const Xenium::SizePixel&                                     size_max ///< The maximum size
+	) noexcept
+{
+	std::error_code error;
+
+	error = validateMinMax<Xenium::SizePixel>(size_min, size_max);
+	if(error)
+	{
+		return error;
+	}
+
+	std::lock_guard lock(xenium->output_mutex);
+
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	window_size.unit          = Xenium::SizeUnit::Pixel;
+	window_size.pixel_minimum = size_min;
+	window_size.pixel_maximum = size_max;
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+	return error;
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
+	) noexcept
+{
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	if(lambda)
+	{
+		window_size.mm_lambda = lambda;
+	}
+	else
+	{
+		window_size.mm_lambda = LambdaSizeMm_DoNothing;
+	}
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lambda
+	) noexcept
+{
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	if(lambda)
+	{
+		window_size.percent_lambda = lambda;
+	}
+	else
+	{
+		window_size.percent_lambda = LambdaSizePercent_DoNothing;
+	}
+}
+
+
+/**
+ * \brief Respond to "Resize" events.
+ *
+ * "Resize" events are unique to Xenium.  After a window has been resized, the 
+ * provided \p lambda will be called.  This event is triggered by the user 
+ * manually resizing the %Window.
+ *
+ * If a lambda has been previously set that needs to be removed, then pass a 
+ * `nullptr` as the \p lambda value.
+ *
+ * \note Execution of the lambda will block the Xenium object's event handling.  
+ * So keep the lambda as small and simple as possible for best performance.
+ */
+void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
+	) noexcept
+{
+	Xenium::WindowSizeData& window_size = xenium->window_size_map[window_id];
+
+	if(lambda)
+	{
+		window_size.pixel_lambda = lambda;
+	}
+	else
+	{
+		window_size.pixel_lambda = LambdaSizePixel_DoNothing;
+	}
+}
+
+// }}}
+// {{{ Class Window : Conversion
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p point will be converted to millimeters.
+ *
+ * \return The converted point.
+ *
+ * \thread_user
+ */
+Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///< The point to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPixelToMm(output, point.x, point.y);
+
+	return {0, value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p point will be converted to a percentage.
+ *
+ * \return The converted point.
+ *
+ * \thread_user
+ */
+Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& point ///< The point to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPixelToPercent(output, point.x, point.y);
+
+	return {0, value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p point will be converted to pixels.
+ *
+ * \return The converted point.
+ *
+ * \thread_user
+ */
+Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point ///< The point to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertMmToPixel(output, point.x, point.y);
+
+	return {0, value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p point will be converted to pixels.
+ *
+ * \return The converted point.
+ *
+ * \thread_user
+ */
+Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& point ///< The point to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPercentToPixel(output, point.x, point.y);
+
+	return {0, value.first, value.second};
+
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p size will be converted to millimeters.
+ *
+ * \return The converted size.
+ *
+ * \thread_user
+ */
+Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< The size to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPixelToMm(output, size.width, size.height);
+
+	return {value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p size will be converted to a percentage.
+ *
+ * \return The converted size.
+ *
+ * \thread_user
+ */
+Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& size ///< The size to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPixelToPercent(output, size.width, size.height);
+
+	return {value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p size will be converted to pixels.
+ *
+ * \return The converted size.
+ *
+ * \thread_user
+ */
+Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///< The size to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertMmToPixel(output, size.width, size.height);
+
+	return {value.first, value.second};
+}
+
+
+/**
+ * \brief Unit conversion.
+ *
+ * The provided \p size will be converted to pixels.
+ *
+ * \return The converted size.
+ *
+ * \thread_user
+ */
+Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size ///< The size to convert
+	) const noexcept
+{
+	std::lock_guard lock(xenium->output_mutex);
+
+	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
+
+	auto value = xenium->convertPercentToPixel(output, size.width, size.height);
+
+	return {value.first, value.second};
+}
+
+// }}}
+// {{{ Class Window : Window Mode
+
+/**
+ * \brief Get the current WindowMode
+ *
+ * Provides the current WindowMode of the %Window.
+ *
+ * \return Xenium::WindowMode
+ */
+Xenium::WindowMode Xenium::Window::windowMode(
+	) const noexcept
+{
+	return xenium->window_mode_map[window_id].window_mode;
+}
+
+
+/**
+ * \brief Check the WindowMode
+ *
+ * Compare the provided \p window_mode with the current window mode.
+ *
+ * \retval true  The WindowMode matches
+ * \retval false The WindowMode's are different
+ */
+bool Xenium::Window::windowModeIs(const Xenium::WindowMode window_mode ///< The WindowMode
+	) const noexcept
+{
+	return (window_mode == this->windowMode());
+}
+
+
+/**
+ * \brief Change the window mode.
+ *
+ * The current mode of a window can be changed programmatically by using this 
+ * method.
+ *
+ * \see Xenium::WindowMode
+ */
+std::error_code Xenium::Window::windowModeSet(const Xenium::WindowMode window_mode ///< The WindowMode
+	) noexcept
+{
+	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
+
+	if(data.window_mode == window_mode)
+	{
+		return ZAKERO_XENIUM__ERROR(Error_None);
+	}
+
+	std::error_code error = xenium->windowModeSet(window_id
+		, data.window_mode // current window mode
+		, window_mode      // new window mode
+		);
+
+	if(error)
+	{
+		return error;
+	}
+
+	data.window_mode = window_mode;
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Respond to "Window Mode" events.
+ *
+ * The Desktop Environment is able to change the %Window's mode.  When that 
+ * event happens, the provided \p lambda will be called.
+ */
+void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The lambda
+	) noexcept
+{
+	Xenium::WindowModeData& data = xenium->window_mode_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		data.lambda = LambdaWindowMode_DoNothing;
+	}
+	else
+	{
+		data.lambda = lambda;
+	}
+}
+
+
+/**
+ * \brief Minimize the window.
+ *
+ * Using this method will remove the window from view.  The user will have to 
+ * use the Desktop Environment to have the window redisplayed, perhaps using 
+ * the task viewer.
+ */
+std::error_code Xenium::Window::minimize() noexcept
+{
+	std::error_code error = xenium->windowMinimize(window_id);
+
+	return error;
+}
+
+// }}}
+// {{{ Class Window : Cursor
+
+// }}}
+// {{{ Class Window : Keyboard
+
+/**
+ * \brief Respond to "Keyboard Enter" events.
+ *
+ * When a window gains keyboard focus, the provided \p lambda will be called.
+ */
+void Xenium::Window::keyboardOnEnter(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_keyboard[window_id].on_enter = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_keyboard[window_id].on_enter = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Keyboard Leave" events.
+ *
+ * When a window loses keyboard focus, the provided \p lambda will be called.
+ */
+void Xenium::Window::keyboardOnLeave(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_keyboard[window_id].on_leave = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_keyboard[window_id].on_leave = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Keyboard Key" events.
+ *
+ * When a Window has _Keyboard Focus_, it will be notified of key press, key 
+ * repeat, and key release events.  The provided \p lambda will be called when 
+ * these events happen.
+ */
+void Xenium::Window::keyboardOnKey(Xenium::LambdaKey lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_on_key_map[window_id] = LambdaKey_DoNothing;
+	}
+	else
+	{
+		xenium->window_on_key_map[window_id] = lambda;
+	}
+}
+
+// }}}
+// {{{ Class Window : Pointer
+
+/**
+ * \brief Respond to "Pointer Axis" events.
+ *
+ * Some pointer devices have a "wheel" that can be rotated.  The provided \p 
+ * lambda will be called when these "Pointer Axis" events happen.
+ */
+void Xenium::Window::pointerOnAxis(Xenium::LambdaAxis lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_on_axis_map[window_id] = LambdaAxis_DoNothing;
+	}
+	else
+	{
+		xenium->window_on_axis_map[window_id] = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Button" events.
+ *
+ * When the user clicks on a _mouse button_ or some other pointer device, it 
+ * generates a "Pointer Button" event.  The provided \p lambda will be called 
+ * when that event occurs.
+ */
+void Xenium::Window::pointerOnButton(Xenium::LambdaButtonMm lambda ///< The lambda
+	) noexcept
+{
+	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_button.lambda_mm = LambdaButtonMm_DoNothing;
+	}
+	else
+	{
+		on_button.lambda_mm = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Button" events.
+ *
+ * When the user clicks on a _mouse button_ or some other pointer device, it 
+ * generates a "Pointer Button" event.  The provided \p lambda will be called 
+ * when that event occurs.
+ */
+void Xenium::Window::pointerOnButton(Xenium::LambdaButtonPercent lambda ///< The lambda
+	) noexcept
+{
+	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_button.lambda_percent = LambdaButtonPercent_DoNothing;
+	}
+	else
+	{
+		on_button.lambda_percent = lambda;
+	}
+
+}
+
+
+/**
+ * \brief Respond to "Pointer Button" events.
+ *
+ * When the user clicks on a _mouse button_ or some other pointer device, it 
+ * generates a "Pointer Button" event.  The provided \p lambda will be called 
+ * when that event occurs.
+ */
+void Xenium::Window::pointerOnButton(Xenium::LambdaButtonPixel lambda ///< The lambda
+	) noexcept
+{
+	WindowOnButtonData& on_button = xenium->window_on_button_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_button.lambda_pixel = LambdaButtonPixel_DoNothing;
+	}
+	else
+	{
+		on_button.lambda_pixel = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Enter" events.
+ *
+ * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
+ * Enter" event occurs.  The provided \p lambda will be called when that event 
+ * happens.
+ *
+ * This event does not occur when the pointer enters the boarder/decoration 
+ * area, but the %Window (content) itself.
+ */
+void Xenium::Window::pointerOnEnter(Xenium::LambdaPointMm lambda ///< The lambda
+	) noexcept
+{
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_mm = LambdaPointMm_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_mm = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Enter" events.
+ *
+ * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
+ * Enter" event occurs.  The provided \p lambda will be called when that event 
+ * happens.
+ *
+ * This event does not occur when the pointer enters the boarder/decoration 
+ * area, but the %Window (content) itself.
+ */
+void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPercent lambda ///< The lambda
+	) noexcept
+{
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_percent = LambdaPointPercent_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_percent = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Enter" events.
+ *
+ * When the _mouse_ or some other pointer device enters the %Window, a "Pointer 
+ * Enter" event occurs.  The provided \p lambda will be called when that event 
+ * happens.
+ *
+ * This event does not occur when the pointer enters the boarder/decoration 
+ * area, but the %Window (content) itself.
+ */
+void Xenium::Window::pointerOnEnter(Xenium::LambdaPointPixel lambda ///< The lambda
+	) noexcept
+{
+	WindowOnEnterData& on_enter = xenium->window_on_enter_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_enter.lambda_pixel = LambdaPointPixel_DoNothing;
+	}
+	else
+	{
+		on_enter.lambda_pixel = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Leave" events.
+ *
+ * When the _mouse_ or some other pointer device leave the %Window, a "Pointer 
+ * Leave" event occurs.  The provided \p lambda will be called when that event 
+ * happens.
+ */
+void Xenium::Window::pointerOnLeave(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	if(lambda == nullptr)
+	{
+		xenium->window_on_leave_map[window_id] = Lambda_DoNothing;
+	}
+	else
+	{
+		xenium->window_on_leave_map[window_id] = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Motion" events.
+ *
+ * When the _mouse_ or some other pointer device moves in the %Window, a 
+ * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
+ * that event happens.
+ */
+void Xenium::Window::pointerOnMotion(Xenium::LambdaPointMm lambda ///< The lambda
+	) noexcept
+{
+	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_motion.lambda_mm = LambdaPointMm_DoNothing;
+	}
+	else
+	{
+		on_motion.lambda_mm = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Motion" events.
+ *
+ * When the _mouse_ or some other pointer device moves in the %Window, a 
+ * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
+ * that event happens.
+ */
+void Xenium::Window::pointerOnMotion(Xenium::LambdaPointPercent lambda ///< The lambda
+	) noexcept
+{
+	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_motion.lambda_percent = LambdaPointPercent_DoNothing;
+	}
+	else
+	{
+		on_motion.lambda_percent = lambda;
+	}
+}
+
+
+/**
+ * \brief Respond to "Pointer Motion" events.
+ *
+ * When the _mouse_ or some other pointer device moves in the %Window, a 
+ * "Pointer Motion" event occurs.  The provided \p lambda will be called when 
+ * that event happens.
+ */
+void Xenium::Window::pointerOnMotion(Xenium::LambdaPointPixel lambda ///< The lambda
+	) noexcept
+{
+	WindowOnMotionData& on_motion = xenium->window_on_motion_map[window_id];
+
+	if(lambda == nullptr)
+	{
+		on_motion.lambda_pixel = LambdaPointPixel_DoNothing;
+	}
+	else
+	{
+		on_motion.lambda_pixel = lambda;
+	}
+}
+
+
+/*
+ * \brief Respond to "Pointer Axis Source" events.
+ *
+ * The provided \p lambda will be called when the "Pointer Axis Source" events 
+ * occur.
+void Xenium::Window::pointerOnAxisSource(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
+}
+ */
+
+
+/*
+ * \brief Respond to "Pointer Axis Stop" events.
+ *
+ * The provided \p lambda will be called when the "Pointer Axis Stop" events 
+ * occur.
+void Xenium::Window::pointerOnAxisStop(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
+}
+ */
+
+
+/*
+ * \brief Respond to "Pointer Axis Discrete" events.
+ *
+ * The provided \p lambda will be called when the "Pointer Axis Discrete" 
+ * events occur.
+void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
+	) noexcept
+{
+	ZAKERO_UNUSED(lambda);
+}
+ */
+
+// }}}
+// {{{ Class Window : Rendering
+
+/**
+ * \brief Get an image buffer.
+ *
+ * To change the contents of the %Window, the image data must be updated.  This 
+ * method will provide access to the %Windows image data via the \p image 
+ * pointer.  The image data will have the same pixel format that was used when 
+ * the %Window was created.  If the source graphic data is in a different pixel 
+ * format, it must be translated to the %Window's pixel format.
+ *
+ * The \p size parameter is the width and height of the image data in pixels.  
+ * The total length of the \p image data in bytes is:
+ * > `size.width * size.height * Window->bytesPerPixel()`
+ *
+ * To index into the \p image data the following formula is used:
+ * > `image[(size.width * y) + x] = pixel_color`
+ * 
+ * The contents of the data pointed to by \p image is undefined and may contain 
+ * "garbage".
+ *
+ * \parcode
+ * // Pixel Format: ARGB8888 -- 32-bit, 4 bytes per pixel
+ * uint32_t* image = nullptr;
+ * Xenium::SizePixel size;
+ *
+ * window->imageNext((uint8_t*)image, size);
+ *
+ * uint32_t color = 0x00ffffff; // White
+ * uint32_t x = 44;
+ * uint32_t y = 22;
+ *
+ * uint32_t pixel = (y * size.width) + x;
+ * image[pixel] = color;
+ * \endparcode
+ *
+ * \return An error code.
+ */
+std::error_code Xenium::Window::imageNext(uint8_t*& image ///< The image data
+	, Xenium::SizePixel&                        size  ///< The image size
+	) noexcept
+{
+	if(frame_buffer)
+	{
+		free(frame_buffer);
+	}
+
+	frame_buffer_size   = xenium->window_size_map[window_id].pixel;
+	frame_buffer_length = frame_buffer_size.width * frame_buffer_size.height * 4;
+	frame_buffer        = (uint8_t*)malloc(sizeof(uint8_t) * frame_buffer_length);
+
+	image = frame_buffer;
+	size  = frame_buffer_size;
+
+	return ZAKERO_XENIUM__ERROR(Error_None);
+}
+
+
+/**
+ * \brief Render the image.
+ *
+ * Once the image data has been updated, this method will schedule the data to 
+ * be rendered.
+ */
+void Xenium::Window::imagePresent() noexcept
+{
+	xcb_put_image(xenium->connection
+		, XCB_IMAGE_FORMAT_Z_PIXMAP
+		, window_id
+		, gc
+		, frame_buffer_size.width
+		, frame_buffer_size.height
+		, 0
+		, 0
+		, 0
+		, xenium->screen->root_depth
+		, frame_buffer_length
+		, frame_buffer
+		);
+
+	frame_time = ZAKERO_STEADY_TIME_NOW(milliseconds);
+}
+
+
+/**
+ * \brief When the last frame was rendered.
+ *
+ * Access the time, in milliseconds, of most recent window update.  The delta 
+ * between two window timestamps can be used to determine the 
+ * Frames-Per-Second.
+ *
+ * \note This is not based on wall-time.
+ *
+ * \return The time.
+ */
+uint32_t Xenium::Window::time() const noexcept
+{
+	return frame_time;
+}
+
+
+/**
+ * \brief Get the number of bytes per pixel.
+ *
+ * The number of bytes required to represent one pixel is provided by this 
+ * method.
+ *
+ * \return The number of bytes per pixel.
+ */
+uint8_t Xenium::Window::bytesPerPixel() const noexcept
+{
+	return 4; // ARGB8888
 }
 
 // }}}

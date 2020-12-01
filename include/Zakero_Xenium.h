@@ -2351,19 +2351,17 @@ Xenium::~Xenium() noexcept
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
- * -# `nullptr`<br>
+ * -# \nullptr<br>
  *    The %X11 defined default.
  *
  * If a connection was successful, then a pointer to a new Xenium instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the X11 server, `nullptr` will be returned.
+ * there was an error connecting to the X11 server, \nullptr will be returned.
  *
  * \note A connection to the X11 server must be made before any windows are 
  * created.
  *
- * \return A pointer to a Xenium instance or a `nullptr` if there was an error.
- *
- * \thread_user
+ * \return A pointer to a Xenium instance or a \nullptr if there was an error.
  */
 Xenium* Xenium::connect() noexcept
 {
@@ -2381,19 +2379,17 @@ Xenium* Xenium::connect() noexcept
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
- * -# `nullptr`<br>
+ * -# \nullptr<br>
  *    The %X11 defined default.
  *
  * If a connection was successful, then a pointer to a new Xenium instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the X11 server, `nullptr` will be returned.
+ * there was an error connecting to the X11 server, \nullptr will be returned.
  *
  * \note A connection to the X11 server must be made before any windows are 
  * created.
  *
- * \return A pointer to a Xenium instance or a `nullptr` if there was an error.
- *
- * \thread_user
+ * \return A pointer to a Xenium instance or a \nullptr if there was an error.
  */
 Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
 	) noexcept
@@ -2411,12 +2407,12 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
- * -# `nullptr`<br>
+ * -# \nullptr<br>
  *    The %X11 defined default.
  *
  * If a connection was successful, then a pointer to a new Xenium instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the X11 server, `nullptr` will be returned.
+ * there was an error connecting to the X11 server, \nullptr will be returned.
  *
  * The provided \p error will be set to Xenium::Error_None or the reason for 
  * the connection failure.  An error code of `Xenium::Error_Connection_Failed` 
@@ -2426,9 +2422,7 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
  * \note A connection to the X11 server must be made before any windows are 
  * created.
  *
- * \return A pointer to a Xenium instance or a `nullptr` if there was an error.
- *
- * \thread_user
+ * \return A pointer to a Xenium instance or a \nullptr if there was an error.
  */
 Xenium* Xenium::connect(std::error_code& error ///< The error code
 	) noexcept
@@ -2445,12 +2439,12 @@ Xenium* Xenium::connect(std::error_code& error ///< The error code
  * used to determine which X11 server to connect to:
  * -# __DISPLAY__<br>
  *    Use the value of this environment variable.
- * -# `nullptr`<br>
+ * -# \nullptr<br>
  *    The %X11 defined default.
  *
  * If a connection was successful, then a pointer to a new Xenium instance will 
  * be returned.  This pointer will need to be `delete`d by the caller.  If 
- * there was an error connecting to the X11 server, `nullptr` will be returned.
+ * there was an error connecting to the X11 server, \nullptr will be returned.
  *
  * The provided \p error will be set to Xenium::Error_None or the reason for 
  * the connection failure.  An error code of `Xenium::Error_Connection_Failed` 
@@ -2460,9 +2454,7 @@ Xenium* Xenium::connect(std::error_code& error ///< The error code
  * \note A connection to the X11 server must be made before any windows are 
  * created.
  *
- * \return A pointer to a Xenium instance or a `nullptr` if there was an error.
- *
- * \thread_user
+ * \return A pointer to a Xenium instance or a \nullptr if there was an error.
  */
 Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
 	, std::error_code&                 error   ///< The error status
@@ -2519,8 +2511,6 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
  * In addition to disconnecting from X11, all allocated resources will be 
  * destroyed.  Any windows created from this instance will be invalidated and 
  * any further use of those windows will result in undefined behavior.
- *
- * \thread_user
  */
 void Xenium::disconnect() noexcept
 {
@@ -2602,8 +2592,6 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
  *
  * Calling this method will start the Event Loop and block until the Event Loop 
  * has started.
- *
- * \thread_user
  */
 void Xenium::eventLoopStart() noexcept
 {
@@ -2635,8 +2623,6 @@ void Xenium::eventLoopStart() noexcept
  * The Xenium Event Loop handles all the messages between the X11 client and 
  * server.  Without this communication, programs that use the Xenium object 
  * will not be able to do anything.
- *
- * \thread_xcb
  */
 void Xenium::eventLoop(std::stop_token thread_token ///< Used to signal thread termination
 	, Xenium*                      xenium       ///< The Xenium instance to use
@@ -2872,8 +2858,6 @@ int32_t Xenium::keyRepeatRate() const noexcept
  * empty.
  *
  * \return The Output data.
- *
- * \thread_user
  */
 Xenium::Output Xenium::output(const Xenium::OutputId output_id
 	) const noexcept
@@ -2902,8 +2886,6 @@ Xenium::Output Xenium::output(const Xenium::OutputId output_id
  * as a "snapshot in time".
  *
  * \return The Output Id's.
- *
- * \thread_user
  */
 Xenium::VectorOutputId Xenium::outputVector() const noexcept
 {
@@ -2929,8 +2911,6 @@ Xenium::VectorOutputId Xenium::outputVector() const noexcept
  * passed, then an empty string will be returned.
  *
  * \return The name of the subpixel format.
- *
- * \thread_user
  */
 std::string Xenium::outputSubpixelName(int32_t subpixel_format ///< The Subpixel format
 	) noexcept
@@ -2954,8 +2934,6 @@ std::string Xenium::outputSubpixelName(int32_t subpixel_format ///< The Subpixel
  * is passed, then an empty string will be returned.
  *
  * \return The name of the transform.
- *
- * \thread_user
  */
 std::string Xenium::outputTransformName(int32_t transform ///< The Transform
 	) noexcept
@@ -2978,8 +2956,6 @@ std::string Xenium::outputTransformName(int32_t transform ///< The Transform
  * output_id.
  *
  * \return A point that uses millimeters.
- *
- * \thread_user
  */
 Xenium::PointMm Xenium::outputConvertToMm(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::PointPixel&                              point     ///< The point to convert
@@ -3007,8 +2983,6 @@ Xenium::PointMm Xenium::outputConvertToMm(const Xenium::OutputId output_id ///< 
  * \p output_id.
  *
  * \return A point that uses a percentage.
- *
- * \thread_user
  */
 Xenium::PointPercent Xenium::outputConvertToPercent(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::PointPixel&                                        point     ///< The point to convert
@@ -3036,8 +3010,6 @@ Xenium::PointPercent Xenium::outputConvertToPercent(const Xenium::OutputId outpu
  * output_id.
  *
  * \return A point that uses pixels.
- *
- * \thread_user
  */
 Xenium::PointPixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::PointMm&                                       point     ///< The point to convert
@@ -3065,8 +3037,6 @@ Xenium::PointPixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id
  * output_id.
  *
  * \return A point that uses pixels.
- *
- * \thread_user
  */
 Xenium::PointPixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::PointPercent&                                  point     ///< The point to convert
@@ -3094,8 +3064,6 @@ Xenium::PointPixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id
  * output_id.
  *
  * \return A size that uses millimeters.
- *
- * \thread_user
  */
 Xenium::SizeMm Xenium::outputConvertToMm(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::SizePixel&                              size      ///< The size to convert
@@ -3123,8 +3091,6 @@ Xenium::SizeMm Xenium::outputConvertToMm(const Xenium::OutputId output_id ///< T
  * output_id.
  *
  * \return A size that uses a percentage.
- *
- * \thread_user
  */
 Xenium::SizePercent Xenium::outputConvertToPercent(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::SizePixel&                                        size      ///< The size to convert
@@ -3151,8 +3117,6 @@ Xenium::SizePercent Xenium::outputConvertToPercent(const Xenium::OutputId output
  * Convert a millimeter-based \p size to pixel using the provided \p output_id.
  *
  * \return A size that uses pixels.
- *
- * \thread_user
  */
 Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::SizeMm&                                       size      ///< The size to convert
@@ -3179,8 +3143,6 @@ Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id 
  * Convert a percentage-based \p size to pixel using the provided \p output_id.
  *
  * \return A size that uses pixels.
- *
- * \thread_user
  */
 Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id ///< The output device for the conversion
 	, const Xenium::SizePercent&                                  size      ///< The size to convert
@@ -3205,10 +3167,8 @@ Xenium::SizePixel Xenium::outputConvertToPixel(const Xenium::OutputId output_id 
  * \brief Notification of adding an Output device.
  *
  * When an output device has been added, the \p lambda that was provided to 
- * this method will be called.  To disable these notifications, pass `nullptr` 
+ * this method will be called.  To disable these notifications, pass \nullptr 
  * as the value of \p lambda.
- *
- * \thread_user
  */
 void Xenium::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
@@ -3229,9 +3189,7 @@ void Xenium::outputOnAdd(LambdaOutputId lambda ///< The lambda to call
  *
  * When an output device's configuration has been changed, the \p lambda that 
  * was provided to this method will be called.  To disable these notifications, 
- * pass `nullptr` as the value of \p lambda.
- *
- * \thread_user
+ * pass \nullptr as the value of \p lambda.
  */
 void Xenium::outputOnChange(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
@@ -3251,10 +3209,8 @@ void Xenium::outputOnChange(LambdaOutputId lambda ///< The lambda to call
  * \brief Notification of removing an Output device.
  *
  * When an output device has been removed, the \p lambda that was provided to 
- * this method will be called.  To disable these notifications, pass `nullptr` 
+ * this method will be called.  To disable these notifications, pass \nullptr 
  * as the value of \p lambda.
- *
- * \thread_user
  */
 void Xenium::outputOnRemove(LambdaOutputId lambda ///< The lambda to call
 	) noexcept
@@ -3559,9 +3515,6 @@ void Xenium::outputAdd(const xcb_randr_get_crtc_info_reply_t* crtc_info   ///< C
  * millimeter values.
  *
  * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
  */
 std::pair<float, float> Xenium::convertPixelToMm(const Xenium::Output& output ///< The output for the conversion
 	, int32_t                                                      xw     ///< The x or width value
@@ -3585,9 +3538,6 @@ std::pair<float, float> Xenium::convertPixelToMm(const Xenium::Output& output //
  * percentage values.
  *
  * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
  */
 std::pair<float, float> Xenium::convertPixelToPercent(const Xenium::Output& output ///< The output for the conversion
 	, int32_t                                                           xw     ///< The x or width value
@@ -3608,9 +3558,6 @@ std::pair<float, float> Xenium::convertPixelToPercent(const Xenium::Output& outp
  * pixel values.
  *
  * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
  */
 std::pair<int32_t, int32_t> Xenium::convertMmToPixel(const Xenium::Output& output ///< The output for the conversion
 	, float                                                            xw     ///< The x or width value
@@ -3634,9 +3581,6 @@ std::pair<int32_t, int32_t> Xenium::convertMmToPixel(const Xenium::Output& outpu
  * pixel values.
  *
  * \return The converted values.
- *
- * \thread_user
- * \thread_wayland
  */
 std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& output ///< The output for the conversion
 	, float                                                                 xw     ///< The x or width value
@@ -3656,7 +3600,7 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
  * \brief Create a window.
  *
  * Create a new Window with the specified \p size.  A pointer to the Window 
- * will be returned.  If there was a problem, a `nullptr` will returned.
+ * will be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
@@ -3665,7 +3609,7 @@ std::pair<int32_t, int32_t> Xenium::convertPercentToPixel(const Xenium::Output& 
  * Servers may have further size restrictions.  The recommended minimum size is 
  * `10` millimeters.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window size
 	, std::error_code&                                 error ///< The error state
@@ -3691,9 +3635,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window
  * possible window size is `Window_Size_Minimum` pixels after millimeter 
  * conversion.
  *
- * \return A pointer to the new Window or `nullptr` on error.
- *
- * \thread_user
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The window size
 	, const uint32_t                                   value_mask ///< The value mask
@@ -3742,7 +3684,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
@@ -3752,7 +3694,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
  * possible window size is `Window_Size_Minimum` pixels after percentage 
  * conversion.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The window size
 	, std::error_code&                                      error ///< The error state
@@ -3777,9 +3719,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The w
  * Servers may have further size restrictions.  For Xenium, the smallest 
  * possible window size is `Window_Size_Minimum` pixels.
  *
- * \return A pointer to the new Window or `nullptr` on error.
- *
- * \thread_user
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///< The window size
 	, const uint32_t                                        value_mask   ///< The value mask
@@ -3828,7 +3768,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
  * \brief Create a window.
  *
  * Create a new Window of the specified \p size.  A pointer to the Window will 
- * be returned.  If there was a problem, a `nullptr` will returned.
+ * be returned.  If there was a problem, a \nullptr will returned.
  *
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
@@ -3837,7 +3777,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
  * Servers may have further size restrictions.  The recommended minimum size is 
  * `100` pixels.
  *
- * \return A pointer to the new Window or `nullptr` on error.
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The window size
 	, std::error_code&                                    error ///< The error state
@@ -3862,9 +3802,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
  * Servers may have further size restrictions.  The recommended minimum size is 
  * `100` pixels.
  *
- * \return A pointer to the new Window or `nullptr` on error.
- *
- * \thread_user
+ * \return A pointer to the new Window or \nullptr on error.
  */
 Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< The window size
 	, const uint32_t                                      value_mask ///< The value mask
@@ -4262,8 +4200,6 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  *
  * Using the window's size configuration and the output information, resize the 
  * window.
- *
- * \return The error code if there was a problem.
  */
 void Xenium::windowResizeTo(const Output&     output      ///< The output information
 	, Xenium::WindowSizeData&             window_size ///< The size configuration
@@ -4732,8 +4668,6 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
  * - Metacity
  * - Openbox
  * - Xfwm
- *
- * \thread_xenium
  */
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///< XCB Event
 	) noexcept
@@ -6671,7 +6605,7 @@ void Xenium::Window::titleSet(const std::string& title ///< The window title
  * will be called when the window receives a "Close Request" event.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  */
 void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
 	) noexcept
@@ -6697,7 +6631,7 @@ void Xenium::Window::onCloseRequest(Xenium::Lambda lambda ///< The lambda
  * to handle the change of the "Active" status.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Xenium object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -6794,8 +6728,6 @@ void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda 
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Window size
 	) noexcept
@@ -6850,8 +6782,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The %Window size
 	) noexcept
@@ -6905,8 +6835,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %Window size
 	) noexcept
@@ -6944,8 +6872,6 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///< The minimum size
 	, const Xenium::SizeMm&                                     size_max ///< The maximum size
@@ -6985,8 +6911,6 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
  *
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_min ///< The minimum size
 	, const Xenium::SizePercent&                                     size_max ///< The maximum size
@@ -7026,8 +6950,6 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
  *
  * \return An error condition.  If there was no error, then 
  * `error_code.value() == 0`.
- *
- * \thread_user
  */
 std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min ///< The minimum size
 	, const Xenium::SizePixel&                                     size_max ///< The maximum size
@@ -7065,7 +6987,7 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Xenium object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -7094,7 +7016,7 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizeMm lambda ///< The lambda
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Xenium object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -7123,7 +7045,7 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizePercent lambda ///< The lamb
  * manually resizing the %Window.
  *
  * If a lambda has been previously set that needs to be removed, then pass a 
- * `nullptr` as the \p lambda value.
+ * \nullptr as the \p lambda value.
  *
  * \note Execution of the lambda will block the Xenium object's event handling.  
  * So keep the lambda as small and simple as possible for best performance.
@@ -7152,8 +7074,6 @@ void Xenium::Window::sizeOnChange(Xenium::LambdaSizePixel lambda ///< The lambda
  * The provided \p point will be converted to millimeters.
  *
  * \return The converted point.
- *
- * \thread_user
  */
 Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
@@ -7174,8 +7094,6 @@ Xenium::PointMm Xenium::Window::convertToMm(const Xenium::PointPixel& point ///<
  * The provided \p point will be converted to a percentage.
  *
  * \return The converted point.
- *
- * \thread_user
  */
 Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& point ///< The point to convert
 	) const noexcept
@@ -7196,8 +7114,6 @@ Xenium::PointPercent Xenium::Window::convertToPercent(const Xenium::PointPixel& 
  * The provided \p point will be converted to pixels.
  *
  * \return The converted point.
- *
- * \thread_user
  */
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point ///< The point to convert
 	) const noexcept
@@ -7218,8 +7134,6 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointMm& point /
  * The provided \p point will be converted to pixels.
  *
  * \return The converted point.
- *
- * \thread_user
  */
 Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& point ///< The point to convert
 	) const noexcept
@@ -7241,8 +7155,6 @@ Xenium::PointPixel Xenium::Window::convertToPixel(const Xenium::PointPercent& po
  * The provided \p size will be converted to millimeters.
  *
  * \return The converted size.
- *
- * \thread_user
  */
 Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
@@ -7263,8 +7175,6 @@ Xenium::SizeMm Xenium::Window::convertToMm(const Xenium::SizePixel& size ///< Th
  * The provided \p size will be converted to a percentage.
  *
  * \return The converted size.
- *
- * \thread_user
  */
 Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& size ///< The size to convert
 	) const noexcept
@@ -7285,8 +7195,6 @@ Xenium::SizePercent Xenium::Window::convertToPercent(const Xenium::SizePixel& si
  * The provided \p size will be converted to pixels.
  *
  * \return The converted size.
- *
- * \thread_user
  */
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///< The size to convert
 	) const noexcept
@@ -7307,8 +7215,6 @@ Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizeMm& size ///<
  * The provided \p size will be converted to pixels.
  *
  * \return The converted size.
- *
- * \thread_user
  */
 Xenium::SizePixel Xenium::Window::convertToPixel(const Xenium::SizePercent& size ///< The size to convert
 	) const noexcept

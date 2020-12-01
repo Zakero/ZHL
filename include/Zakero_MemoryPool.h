@@ -1269,7 +1269,7 @@ namespace
 	 *
 	 * The provided \p offset will be converted into an address that can be 
 	 * de-referenced as a normal C-Style pointer.  If the \p offset is not 
-	 * valid, then `nullptr` will be returned.
+	 * valid, then \nullptr will be returned.
 	 *
 	 * \parcode
 	 * off_t offset = memory_pool.alloc(256);

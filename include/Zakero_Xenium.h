@@ -477,20 +477,20 @@ namespace zakero
 			// -------------------------------------------------- //
 
 			using Lambda                  = std::function<void()>;
-			using LambdaKey               = std::function<void(const Xenium::Key&, const Xenium::KeyModifier&)>;
 			using LambdaAxis              = std::function<void(const Xenium::PointerAxis&, const Xenium::KeyModifier&)>;
+			using LambdaBool              = std::function<void(bool)>;
 			using LambdaButtonMm          = std::function<void(const Xenium::PointerButton&, const Xenium::PointMm&, const Xenium::KeyModifier&)>;
 			using LambdaButtonPercent     = std::function<void(const Xenium::PointerButton&, const Xenium::PointPercent&, const Xenium::KeyModifier&)>;
 			using LambdaButtonPixel       = std::function<void(const Xenium::PointerButton&, const Xenium::PointPixel&, const Xenium::KeyModifier&)>;
+			using LambdaKey               = std::function<void(const Xenium::Key&, const Xenium::KeyModifier&)>;
 			using LambdaPointMm           = std::function<void(const Xenium::PointMm&, const Xenium::KeyModifier&)>;
 			using LambdaPointPercent      = std::function<void(const Xenium::PointPercent&, const Xenium::KeyModifier&)>;
 			using LambdaPointPixel        = std::function<void(const Xenium::PointPixel&, const Xenium::KeyModifier&)>;
-			using LambdaBool              = std::function<void(bool)>;
-			using LambdaWindowDecorations = std::function<void(Xenium::WindowDecorations)>;
-			using LambdaWindowMode        = std::function<void(Xenium::WindowMode)>;
 			using LambdaSizeMm            = std::function<void(const Xenium::SizeMm&)>;
 			using LambdaSizePercent       = std::function<void(const Xenium::SizePercent&)>;
 			using LambdaSizePixel         = std::function<void(const Xenium::SizePixel&)>;
+			using LambdaWindowDecorations = std::function<void(Xenium::WindowDecorations)>;
+			using LambdaWindowMode        = std::function<void(Xenium::WindowMode)>;
 
 			using WindowId = uint32_t;
 
@@ -686,7 +686,7 @@ namespace zakero
 			,	Pixel
 			};
 
-			struct MotifHints
+			struct MotifWmHints
 			{
 				uint32_t flags;
 				uint32_t functions;
@@ -701,7 +701,7 @@ namespace zakero
 				std::error_code                 error;
 				Xenium::WindowId                window_id;
 				Xenium::OutputId                output_id;
-				xcb_atom_t                      atom;
+				xcb_atom_t                      atom; // Rename to "atom_close_request"
 				xcb_gcontext_t                  gc;
 				Xenium::SizeUnit                size_unit;
 				Xenium::SizeMm                  size_mm;
@@ -880,9 +880,7 @@ namespace zakero
 			[[nodiscard]] std::error_code          atomInit() noexcept;
 			[[nodiscard]] xcb_atom_t               atomCreateDeleteWindow(const WindowId, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] std::string              atomName(const xcb_atom_t) noexcept;
-			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const Xenium::WindowId, const xcb_atom_t) noexcept;
 			[[nodiscard]] std::vector<xcb_atom_t>  atomValueAtom(const Xenium::WindowId, const xcb_atom_t, xcb_generic_error_t&) noexcept;
-			[[nodiscard]] std::vector<int32_t>     atomValueData(const Xenium::WindowId, const xcb_atom_t, const xcb_atom_t, const size_t) noexcept;
 			[[nodiscard]] std::vector<int32_t>     atomValueData(const Xenium::WindowId, const xcb_atom_t, const xcb_atom_t, const size_t, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] xcb_atom_t               internAtom(const std::string&, const bool, xcb_generic_error_t&) noexcept;
 			[[nodiscard]] xcb_intern_atom_cookie_t internAtomRequest(const std::string&, const bool = true) noexcept;
@@ -908,7 +906,6 @@ namespace zakero
 			// }}}
 			// {{{ XCB : Utility
 			
-			[[nodiscard]] bool requestCheckHasError(const xcb_void_cookie_t&) noexcept;
 			[[nodiscard]] bool requestCheckHasError(const xcb_void_cookie_t&, xcb_generic_error_t&) noexcept;
 
 			// }}}
@@ -1819,6 +1816,27 @@ namespace
  */
 
 /**
+ * \struct Xenium::KeyData
+ *
+ * \brief Key State.
+ *
+ * KeyData holds the key information plus additional state used to track key 
+ * repeat events.
+ *
+ * \var Xenium::KeyData::key
+ * \brief The Key
+ *
+ * \var Xenium::KeyData::modifier
+ * \brief The last checked key modifiers
+ *
+ * \var Xenium::KeyData::window_id
+ * \brief The window id that will receive the events
+ *
+ * \var Xenium::KeyData::repeat_time
+ * \brief The time of the next key repeat event
+ */
+
+/**
  * \name Key Modifier Flags
  * \{
  */
@@ -1870,6 +1888,108 @@ namespace
  *
  * \var Xenium::KeyModifier::group
  * \brief The keyboard layout
+ */
+
+/**
+ * \struct Xenium::MotifWmHints
+ *
+ * \brief Motif Hints
+ *
+ * One of the earliest X11 %Window Managers was MOTIF and as such, the extended 
+ * functionality that it introduced became the "defacto" standard.  While most 
+ * of the MOTIF extensions have be moved into other parts of X11, some parts 
+ * still linger in the shadows.  This structure is a recreation of one those 
+ * arcane MOTIF features that is no longer available in the standard XCB 
+ * headers.
+ *
+ * Most of this functionality is ignored by modern X11 %Window Managers,
+ * however, most still honor the MWM_DECOR_ALL bit.
+ *
+ * \var Xenium::MotifWmHints::flags
+ * \brief A bitmask of what values to look for.
+ *
+ * The flags is a bitmask of the following values:
+ *
+ * | Bit    | Name                  | Meaning                                             |
+ * |--------|-----------------------|-----------------------------------------------------|
+ * | 1 << 0 | MWM_HINTS_FUNCTIONS   | Use the values in Xenium::MotifWmHints::functions   |
+ * | 1 << 1 | MWM_HINTS_DECORATIONS | Use the values in Xenium::MotifWmHints::decorations |
+ *
+ * \var Xenium::MotifWmHints::functions
+ * \brief A bitmask of allowable functions
+ *
+ * A window can allow (bit == 1) or forbid (bit == 0) certain actions from 
+ * being performed.  The following bits determine which functionality is 
+ * allowed.
+ *
+ * | Bit    | Name              | Meaning                                 |
+ * |--------|-------------------|-----------------------------------------|
+ * | 1 << 0 | MWM_FUNC_ALL      | Allow all functionality                 |
+ * | 1 << 1 | MWM_FUNC_RESIZE   | Allow resizing                          |
+ * | 1 << 2 | MWM_FUNC_MOVE     | Allow the window to be moved            |
+ * | 1 << 3 | MWM_FUNC_ICONIFY  | Allow the window to be iconified        |
+ * | 1 << 4 | MWM_FUNC_MAXIMIZE | Allow the window to be maximized        |
+ * | 1 << 5 | MWM_FUNC_CLOSE    | Allow the window to have a close button |
+ *
+ * \var Xenium::MotifWmHints::decorations
+ * \brief A bitmask of decorations
+ *
+ * | Bit    | Name                | Meaning                                 |
+ * |--------|---------------------|-----------------------------------------|
+ * | 1 << 0 | MWM_DECOR_ALL       | Enable all decorations                  |
+ * | 1 << 1 | MWM_DECOR_BORDER    | Enable the window border                |
+ * | 1 << 2 | MWM_DECOR_RESIZEH   | Enable the resize handles               |
+ * | 1 << 3 | MWM_DECOR_TITLE     | Enable the title bar                    |
+ * | 1 << 4 | MWM_DECOR_MENU      | Enable the menu button on the title bar |
+ * | 1 << 5 | MWM_DECOR_MINIMIZE  | Show the minimize button                |
+ * | 1 << 6 | MWM_DECOR_MAXIMIZE  | Show the maximize button                |
+ *
+ * \var Xenium::MotifWmHints::input_mode
+ * \brief Unused?
+ *
+ * \var Xenium::MotifWmHints::status
+ * \brief Unused?
+ */
+
+/**
+ * \struct Xenium::Output
+ *
+ * \brief Information about a output device.
+ *
+ * All the X11 information about an output device in a single structure.
+ *
+ * \var Xenium::Output::name
+ * \brief The name of the output.
+ *
+ * \var Xenium::Output::x
+ * \brief The X position within the global compositor.
+ *
+ * \var Xenium::Output::y
+ * \brief The Y position within the global compositor.
+ *
+ * \var Xenium::Output::width
+ * \brief The width of the device in hardware units.
+ *
+ * \var Xenium::Output::height
+ * \brief The height of the device in hardware units.
+ *
+ * \var Xenium::Output::physical_width_mm
+ * \brief The width of the device in millimeters.
+ *
+ * \var Xenium::Output::physical_height_mm
+ * \brief The height of the device in millimeters.
+ *
+ * \var Xenium::Output::subpixel
+ * \brief The device's subpixel orientation.
+ *
+ * \var Xenium::Output::transform
+ * \brief Transform that maps framebuffer to output.
+ *
+ * \var Xenium::Output::pixels_per_mm_horizontal
+ * \brief A pre-calculated value.
+ *
+ * \var Xenium::Output::pixels_per_mm_vertical
+ * \brief A pre-calculated value.
  */
 
 /**
@@ -3512,6 +3632,8 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  * \enum Xenium::WindowDecorations
  *
  * \brief Who is responsible for rendering the decorations.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Xenium::Client_Side
  * \brief The user app must draw the decorations.
@@ -3523,7 +3645,9 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
 /**
  * \enum Xenium::WindowMode
  *
- * All the available window modes.
+ * \brief All the available window modes.
+ */
+/* Disabled because Doxygen does not support "enum classes"
  *
  * \var Xenium::Normal
  * \brief A normal window.
@@ -3533,17 +3657,6 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  *
  * \var Xenium::Maximized
  * \brief A window that uses as much of the screen as possible.
- */
-
-
-/**
- * \internal
- *
- * \struct WindowData
- *
- * \brief Data to create a Window
- *
- * A container to hold all the data required to create a window.
  */
 
 
@@ -3559,15 +3672,15 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  */
 
 /**
- * \typedef Xenium::LambdaKey
- *
- * \brief A Lambda that has parameters: Key and KeyModifier.
- */
-
-/**
  * \typedef Xenium::LambdaAxis
  *
  * \brief A Lambda that has parameters: PointerAxis and KeyModifier.
+ */
+
+/**
+ * \typedef Xenium::LambdaBool
+ *
+ * \brief A Lambda that has a parameter: bool.
  */
 
 /**
@@ -3591,6 +3704,12 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  */
 
 /**
+ * \typedef Xenium::LambdaKey
+ *
+ * \brief A Lambda that has parameters: Key and KeyModifier.
+ */
+
+/**
  * \typedef Xenium::LambdaPointMm
  *
  * \brief A Lambda that has parameters: PointMm and KeyModifier.
@@ -3606,24 +3725,6 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  * \typedef Xenium::LambdaPointPixel
  *
  * \brief A Lambda that has parameters: PointPixel and KeyModifier.
- */
-
-/**
- * \typedef Xenium::LambdaBool
- *
- * \brief A Lambda that has a parameter: bool.
- */
-
-/**
- * \typedef Xenium::LambdaWindowDecorations
- *
- * \brief A Lambda that has a parameter: WindowDecorations.
- */
-
-/**
- * \typedef Xenium::LambdaWindowMode
- *
- * \brief A Lambda that has a parameter: WindowMode.
  */
 
 /**
@@ -3645,7 +3746,25 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  */
 
 /**
+ * \typedef Xenium::LambdaWindowDecorations
+ *
+ * \brief A Lambda that has a parameter: WindowDecorations.
+ */
+
+/**
+ * \typedef Xenium::LambdaWindowMode
+ *
+ * \brief A Lambda that has a parameter: WindowMode.
+ */
+
+/**
  * \}
+ */
+
+/**
+ * \typedef Xenium::WindowId
+ *
+ * \brief A type for better readablity.
  */
 
 // }}}
@@ -3659,7 +3778,9 @@ void Xenium::windowReadyWait(const WindowId window_id ///< The Window Id
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  The recommended minimum size is 
+ * `10` millimeters.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
@@ -3682,7 +3803,10 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size  ///< The window
  * The \p error parameter will be set to Error_None if the window was 
  * successfully created or it will be set to an appropriate error code.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  For Xenium, the smallest 
+ * possible window size is `Window_Size_Minimum` pixels after millimeter 
+ * conversion.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  *
@@ -3731,7 +3855,13 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 }
 
 
-void Xenium::windowCreate(Xenium::WindowCreateData* window_data
+/**
+ * \brief Create the backend window data.
+ *
+ * This method will fill in the gaps of the provided \p window_data then setup 
+ * all the data structures.  Any errors will be placed in `window_data->error`.
+ */
+void Xenium::windowCreate(Xenium::WindowCreateData* window_data ///< The window data
 	) noexcept
 {
 	window_data->output_id = output_map.begin()->first;
@@ -3786,6 +3916,15 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data
 		return;
 	}
 
+	if((window_data->size_pixel.width < Window_Size_Minimum)
+		|| (window_data->size_pixel.width < Window_Size_Minimum)
+		)
+	{
+		window_data->error = ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
+
+		return;
+	}
+
 	xcbWindowCreate(window_data);
 
 	if(window_data->error)
@@ -3806,7 +3945,10 @@ void Xenium::windowCreate(Xenium::WindowCreateData* window_data
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  For Xenium, the smallest 
+ * possible window size is `Window_Size_Minimum` pixels after percentage 
+ * conversion.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
@@ -3829,7 +3971,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size  ///< The w
  * The \p error parameter will be set to Error_None if the window was 
  * successfully created or it will be set to an appropriate error code.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  For Xenium, the smallest 
+ * possible window size is `Window_Size_Minimum` pixels.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  *
@@ -3887,7 +4031,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
  * The \p error parameter will be set to Xenium::Error_None on success or to an 
  * appropriate error if there was a problem.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  The recommended minimum size is 
+ * `100` pixels.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  */
@@ -3910,7 +4056,9 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size  ///< The win
  * The \p error parameter will be set to Error_None if the window was 
  * successfully created or it will be set to an appropriate error code.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `0`.  Also some X11 
+ * Servers may have further size restrictions.  The recommended minimum size is 
+ * `100` pixels.
  *
  * \return A pointer to the new Window or `nullptr` on error.
  *
@@ -3959,31 +4107,47 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 }
 
 
-void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data
+/**
+ * \brief Destroy the backend window data.
+ */
+void Xenium::xcbWindowDestroy(Xenium::WindowDestroyData* window_data ///< The window data
 	) noexcept
 {
 	xcb_destroy_window(this->connection, window_data->window_id);
 
-	window_ready_map.erase(window_data->window_id);
-	window_output_map.erase(window_data->window_id);
-	window_on_motion_map.erase(window_data->window_id);
-	window_on_leave_map.erase(window_data->window_id);
-	window_keyboard.erase(window_data->window_id);
-	window_on_key_map.erase(window_data->window_id);
-	window_on_enter_map.erase(window_data->window_id);
-	window_on_button_map.erase(window_data->window_id);
-	window_on_axis_map.erase(window_data->window_id);
-	window_focus_map.erase(window_data->window_id);
-	window_delete_map.erase(window_data->window_id);
 	window_decorations_map.erase(window_data->window_id);
+	window_delete_map.erase(window_data->window_id);
+	window_focus_map.erase(window_data->window_id);
+	window_keyboard.erase(window_data->window_id);
 	window_map.erase(window_data->window_id);
+	window_mode_map.erase(window_data->window_id);
+	window_on_axis_map.erase(window_data->window_id);
+	window_on_button_map.erase(window_data->window_id);
+	window_on_enter_map.erase(window_data->window_id);
+	window_on_key_map.erase(window_data->window_id);
+	window_on_leave_map.erase(window_data->window_id);
+	window_on_motion_map.erase(window_data->window_id);
+	window_output_map.erase(window_data->window_id);
+	window_ready_map.erase(window_data->window_id);
+	window_size_map.erase(window_data->window_id);
 }
 
 
-bool Xenium::windowPropertySet(WindowId window_id
-	, const xcb_atom_t              property
-	, const xcb_atom_t              value
-	, xcb_generic_error_t&          generic_error
+/**
+ * \brief Set a Window property.
+ *
+ * XCB properties take many shapes and forms.  This method will set an Atom \p 
+ * property with the \p value of another Atom on the window of the given \p 
+ * window_id.  If the value was not able to be set, then the \p generic_error 
+ * will be updated with the error that occurred.
+ *
+ * \retval true  The value was set.
+ * \retval false The value was not set.
+ */
+bool Xenium::windowPropertySet(WindowId window_id     ///< The Window ID
+	, const xcb_atom_t              property      ///< The property to set
+	, const xcb_atom_t              value         ///< The value to set
+	, xcb_generic_error_t&          generic_error ///< The error that occurred
 	) noexcept
 {
 	xcb_void_cookie_t void_cookie =
@@ -4007,10 +4171,21 @@ bool Xenium::windowPropertySet(WindowId window_id
 }
 
 
-bool Xenium::windowPropertySet(WindowId window_id
-	, const xcb_atom_t              property
-	, const std::string&            value
-	, xcb_generic_error_t&          generic_error
+/**
+ * \brief Set a Window property.
+ *
+ * XCB properties take many shapes and forms.  This method will set an Atom \p 
+ * property with the string \p value on the window of the given \p window_id.  
+ * If the value was not able to be set, then the \p generic_error will be 
+ * updated with the error that occurred.
+ *
+ * \retval true  The value was set.
+ * \retval false The value was not set.
+ */
+bool Xenium::windowPropertySet(WindowId window_id     ///< The Window ID
+	, const xcb_atom_t              property      ///< The property to set
+	, const std::string&            value         ///< The value to set
+	, xcb_generic_error_t&          generic_error ///< The error that occurred
 	) noexcept
 {
 	xcb_void_cookie_t void_cookie =
@@ -4057,16 +4232,17 @@ bool Xenium::windowPropertySet(WindowId window_id
  *    that best fits it User Interface.
  *    - Con: No consistent Look-And-Feel across all applications.
  *    <br><br>
- * -# __Server-Side Decorations__: The Desktop Environment is responsible for 
- * rendering the window decorations.
+ * -# __Server-Side Decorations__: The X11 Server is responsible for rendering 
+ * the window decorations.
  *    - Pro: Interacting with windows in consistent across all applications and 
  *    windows are only responsible for there rectangular area on-screen.
- *    - Con: The Desktop Environment's window decorations may visually clash 
- *    with the application's User Interface and/or provide redundant controls 
- *    (like have two ways of closing the application).
+ *    - Con: The X11 Server's window decorations may visually clash with the 
+ *    application's User Interface and/or provide redundant controls (like have 
+ *    two ways of closing the application).
  *
- * Because of this conflict, window decorations are still non-standard and vary 
- * in almost every Desktop Environment.
+ * X11 has traditionally been __Server-Side Decorations__, but "modern" X11 
+ * Servers have no problems with borderless (no decorations) windows.  Use what 
+ * works best for your application.
  * \endparblock
  *
  * \par Rendering
@@ -4082,23 +4258,25 @@ bool Xenium::windowPropertySet(WindowId window_id
  * example: Qt5's QImage can be used with a raw data pointer.
  *
  * After writing all the required data to the "image", the second step is to 
- * tell the %Window to present the image (Xenium::Window::imagePresent()).  
- * Then the %Window will tell the X11 server to update the window contents 
+ * tell the %Window to present the image (Xenium::Window::imagePresent()).  The 
+ * %Window will then tell the X11 server to update the window contents 
  * on-screen.
  *
  * Why the method names "imageNext()" and "imagePresent()"?  That is to match 
- * the same language that the _Vulkan_ API uses.  _Zakero %Xenium_ is not 
+ * the same terminology that the _Vulkan_ API uses.  _Zakero %Xenium_ is not 
  * compatible with _Vulkan_ at this point in time.
  * \endparblock
  *
  * \par Cursors
  * \parblock
- *
+ * _future_
  * \endparblock
  *
  * \par Focus
  * \parblock
- *
+ * X11 focus works very simply: either your window has focus or it doesn't.  If 
+ * the window has focus, then both keyboard and mouse (pointer) events will be 
+ * set to the window.
  * \endparblock
  *
  * \internal
@@ -4119,27 +4297,19 @@ bool Xenium::windowPropertySet(WindowId window_id
  * __This constructor is not intended to be used.  The correct way to create a 
  * %Window is to use one of these methods:__
  * - Xenium::windowCreate(const Xenium::SizeMm&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizeMm&, const wl_shm_format)
- * - Xenium::windowCreate(const Xenium::SizeMm&, const wl_shm_format, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizeMm&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
  * - Xenium::windowCreate(const Xenium::SizePercent&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizePercent&, const wl_shm_format)
- * - Xenium::windowCreate(const Xenium::SizePercent&, const wl_shm_format, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizePercent&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
  * - Xenium::windowCreate(const Xenium::SizePixel&, std::error_code&)
- * - Xenium::windowCreate(const Xenium::SizePixel&, const wl_shm_format)
- * - Xenium::windowCreate(const Xenium::SizePixel&, const wl_shm_format, std::error_code&)
+ * - Xenium::windowCreate(const Xenium::SizePixel&, const uint32_t, xcb_create_window_value_list_t&, std::error_code&) noexcept;
  *
  * \internal
  *
- * The \p ptr is the Xenium::WindowData in disguise.  The constructor will use 
- * the WindowData to create the requested window.  If there is an error during 
- * construction, %Window will be in an unknown state and the 
- * Xenium::WindowData.error will be set appropriately.
- *
- * It is expected that the caller will check the WindowData error and delete 
- * the incomplete %Window if needed.
+ * The \p ptr is the Xenium::WindowCreateData in disguise.  The constructor 
+ * will use the WindowCreateData to set internal values.
  */
-Xenium::Window::Window(Xenium* xenium
-	, void*                data
+Xenium::Window::Window(Xenium* xenium ///< The owning Xenium instance
+	, void*                data   ///< The data to use
 	)
 	: xenium(xenium)
 	, frame_buffer(nullptr)
@@ -4185,13 +4355,13 @@ Xenium::Window::~Window()
 /**
  * \brief Change the window class.
  *
- * The \p app_id of a window is a name that is used to group windows which the 
- * Desktop Environment may be able to use.  An example of this grouping would 
- * be give all the windows a \p app_id of the application name.  Another 
- * example would be to give a "file browser" \p app_id to a window that allows 
- * the user to navigate the file system.
+ * The \p class_name of a window is a name that is used to group windows which 
+ * the Desktop Environment may be able to use.  An example of this grouping 
+ * would be give all the windows a \p class_name of the application name.  
+ * Another example would be to give a "file browser" \p class_name to a window 
+ * that allows the user to navigate the file system.
  *
- * It is suggested to use a \p app_id that matches the basename of the 
+ * It is suggested to use a \p class_name that matches the basename of the 
  * application's .desktop file.  For example, "org.freedesktop.FooViewer" where 
  * the .desktop file is "org.freedesktop.FooViewer.desktop".
  *
@@ -4280,11 +4450,9 @@ std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations d
 /**
  * \brief Respond to "Decoration Change" events.
  *
- * For the Wayland Compositors that support Server-Side Decorations, the 
- * Desktop Environment can notify a %Window whether or not it should render its 
- * own decorations.  An example of this would be a user requesting for a 
- * %Window to be border-less.  This lambda will be called when that event 
- * happens.
+ * The X11 Server will notify a %Window whether or not it should render its own 
+ * decorations.  An example of this would be a user requesting for a %Window to 
+ * be border-less.  This lambda will be called when that event happens.
  */
 void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda ///< The lambda
 	) noexcept
@@ -4313,9 +4481,10 @@ void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda 
  * size settings.  This can result in strange behavior when a user then 
  * attempts to manually resize the %Window.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
+ * after millimeter conversion.
  *
- * \note This method does __not__ trigger the Resize Event.
+ * \note This method does __will__ trigger the Resize Event.
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
@@ -4368,9 +4537,10 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
  * size settings.  This can result in strange behavior when a user then 
  * attempts to manually resize the %Window.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum` 
+ * after percentage conversion.
  *
- * \note This method does __not__ trigger the Resize Event.
+ * \note This method does __will__ trigger the Resize Event.
  *
  * \return An error code.  If there was no error, then `error_code.value() == 
  * 0`.
@@ -4423,7 +4593,7 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
  * size settings.  This can result in strange behavior when a user then 
  * attempts to manually resize the %Window.
  *
- * \note The size of a window __must__ be greater than `0`.
+ * \note The size of a window __must__ be greater than `Window_Size_Minimum`.
  *
  * \note This method __will__ trigger a Resize Event.
  *
@@ -4581,9 +4751,27 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 }
 
 
+/**
+ * \brief Min/Max Size Conversion and Validation.
+ *
+ * \todo This should be a stand-alone method (not part of a chain) or broken in 
+ * to the following pieces:
+ * - Get new size
+ * - Validate size
+ * - Convert sizes
+ * - Set min/max
+ *
+ * \bug If the new min/max size is not valid, the invalid data is stored in the 
+ * window's data structures.
+ *
+ * Before, setting the window's new min/max constraints, the size values are 
+ * validated by this method.
+ *
+ * \return The error code if the size was not valid.
+ */
 std::error_code Xenium::windowSizeSetMinMax(const Xenium::Output& output      ///< The output device
-	, const Xenium::WindowId                                  window_id
-	, Xenium::WindowSizeData&                                     window_size ///< The window size
+	, const Xenium::WindowId                                  window_id   ///< The window id
+	, Xenium::WindowSizeData&                                 window_size ///< The window size
 	) noexcept
 {
 	if(window_size.unit == SizeUnit::Millimeter)
@@ -4683,11 +4871,19 @@ std::error_code Xenium::windowSizeSetMinMax(const Xenium::Output& output      //
 }
 
 
-std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id
-	, const int32_t                                    min_width
-	, const int32_t                                    min_height
-	, const int32_t                                    max_width
-	, const int32_t                                    max_height
+/**
+ * \brief Set the min/max size of a window.
+ *
+ * This method will notify the X11 Server of the Window's desired minimum and 
+ * maximum size.  All values are assumed to be valid.
+ *
+ * \return An error code if there was a problem.
+ */
+std::error_code Xenium::windowSizeSetMinMax(const WindowId window_id  ///< The window id
+	, const int32_t                                    min_width  ///< The minimum width
+	, const int32_t                                    min_height ///< The minimum height
+	, const int32_t                                    max_width  ///< The maximum width
+	, const int32_t                                    max_height ///< The maximum height
 	) noexcept
 {
 	xcb_get_property_cookie_t property_cookie =
@@ -4943,7 +5139,7 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
 /**
  * \brief Get an image buffer.
  *
- * To change the contents of the %Window, the image data must be update.  This 
+ * To change the contents of the %Window, the image data must be updated.  This 
  * method will provide access to the %Windows image data via the \p image 
  * pointer.  The image data will have the same pixel format that was used when 
  * the %Window was created.  If the source graphic data is in a different pixel 
@@ -5663,7 +5859,10 @@ void Xenium::Window::pointerOnAxisDiscrete(Xenium::Lambda lambda ///< The lambda
 // }}}
 // {{{ Window : Helpers
 
-void Xenium::windowCreateAddToQueue(Xenium::WindowCreateData* window_data
+/**
+ * \brief Add a create window request to the event loop.
+ */
+void Xenium::windowCreateAddToQueue(Xenium::WindowCreateData* window_data ///< The window data
 	) noexcept
 {
 	xenium_window_mutex.lock();
@@ -5674,7 +5873,10 @@ void Xenium::windowCreateAddToQueue(Xenium::WindowCreateData* window_data
 }
 
 
-void Xenium::windowDestroyAddToQueue(Xenium::WindowDestroyData* window_data
+/**
+ * \brief Add a destroy window request to the event loop.
+ */
+void Xenium::windowDestroyAddToQueue(Xenium::WindowDestroyData* window_data ///< The window data
 	) noexcept
 {
 	xenium_window_mutex.lock();
@@ -5686,11 +5888,19 @@ void Xenium::windowDestroyAddToQueue(Xenium::WindowDestroyData* window_data
 
 
 /**
+ * \brief Window decorations.
+ *
  * \todo After an X11 connection has been established, create the frequently 
  * used Atoms so that they don't have to be created or retrieved every time.
+ *
+ * If \p enable is `true` then the X11 Server will be requested to render the 
+ * window decorations around the window.  If \p enable is false, then the 
+ * window will be borderless.
+ *
+ * \return A error code if there was a problem.
  */
-std::error_code Xenium::windowBorder(const WindowId window_id
-	, const bool                                enable
+std::error_code Xenium::windowBorder(const WindowId window_id ///< The window id
+	, const bool                                enable    ///< The border flag
 	) noexcept
 {
 	xcb_generic_error_t generic_error;
@@ -5703,10 +5913,11 @@ std::error_code Xenium::windowBorder(const WindowId window_id
 	if(motif_wm_hints_atom == XCB_ATOM_NONE)
 	{
 		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	MotifHints hints_data =
+	MotifWmHints hints_data =
 	{	.flags       = 2
 	,	.functions   = 0
 	,	.decorations = enable
@@ -5736,10 +5947,16 @@ std::error_code Xenium::windowBorder(const WindowId window_id
 
 
 /**
+ * \brief Set the window's location.
+ *
+ * Move the window (\p window_id) to the desired \p point on the screen.
+ *
  * \note Not currently used.
+ *
+ * \return The error code if there was a problem.
  */
-std::error_code Xenium::windowLocationSet(const WindowId window_id
-	, const Xenium::PointPixel&              point      ///< The %Window size
+std::error_code Xenium::windowLocationSet(const WindowId window_id ///< The window id
+	, const Xenium::PointPixel&                      point     ///< The %Window size
 	) noexcept
 {
 	xcb_configure_window_value_list_t value_list =
@@ -5773,7 +5990,14 @@ std::error_code Xenium::windowLocationSet(const WindowId window_id
 }
 
 
-std::error_code Xenium::windowSizeSet(const WindowId window_id
+/**
+ * \brief Set the window's size.
+ *
+ * Resize the window (\p window_id) to the desired pixel \p size.
+ *
+ * \return The error code if there was a problem.
+ */
+std::error_code Xenium::windowSizeSet(const WindowId window_id ///< The window id
 	, const Xenium::SizePixel&                   size      ///< The %Window size
 	) noexcept
 {
@@ -5808,9 +6032,17 @@ std::error_code Xenium::windowSizeSet(const WindowId window_id
 }
 
 
-void Xenium::windowResizeTo(const Output&     output
-	, Xenium::WindowSizeData&                         window_size
-	, const xcb_configure_notify_event_t* event ///< XCB Event
+/**
+ * \brief Set the window's size.
+ *
+ * Using the window's size configuration and the output information, resize the 
+ * window.
+ *
+ * \return The error code if there was a problem.
+ */
+void Xenium::windowResizeTo(const Output&     output      ///< The output information
+	, Xenium::WindowSizeData&             window_size ///< The size configuration
+	, const xcb_configure_notify_event_t* event       ///< XCB Event
 	) noexcept
 {
 	bool update_size = false;
@@ -5898,7 +6130,10 @@ void Xenium::windowResizeTo(const Output&     output
 // }}}
 // {{{ XCB
 
-void Xenium::xcbEvent(const xcb_client_message_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Client Message:  " << to_string(*event) << '\n';
@@ -5913,7 +6148,10 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_button_press_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_button_press_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Button Press:  " << to_string(*event) << '\n';
@@ -6082,11 +6320,13 @@ void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///< XCB Event
 
 
 /**
+ * \brief XCB event handler.
+ *
  * \bug X11 emulation in Wayland maybe broken with KDE/kwin
  *      - When a window loses focus, an additional Enter notify is generated
  *      - When click in a window that has focus, generates an Enter Notify
  */
-void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
+void Xenium::xcbEvent(const xcb_enter_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Enter Notify:    " << to_string(*event) << '\n';
@@ -6128,7 +6368,10 @@ void Xenium::xcbEvent(const xcb_enter_notify_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_expose_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_expose_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Expose:          " << to_string(*event) << '\n';
@@ -6136,7 +6379,10 @@ void Xenium::xcbEvent(const xcb_expose_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_focus_in_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_focus_in_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Pocus:           " << to_string(*event) << '\n';
@@ -6162,7 +6408,10 @@ void Xenium::xcbEvent(const xcb_focus_in_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Gravity Notify:  " << to_string(*event) << '\n';
@@ -6196,7 +6445,7 @@ void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event
  * - Move the mouse, get the modifier `state` (Shift key state is `true`)
  * \endparblock
  */
-void Xenium::xcbEvent(const xcb_key_press_event_t* event
+void Xenium::xcbEvent(const xcb_key_press_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Key Press:       " << to_string(*event) << '\n';
@@ -6387,14 +6636,20 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_map_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_map_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Map Netify:      " << to_string(*event) << '\n';
 }
 
 
-void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_motion_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Motion Notify:   " << to_string(*event) << '\n';
@@ -6425,7 +6680,10 @@ void Xenium::xcbEvent(const xcb_motion_notify_event_t* event
 }
 
 
-void Xenium::xcbEvent(const xcb_property_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_property_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Property Notify: " << to_string(*event) << '\n';
@@ -6515,21 +6773,32 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event
 	}
 }
 
-void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Reparent Notify: " << to_string(*event) << '\n';
 }
 
 
-void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event
+/**
+ * \brief XCB event handler.
+ */
+void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Unmap Notify:    " << to_string(*event) << '\n';
 }
 
 
-void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data
+/**
+ * \brief Create an XCB Window
+ *
+ * This method will create the XCB Window and the other data directly related.
+ */
+void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data ///< The window data
 	) noexcept
 {
 	data->window_id = xcb_generate_id(this->connection);
@@ -6619,7 +6888,15 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* data
 }
 
 
-std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id
+/**
+ * \brief Minimize a window.
+ *
+ * A minimize request will be sent to the X11 Server for the provided \p 
+ * window_id.
+ *
+ * \return The error code if there was a problem.
+ */
+std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id ///< The window id
 	) noexcept
 {
 	xcb_client_message_event_t event =
@@ -6645,9 +6922,18 @@ std::error_code Xenium::windowMinimize(const Xenium::WindowId window_id
 }
 
 
-std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
-	, const Xenium::WindowMode                           current_mode
-	, const Xenium::WindowMode                           new_mode
+/**
+ * \brief Send a mode change request.
+ *
+ * The mode of the window is stored as a series of properties.  This method 
+ * will modify the properties so that the X11 Server will change the window to 
+ * get the desired effect.
+ *
+ * \return An error code if there was a problem.
+ */
+std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id    ///< The window id
+	, const Xenium::WindowMode                           current_mode ///< The current window mode
+	, const Xenium::WindowMode                           new_mode     ///< The new window mode
 	) noexcept
 {
 	xcb_client_message_event_t event =
@@ -6721,6 +7007,16 @@ std::error_code Xenium::windowModeSet(const Xenium::WindowId window_id
 // }}}
 // {{{ XCB : Atom
 
+/**
+ * \brief Create atoms.
+ *
+ * Many types of Atoms (properties) have been defined that are commonly used.  
+ * This method will create all known Atoms for future use.
+ *
+ * \return An error code if the was a problem.
+ *
+ * \todo Add the "MOTIF" atoms
+ */
 std::error_code Xenium::atomInit() noexcept
 {
 	auto cookie_wm_change_state             = internAtomRequest("WM_CHANGE_STATE");
@@ -6781,8 +7077,21 @@ std::error_code Xenium::atomInit() noexcept
 }
 
 
-xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
-	, xcb_generic_error_t&                           generic_error
+/**
+ * \brief Create an Atom.
+ *
+ * The X11 Server will send a property change notification when the "Close" 
+ * button is pressed in the window frame's decoration.  However to actually 
+ * know that this event happens, an atom must be created and associated with 
+ * the "Close" button (a delete request).  This method does all the above.
+ *
+ * If there was a problem creating atom, the returned atom will be 
+ * `XCB_ATOM_NONE` and \p generic_error will be set.
+ *
+ * \return The "Close" property atom.
+ */
+xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id     ///< The window id
+	, xcb_generic_error_t&                           generic_error ///< The error
 	) noexcept
 {
 	bool property_was_set = windowPropertySet(window_id
@@ -6801,7 +7110,18 @@ xcb_atom_t Xenium::atomCreateDeleteWindow(const WindowId window_id
 }
 
 
-std::string Xenium::atomName(const xcb_atom_t atom
+/**
+ * \brief Get the name of an atom.
+ *
+ * In addition to being associated with values, atoms have names!  Use this 
+ * method to get the atom's name.
+ *
+ * If the atom was not valid or if there was a problem, an empty string will be 
+ * returned.
+ *
+ * \return The name.
+ */
+std::string Xenium::atomName(const xcb_atom_t atom ///< The atom
 	) noexcept
 {
 	if(atom == XCB_ATOM_NONE)
@@ -6835,19 +7155,24 @@ std::string Xenium::atomName(const xcb_atom_t atom
 }
 
 
-std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
-	, const xcb_atom_t                                   atom
-	) noexcept
-{
-	xcb_generic_error_t generic_error = { 0 };
-
-	return atomValueAtom(window_id, atom, generic_error);
-}
-
-
-std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
-	, const xcb_atom_t                                   atom
-	, xcb_generic_error_t&                               generic_error
+/**
+ * \brief Get the atom's values.
+ *
+ * \todo This method could just call atomValueData() with the appropriate 
+ * values.
+ *
+ * An atom can be associated with zero or more values.  This method will 
+ * provide a vector of all the atom values associated with the provided \p 
+ * atom.
+ *
+ * If there was a problem, an empty vector will be returned and the \p 
+ * generic_error will be set.
+ *
+ * \return A vector of atom values.
+ */
+std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id     ///< The window id
+	, const xcb_atom_t                                   atom          ///< The atom
+	, xcb_generic_error_t&                               generic_error ///< The error
 	) noexcept
 {
 	xcb_get_property_cookie_t property_cookie =
@@ -6885,23 +7210,28 @@ std::vector<xcb_atom_t> Xenium::atomValueAtom(const WindowId window_id
 }
 
 
-std::vector<int32_t> Xenium::atomValueData(const WindowId window_id
-	, const xcb_atom_t                                  property
-	, const xcb_atom_t                                  type
-	, const size_t                                      count
-	) noexcept
-{
-	xcb_generic_error_t generic_error;
-
-	return atomValueData(window_id, property, type, count, generic_error);
-}
-
-
-std::vector<int32_t> Xenium::atomValueData(const WindowId window_id
-	, const xcb_atom_t                                  property
-	, const xcb_atom_t                                  type
-	, const size_t                                      count
-	, xcb_generic_error_t&                              generic_error
+/**
+ * \brief Get the atom's values.
+ *
+ * An atom can be associated with zero or more values.  This method will 
+ * provide a vector of all the values of the specified \p type associated with 
+ * the provided \p atom.  The \p count is the number of 32-bit sized "words".
+ *
+ * To better understand \p count, consider the following example.  If an ASCII 
+ * string has 8 letters, such as "password", each letter is 1 byte (8 bits) in 
+ * size.  So the word "password" has a size of 8 bytes, or a total of 64-bits.  
+ * This would be the same as 2 32-bit sized "words" for a \p count of 2.
+ *
+ * If there was a problem, an empty vector will be returned and the \p 
+ * generic_error will be set.
+ *
+ * \return A vector of atom values.
+ */
+std::vector<int32_t> Xenium::atomValueData(const WindowId window_id     ///< The window id
+	, const xcb_atom_t                                property      ///< The property atom
+	, const xcb_atom_t                                type          ///< The property type
+	, const size_t                                    count         ///< The number of 32-bit values
+	, xcb_generic_error_t&                            generic_error ///< The error
 	) noexcept
 {
 	xcb_get_property_cookie_t property_cookie =
@@ -6944,9 +7274,27 @@ std::vector<int32_t> Xenium::atomValueData(const WindowId window_id
 }
 
 
-xcb_atom_t Xenium::internAtom(const std::string& atom_name
-	, const bool                             create_if_needed
-	, xcb_generic_error_t&                   generic_error
+/**
+ * \brief Get an internal atom.
+ *
+ * The X11 Server has some "built-in" atoms that are available for use.  XCB 
+ * client applications can also request for these internal atoms to be created 
+ * if they are not already available.
+ *
+ * This method will get one of these atoms based on its \p atom_name.  The \p 
+ * create_if_needed flag tells the X11 Server to create the atom if it does not 
+ * already exist.  If the requested atom does not exist and \p create_if_needed 
+ * is `false`, then `XCB_ATOM_NONE` will be returned and not considered to be 
+ * an error.
+ *
+ * If the was an error getting the internal atom, `XCB_ATOM_NONE` will be 
+ * returned and \p generic_error will be set.
+ *
+ * \return The atom.
+ */
+xcb_atom_t Xenium::internAtom(const std::string& atom_name        ///< The atom name
+	, const bool                             create_if_needed ///< The creation flag
+	, xcb_generic_error_t&                   generic_error    ///< The error
 	) noexcept
 {
 	xcb_generic_error_t* error = nullptr;
@@ -6995,8 +7343,22 @@ xcb_atom_t Xenium::internAtom(const std::string& atom_name
 }
 
 
-xcb_intern_atom_cookie_t Xenium::internAtomRequest(const std::string& atom_name
-	, const bool                                                  create_if_needed
+/**
+ * \brief Request an internal atom.
+ *
+ * This method is similar to Xenium::internAtom(), the difference is that this 
+ * method is the first of a two step process of getting an atom.  All this 
+ * method does is send the atom request to the X11 Server.  The returned value, 
+ * is needed by Xenium::internAtomReply() to get the actual atom.
+ *
+ * Using a two step process like this allows for several requests to be sent to 
+ * the X11 Server and the caller can continue to do work before getting the 
+ * requested atoms.
+ *
+ * \return An atomic cookie.
+ */
+xcb_intern_atom_cookie_t Xenium::internAtomRequest(const std::string& atom_name        ///< The atom name
+	, const bool                                                  create_if_needed ///< The creation flag
 	) noexcept
 {
 	xcb_intern_atom_cookie_t cookie =
@@ -7012,8 +7374,19 @@ xcb_intern_atom_cookie_t Xenium::internAtomRequest(const std::string& atom_name
 }
 
 
-xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_cookie
-	, xcb_generic_error_t&                                    generic_error
+/**
+ * \brief Get an internal atom.
+ *
+ * This method gets the internal atom from the X11 Server that was requested by 
+ * Xenium::internAtomRequest().
+ *
+ * If the was an error getting the internal atom, `XCB_ATOM_NONE` will be 
+ * returned and \p generic_error will be set.
+ *
+ * \return The atom.
+ */
+xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_cookie ///< The atomic cookie
+	, xcb_generic_error_t&                                    generic_error      ///< The error
 	) noexcept
 {
 	xcb_generic_error_t* error = nullptr;
@@ -7053,6 +7426,13 @@ xcb_atom_t Xenium::internAtomReply(const xcb_intern_atom_cookie_t intern_atom_co
 // }}}
 // {{{ XCB : XKB
 
+/**
+ * \brief Clear the key state.
+ *
+ * This method will check all current key states and emit a key release event 
+ * if the key is pressed.  The time stamp of the key state will be reset to `0` 
+ * to signal that the key no longer has state.
+ */
 void Xenium::keyDataArrayClear() noexcept
 {
 	const auto time_now = ZAKERO_STEADY_TIME_NOW(milliseconds);
@@ -7079,6 +7459,14 @@ void Xenium::keyDataArrayClear() noexcept
 }
 
 
+/**
+ * \brief Process key state.
+ *
+ * This method will check all the current key state checking its time stamp.  
+ * If the key has remained pressed for the required amount of time, a key 
+ * repeat event will be emitted.  If a was released, the key release event will 
+ * be emitted and the key's time value will be reset to `0`.
+ */
 void Xenium::keyDataArrayProcess() noexcept
 {
 	for(auto& key_data : key_data_array)
@@ -7125,6 +7513,13 @@ void Xenium::keyDataArrayProcess() noexcept
 }
 
 
+/**
+ * \brief Initialize the XCB XKB extension.
+ *
+ * Initialize the XCB XKB extension.
+ *
+ * \return An error code if the extension does not exist.
+ */
 std::error_code Xenium::xkbInit() noexcept
 {
 	xcb_xkb_use_extension_reply_t* extension_reply =
@@ -7140,11 +7535,13 @@ std::error_code Xenium::xkbInit() noexcept
 
 	free(extension_reply);
 
-
 	return ZAKERO_XENIUM__ERROR(Error_None);
 }
 
 
+/**
+ * \brief Update the XKB Controls structure.
+ */
 void Xenium::xkbControlsUpdate() noexcept
 {
 	xcb_xkb_get_controls_reply_t* controls_reply =
@@ -7167,6 +7564,9 @@ void Xenium::xkbControlsUpdate() noexcept
 }
 
 
+/**
+ * \brief Get the states of "lockable" keys.
+ */
 void Xenium::xkbIndicatorStateUpdate() noexcept
 {
 	xcb_xkb_get_indicator_state_reply_t* reply =
@@ -7407,32 +7807,25 @@ void Xenium::randrEvent(const xcb_randr_notify_event_t* event ///< The event
 void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///< The event
 	) noexcept
 {
-std::cout << "RandR ScrnChange:" << to_string(*event) << '\n';
+//std::cout << "RandR ScrnChange:" << to_string(*event) << '\n';
 }
 
 // }}}
 // {{{ XCB : Utility
 
-bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
-	) noexcept
-{
-	xcb_generic_error_t* error = xcb_request_check(this->connection, void_cookie);
-
-	if(error != nullptr)
-	{
-		std::cout << "requestCheck Error: " << to_string(*error) << '\n';
-
-		free(error);
-
-		return true;
-	}
-
-	return false;
-}
-
-
-bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie
-	, xcb_generic_error_t&                             generic_error
+/**
+ * \brief Check if the cookie has an error.
+ *
+ * Some requests to the X11 Server return a generic (void) cookie.  Once the 
+ * X11 Server has completed the request, it will update the cookie with an 
+ * error if there was a problem.  This method will check for that error and 
+ * return it if it exists.
+ * 
+ * \retval true  The request resulted in an error.
+ * \retval false The request does not have an error.
+ */
+bool Xenium::requestCheckHasError(const xcb_void_cookie_t& void_cookie   ///< The cookie of the request
+	, xcb_generic_error_t&                             generic_error ///< The error
 	) noexcept
 {
 	xcb_generic_error_t* error = xcb_request_check(this->connection, void_cookie);

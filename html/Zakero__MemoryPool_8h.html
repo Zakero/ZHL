@@ -64,7 +64,8 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#define-members">Macros</a>  </div>
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">Zakero_MemoryPool.h File Reference</div>  </div>
 </div><!--header-->
@@ -95,12 +96,21 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html">zakero::MemoryPool</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A pool of memory.  <a href="classzakero_1_1MemoryPool.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:structzakero_1_1MemoryPool_1_1Segment"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#structzakero_1_1MemoryPool_1_1Segment">zakero::MemoryPool::Segment</a></td></tr>
+<tr class="memdesc:structzakero_1_1MemoryPool_1_1Segment"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data that defines a segment.  <a href="classzakero_1_1MemoryPool.html#structzakero_1_1MemoryPool_1_1Segment">More...</a><br /></td></tr>
+<tr class="separator:structzakero_1_1MemoryPool_1_1Segment"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:ad5cdfd37be94b166464e8be23e33d76b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MemoryPool_8h.html#ad5cdfd37be94b166464e8be23e33d76b">ZAKERO_MEMORYPOOL_IMPLEMENTATION</a></td></tr>
 <tr class="memdesc:ad5cdfd37be94b166464e8be23e33d76b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activate the implementation code.  <a href="Zakero__MemoryPool_8h.html#ad5cdfd37be94b166464e8be23e33d76b">More...</a><br /></td></tr>
 <tr class="separator:ad5cdfd37be94b166464e8be23e33d76b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:aef7fb0b7a49f83b7f050bc8fb463a197"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MemoryPool_8h.html#aef7fb0b7a49f83b7f050bc8fb463a197">zakero::to_string</a> (const MemoryPool::VectorSegment &amp;segment) noexcept</td></tr>
+<tr class="memdesc:aef7fb0b7a49f83b7f050bc8fb463a197"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert VectorSegment into a JSON formated string.  <a href="Zakero__MemoryPool_8h.html#aef7fb0b7a49f83b7f050bc8fb463a197">More...</a><br /></td></tr>
+<tr class="separator:aef7fb0b7a49f83b7f050bc8fb463a197"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><table class="markdownTable">
@@ -210,7 +220,43 @@ Macros</h2></td></tr>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000002">Todo:</a></b></dt><dd>Be able to defrag the memory pool </dd></dl>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000003">Todo:</a></b></dt><dd>Pass a lambda to the resize() method so that how the memory is moved can be controlled. For example, if the memory was holding a texture, the texture should be "clipped" or "zero'ed" space added around the existing data. </dd></dl>
 <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Be able to initialize a MemoryPool with a Unix File Descriptor and the file size.</dd></dl>
-</div><h2 class="groupheader">Macro Definition Documentation</h2>
+</div><hr/><h2 class="groupheader">Class Documentation</h2>
+<a name="structzakero_1_1MemoryPool_1_1Segment" id="structzakero_1_1MemoryPool_1_1Segment"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#structzakero_1_1MemoryPool_1_1Segment">&#9670;&nbsp;</a></span>zakero::MemoryPool::Segment</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">struct zakero::MemoryPool::Segment</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<div class="textblock"></div><table class="fieldtable">
+<tr><th colspan="3">Class Members</th></tr>
+<tr><td class="fieldtype">
+<a id="a652311ca5b8752b5ea8622a4847ba2b6"></a>bool</td>
+<td class="fieldname">
+in_use</td>
+<td class="fielddoc">
+A flag used to determine if the memory chunk is in use. </td></tr>
+<tr><td class="fieldtype">
+<a id="ac0253b4e29c7b0879793ca56cfef1610"></a>off_t</td>
+<td class="fieldname">
+offset</td>
+<td class="fielddoc">
+The offset into the allocated memory pool. </td></tr>
+<tr><td class="fieldtype">
+<a id="a14b4c18edee475ca87d1f874d7703a28"></a>off_t</td>
+<td class="fieldname">
+size</td>
+<td class="fielddoc">
+The size of the allocated memory chunk. </td></tr>
+</table>
+
+</div>
+</div>
+<h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="ad5cdfd37be94b166464e8be23e33d76b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad5cdfd37be94b166464e8be23e33d76b">&#9670;&nbsp;</a></span>ZAKERO_MEMORYPOOL_IMPLEMENTATION</h2>
 
@@ -224,6 +270,40 @@ Macros</h2></td></tr>
 </div><div class="memdoc">
 <p>Defining this macro will cause the <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">zakero::MemoryPool</a> implementation to be included. This should only be done once, since compiler and/or linker errors will typically be generated if more than a single implementation is found.</p>
 <dl class="section note"><dt>Note</dt><dd>It does not matter if the macro is given a value or not, only its existence is checked. </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="aef7fb0b7a49f83b7f050bc8fb463a197"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef7fb0b7a49f83b7f050bc8fb463a197">&#9670;&nbsp;</a></span>to_string()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string zakero::to_string </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classzakero_1_1MemoryPool.html#a289e83717e7fb3b06dd78155a8851ed3">MemoryPool::VectorSegment</a> &amp;&#160;</td>
+          <td class="paramname"><em>segment</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<dl class="section return"><dt>Returns</dt><dd>The JSON formatted string. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">segment</td><td>The value to convert </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

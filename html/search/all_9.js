@@ -1,22 +1,8 @@
 var searchData=
 [
-  ['lambda_45',['Lambda',['../classzakero_1_1Yetani.html#a67cc71aa05be2bee03bf212f1d4f8116',1,'zakero::Yetani']]],
-  ['lambdaaddressmap_46',['LambdaAddressMap',['../classzakero_1_1MemoryPool.html#af684a6a80921ce92404f9f2d4bdb03ea',1,'zakero::MemoryPool']]],
-  ['lambdaaxis_47',['LambdaAxis',['../classzakero_1_1Yetani.html#a59363d3e9580853a4f54cec861e34530',1,'zakero::Yetani']]],
-  ['lambdabool_48',['LambdaBool',['../classzakero_1_1Yetani.html#ab5f4ec622c8e50bd0c2506de5b7f57a8',1,'zakero::Yetani']]],
-  ['lambdabuttonmm_49',['LambdaButtonMm',['../classzakero_1_1Yetani.html#abfef6bbfa6b6291a6ef1216b6aa90f7e',1,'zakero::Yetani']]],
-  ['lambdabuttonpercent_50',['LambdaButtonPercent',['../classzakero_1_1Yetani.html#a1fc7cae0bace14caf6892a14f752c6d3',1,'zakero::Yetani']]],
-  ['lambdabuttonpixel_51',['LambdaButtonPixel',['../classzakero_1_1Yetani.html#a4e2ee3042c5a75a94cd04b2860177a42',1,'zakero::Yetani']]],
-  ['lambdakey_52',['LambdaKey',['../classzakero_1_1Yetani.html#a0e6e3531217544627c8d21516f4a83a2',1,'zakero::Yetani']]],
-  ['lambdapointmm_53',['LambdaPointMm',['../classzakero_1_1Yetani.html#a5b9f2b18f9c25b1ef6c9ca337d466153',1,'zakero::Yetani']]],
-  ['lambdapointpercent_54',['LambdaPointPercent',['../classzakero_1_1Yetani.html#a65a277f2b89c44d4be7f3729be06bab5',1,'zakero::Yetani']]],
-  ['lambdapointpixel_55',['LambdaPointPixel',['../classzakero_1_1Yetani.html#ab45f4b866ac6f9b067d8cec3e168b9dc',1,'zakero::Yetani']]],
-  ['lambdasize_56',['LambdaSize',['../classzakero_1_1MemoryPool.html#a06a72834586ae1751ad4d22e421cb307',1,'zakero::MemoryPool']]],
-  ['lambdasizemm_57',['LambdaSizeMm',['../classzakero_1_1Yetani.html#a77fa0a747c629a4c3603a127e3329237',1,'zakero::Yetani']]],
-  ['lambdasizepercent_58',['LambdaSizePercent',['../classzakero_1_1Yetani.html#a84885b4888c103cb7998f0b57920a874',1,'zakero::Yetani']]],
-  ['lambdasizepixel_59',['LambdaSizePixel',['../classzakero_1_1Yetani.html#acb34b3db0fd69ad642ab746eb4379f6c',1,'zakero::Yetani']]],
-  ['lambdawindowdecorations_60',['LambdaWindowDecorations',['../classzakero_1_1Yetani.html#acf67bc8fa68c711c3e404d2c6105eca4',1,'zakero::Yetani']]],
-  ['lambdawindowmode_61',['LambdaWindowMode',['../classzakero_1_1Yetani.html#a48b772ea8868e94b8b4570d06e4643e2',1,'zakero::Yetani']]],
-  ['latched_62',['latched',['../classzakero_1_1Yetani.html#a60ece3df5dc339991985f40627313c68',1,'zakero::Yetani::KeyModifier']]],
-  ['locked_63',['locked',['../classzakero_1_1Yetani.html#afc519cc4f84bc2237cc7615a14f09321',1,'zakero::Yetani::KeyModifier']]]
+  ['image_5fdata_36',['image_data',['../classzakero_1_1Yetani.html#a1ee8e27c543d504820f764005aa579e0',1,'zakero::Yetani::CursorConfig']]],
+  ['imagenext_37',['imageNext',['../classzakero_1_1Xenium_1_1Window.html#ad95531b46062b716fc385e4926310bf3',1,'zakero::Xenium::Window::imageNext()'],['../classzakero_1_1Yetani_1_1Window.html#ad5b8843f0e5c9588b823770ff109bf73',1,'zakero::Yetani::Window::imageNext()']]],
+  ['imagepresent_38',['imagePresent',['../classzakero_1_1Xenium_1_1Window.html#ace7f533aee1bf444e303376f4f8a1c61',1,'zakero::Xenium::Window::imagePresent()'],['../classzakero_1_1Yetani_1_1Window.html#a2af11551551290895aea42b224dc0656',1,'zakero::Yetani::Window::imagePresent()']]],
+  ['in_5fuse_39',['in_use',['../classzakero_1_1MemoryPool.html#a652311ca5b8752b5ea8622a4847ba2b6',1,'zakero::MemoryPool::Segment']]],
+  ['init_40',['init',['../classzakero_1_1MemoryPool.html#a0946eadefd2baeda1bdfe25f7e13c5e5',1,'zakero::MemoryPool']]]
 ];

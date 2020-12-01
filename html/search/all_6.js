@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['height_25',['height',['../structzakero_1_1Yetani_1_1SizeMm.html#aea09514369038afb866bf3bf4bc40a14',1,'zakero::Yetani::SizeMm::height()'],['../structzakero_1_1Yetani_1_1SizePercent.html#ac7a921a8abf8b175c7181348469baeba',1,'zakero::Yetani::SizePercent::height()'],['../structzakero_1_1Yetani_1_1SizePixel.html#a9a01037b22ebe008881e83df179bfc21',1,'zakero::Yetani::SizePixel::height()'],['../classzakero_1_1Yetani.html#a26b4ae0f485e823355e92796b1d1672e',1,'zakero::Yetani::Output::height()']]],
-  ['hotspot_5fx_26',['hotspot_x',['../classzakero_1_1Yetani.html#a6200a0bb358ab2adfb0f02709d4a6769',1,'zakero::Yetani::CursorConfig']]],
-  ['hotspot_5fy_27',['hotspot_y',['../classzakero_1_1Yetani.html#a7b3e3b9c9b56db6c521df68bfc6933ec',1,'zakero::Yetani::CursorConfig']]]
+  ['fd_28',['fd',['../classzakero_1_1MemoryPool.html#a99fa5532f650637172a31b58684cc329',1,'zakero::MemoryPool']]],
+  ['flags_29',['flags',['../classzakero_1_1Yetani.html#a4ecfe61026e0e3788c6093a2fabee0ba',1,'zakero::Yetani::Output']]],
+  ['format_30',['format',['../classzakero_1_1Yetani.html#a824c2efa9c835cf0fb268f9b79a376ba',1,'zakero::Yetani::CursorConfig']]],
+  ['free_31',['free',['../classzakero_1_1MemoryPool.html#a2d20c34a90c6dc856fa3bbe0c53c0930',1,'zakero::MemoryPool']]]
 ];

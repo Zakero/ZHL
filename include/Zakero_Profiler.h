@@ -634,11 +634,11 @@ namespace zakero
  * -# __ErrorMessage__<br>
  */
 #define ZAKERO_PROFILER__ERROR_DATA \
-	X(Error_None                ,  0 , "No Error"                                       ) \
-	X(Error_Stream_Already_Open ,  1 , "The profiler is already using an output stream" ) \
-	X(Error_No_Filename         ,  2 , "No filename was provided"                       ) \
-	X(Error_Cant_Open_Stream    ,  3 , "Unable to open the output stream"               ) \
-	X(Error_Bad_Stream          ,  4 , "The stream is not in a good state"              ) \
+	X(Error_None                , 0 , "No Error"                                       ) \
+	X(Error_Stream_Already_Open , 1 , "The profiler is already using an output stream" ) \
+	X(Error_No_Filename         , 2 , "No filename was provided"                       ) \
+	X(Error_Cant_Open_Stream    , 3 , "Unable to open the output stream"               ) \
+	X(Error_Bad_Stream          , 4 , "The stream is not in a good state"              ) \
 
 /**
  * \internal
@@ -861,7 +861,7 @@ std::error_code zakero::Profiler::init(const std::filesystem::path path      ///
  * for information on keys that will be over-written.
  */
 std::error_code zakero::Profiler::init(std::ostream& output_stream ///< The output stream
-	, zakero::Profiler::MetaData      meta_data     ///< Extra meta data
+	, zakero::Profiler::MetaData                 meta_data     ///< Extra meta data
 	) noexcept
 {
 	std::lock_guard<std::mutex> lock(zakero_profiler.mutex);

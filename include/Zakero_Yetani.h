@@ -180,6 +180,8 @@
  * \parversion{zakero_yetani}
  * __v0.6.1__
  * - Moved to_string(std::error_code) to Zakero_Base.h
+ * - Moved equalish() to Zakero_Base.h
+ * - Documentation improvements
  *
  * __v0.6.0__
  * - Fully Documented
@@ -2068,9 +2070,13 @@ namespace zakero
 
 	std::string to_string(const wl_shm_format&) noexcept;
 	std::string to_string(const std::error_code&) noexcept;
+	std::string to_string(const Yetani::Key&) noexcept;
 	std::string to_string(const Yetani::KeyModifier&) noexcept;
 	std::string to_string(const Yetani::KeyState&) noexcept;
 	std::string to_string(const Yetani::Output&) noexcept;
+	std::string to_string(const Yetani::PointMm&) noexcept;
+	std::string to_string(const Yetani::PointPercent&) noexcept;
+	std::string to_string(const Yetani::PointPixel&) noexcept;
 	std::string to_string(const Yetani::PointerAxis&) noexcept;
 	std::string to_string(const Yetani::PointerAxisSource&) noexcept;
 	std::string to_string(const Yetani::PointerAxisType&) noexcept;
@@ -2598,7 +2604,8 @@ namespace
 				return "zakero.Yetani";
 			}
 
-			std::string message(int condition) const override
+			std::string message(int condition
+				) const noexcept override
 			{
 				switch(condition)
 				{
@@ -2636,26 +2643,6 @@ namespace
 	/**
 	 * \}
 	 */
-
-
-	/**
-	 * \brief Compare 2 floats
-	 *
-	 * Compare two floats for equality.  Since floats are not _exact_, this 
-	 * function will calculate the difference between them.  For the float 
-	 * values to be "equal", the difference must be less than the specified 
-	 * \p delta.
-	 *
-	 * \retval true  The values are equal
-	 * \retval false The values are not equal
-	 */
-	bool equalish(const float a     ///< The first value
-		, const float     b     ///< The second value
-		, const float     delta ///< The maximum difference
-		) noexcept
-	{
-		return (std::abs(a - b) < delta);
-	}
 
 
 	/**
@@ -2795,7 +2782,6 @@ namespace
  *
  * \par Thread (not) Safe
  * \parblock
- *
  * The main Wayland event loop runs in a dedicated thread.  Because of this, 
  * there are race-conditions where execution uses the same data.  The most 
  * likely thread conflict is the resizing of a surface:
@@ -3420,8 +3406,8 @@ Yetani* Yetani::connect(std::error_code& error ///< The error code
  *
  * \thread_user
  */
-Yetani* Yetani::connect(const std::string& display ///! The Display Name or ID
-	, std::error_code&                 error   ///! The error status
+Yetani* Yetani::connect(const std::string& display ///< The Display Name or ID
+	, std::error_code&                 error   ///< The error status
 	) noexcept
 {
 	Yetani* yetani = new Yetani();
@@ -4318,7 +4304,7 @@ std::error_code Yetani::cursorDetach(struct wl_surface* wl_surface ///< The surf
  * \brief Start the event loop.
  *
  * Calling this method will start the Event Loop and block until the Event Loop 
- * exits.
+ * has started.
  *
  * \thread_user
  */
@@ -4349,8 +4335,8 @@ void Yetani::eventLoopStart() noexcept
 /**
  * \brief Event processing.
  *
- * The Yetani Event Loop all the messages between the Wayland client and 
- * server.  Without this communication, programs that use the Yetani object 
+ * The Yetani Event Loop handles all the messages between the Wayland client 
+ * and server.  Without this communication, programs that use the Yetani object 
  * will not be able to do anything.
  *
  * The usual Wayland event loop is not used because `wl_display_dispatch()` 
@@ -8892,13 +8878,13 @@ void Yetani::Window::cursorShow() noexcept
 /**
  * \brief Change the window class.
  *
- * The \p app_id of a window is a name that is used to group windows which the 
- * Desktop Environment may be able to use.  An example of this grouping would 
- * be give all the windows a \p app_id of the application name.  Another 
- * example would be to give a "file browser" \p app_id to a window that allows 
- * the user to navigate the file system.
+ * The \p class_name of a window is a name that is used to group windows which 
+ * the Desktop Environment may be able to use.  An example of this grouping 
+ * would be give all the windows a \p class_name of the application name.  
+ * Another example would be to give a "file browser" \p class_name to a window 
+ * that allows the user to navigate the file system.
  *
- * It is suggested to use a \p app_id that matches the basename of the 
+ * It is suggested to use a \p class_name that matches the basename of the 
  * application's .desktop file.  For example, "org.freedesktop.FooViewer" where 
  * the .desktop file is "org.freedesktop.FooViewer.desktop".
  *
@@ -10342,6 +10328,24 @@ std::string to_string(const wl_shm_format& shm_format ///< The value
 /**
  * \brief Convert a value to a std::string.
  *
+ * The \p key data will be converted into a JSON formatted std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::Key& key ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": "    + std::to_string(key.time)
+		+ ", \"code\": "    + std::to_string(key.code)
+		+ ", \"state\": \"" + zakero::to_string(key.state) + "\""
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
  * The \p key_modifier data will be converted into a JSON formatted 
  * std::string.
  *
@@ -10462,6 +10466,60 @@ std::string to_string(const Yetani::Output& output ///< The value
 /**
  * \brief Convert a value to a std::string.
  *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointMm& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointPercent& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p point will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointPixel& point ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"time\": " + std::to_string(point.time)
+		+ ", \"x\": "    + std::to_string(point.x)
+		+ ", \"y\": "    + std::to_string(point.y)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
  * The \p axis will be converted into a std::string.
  *
  * \return A string
@@ -10524,6 +10582,23 @@ std::string to_string(const Yetani::PointerAxisType& type ///< The value
 /**
  * \brief Convert a value to a std::string.
  *
+ * The \p button will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::PointerButton& button ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"code\": " + std::to_string(button.code)
+		+ ", \"state\": " + zakero::to_string(button.state)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
  * The \p button_state will be converted into a std::string.
  *
  * \return A string
@@ -10537,6 +10612,57 @@ std::string to_string(const Yetani::PointerButtonState& button_state ///< The va
 		case Yetani::PointerButtonState::Released: return "Released";
 		default:                                   return "";
 	}
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::SizeMm& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::SizePercent& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
+}
+
+
+/**
+ * \brief Convert a value to a std::string.
+ *
+ * The \p size will be converted into a std::string.
+ *
+ * \return A string
+ */
+std::string to_string(const Yetani::SizePixel& size ///< The value
+	) noexcept
+{
+	return std::string()
+		+ "{ \"width\": "  + std::to_string(size.width)
+		+ ", \"height\": " + std::to_string(size.height)
+		+ " }";
 }
 
 
@@ -10577,8 +10703,8 @@ bool operator==(Yetani::PointMm& lhs ///< Left-Hand side
 	, Yetani::PointMm&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.x, rhs.x, 0.001)
-		&&  equalish(lhs.y, rhs.y, 0.001)
+	return zakero::equalish(lhs.x, rhs.x, 0.001)
+		&&  zakero::equalish(lhs.y, rhs.y, 0.001)
 		;
 }
 
@@ -10600,8 +10726,8 @@ bool operator==(Yetani::PointPercent& lhs ///< Left-Hand side
 	, Yetani::PointPercent&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.x, rhs.x, 0.00001)
-		&&  equalish(lhs.y, rhs.y, 0.00001)
+	return zakero::equalish(lhs.x, rhs.x, 0.00001)
+		&&  zakero::equalish(lhs.y, rhs.y, 0.00001)
 		;
 }
 
@@ -10639,8 +10765,8 @@ bool operator==(Yetani::SizeMm& lhs ///< Left-Hand side
 	, Yetani::SizeMm&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.width, rhs.width, 0.001)
-		&&  equalish(lhs.height, rhs.height, 0.001)
+	return zakero::equalish(lhs.width, rhs.width, 0.001)
+		&&  zakero::equalish(lhs.height, rhs.height, 0.001)
 		;
 }
 
@@ -10660,8 +10786,8 @@ bool operator==(Yetani::SizePercent& lhs ///< Left-Hand side
 	, Yetani::SizePercent&       rhs ///< Right-Hand side
 	) noexcept
 {
-	return equalish(lhs.width, rhs.width, 0.00001)
-		&&  equalish(lhs.height, rhs.height, 0.00001)
+	return zakero::equalish(lhs.width, rhs.width, 0.00001)
+		&&  zakero::equalish(lhs.height, rhs.height, 0.00001)
 		;
 }
 

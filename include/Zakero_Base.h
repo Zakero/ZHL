@@ -27,6 +27,7 @@
  * - Added ZAKERO_FREE()
  * - Added ZAKERO_UNUSED()
  * - Added ZAKERO_PID
+ * - Added equalish()
  *
  * __v0.9.1__
  * - Added macro ZAKERO_STEADY_TIME_NOW()

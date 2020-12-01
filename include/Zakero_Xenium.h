@@ -867,15 +867,16 @@ namespace zakero
 			// }}}
 			// {{{ XCB : Atom
 
-			xcb_atom_t atom_wm_change_state             = XCB_ATOM_NONE;
-			xcb_atom_t atom_wm_delete_window            = XCB_ATOM_NONE;
-			xcb_atom_t atom_wm_protocols                = XCB_ATOM_NONE;
+			xcb_atom_t atom_motif_wm_hints              = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_frame_extents           = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state                = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_fullscreen     = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_hidden         = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_maximized_horz = XCB_ATOM_NONE;
 			xcb_atom_t atom_net_wm_state_maximized_vert = XCB_ATOM_NONE;
+			xcb_atom_t atom_wm_change_state             = XCB_ATOM_NONE;
+			xcb_atom_t atom_wm_delete_window            = XCB_ATOM_NONE;
+			xcb_atom_t atom_wm_protocols                = XCB_ATOM_NONE;
 
 			// -------------------------------------------------- //
 
@@ -3911,9 +3912,6 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 /**
  * \brief Window decorations.
  *
- * \todo After an X11 connection has been established, create the frequently 
- * used Atoms so that they don't have to be created or retrieved every time.
- *
  * If \p enable is `true` then the X11 Server will be requested to render the 
  * window decorations around the window.  If \p enable is false, then the 
  * window will be borderless.
@@ -3924,20 +3922,6 @@ std::error_code Xenium::windowBorder(const WindowId window_id ///< The window id
 	, const bool                                enable    ///< The border flag
 	) noexcept
 {
-	xcb_generic_error_t generic_error;
-
-	xcb_atom_t motif_wm_hints_atom = internAtom("_MOTIF_WM_HINTS"
-		, true
-		, generic_error
-		);
-
-	if(motif_wm_hints_atom == XCB_ATOM_NONE)
-	{
-		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
-
-		return ZAKERO_XENIUM__ERROR(Error_Unknown);
-	}
-
 	MotifWmHints hints_data =
 	{	.flags       = 2
 	,	.functions   = 0
@@ -3950,16 +3934,19 @@ std::error_code Xenium::windowBorder(const WindowId window_id ///< The window id
 		xcb_change_property_checked(this->connection
 			, XCB_PROP_MODE_REPLACE // mode
 			, window_id             // window
-			, motif_wm_hints_atom   // property
-			, motif_wm_hints_atom   // type
+			, atom_motif_wm_hints   // property
+			, atom_motif_wm_hints   // type
 			, 32                    // format : pointer to 32-bit data
 			, 5                     // data_len
 			, &hints_data           // data
 			);
 
+	xcb_generic_error_t generic_error;
+
 	if(requestCheckHasError(void_cookie, generic_error))
 	{
 		ZAKERO_XENIUM__DEBUG_VAR(to_string(generic_error));
+
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
@@ -5636,32 +5623,32 @@ std::error_code Xenium::xcbWindowCreateInit(Xenium::WindowCreateData* data ///< 
  * This method will create all known Atoms for future use.
  *
  * \return An error code if the was a problem.
- *
- * \todo Add the "MOTIF" atoms
  */
 std::error_code Xenium::atomInit() noexcept
 {
-	auto cookie_wm_change_state             = internAtomRequest("WM_CHANGE_STATE");
-	auto cookie_wm_delete_window            = internAtomRequest("WM_DELETE_WINDOW");
-	auto cookie_wm_protocols                = internAtomRequest("WM_PROTOCOLS");
+	auto cookie_motif_wm_hints              = internAtomRequest("_MOTIF_WM_HINTS");
 	auto cookie_net_frame_extents           = internAtomRequest("_NET_FRAME_EXTENTS");
 	auto cookie_net_wm_state                = internAtomRequest("_NET_WM_STATE");
 	auto cookie_net_wm_state_fullscreen     = internAtomRequest("_NET_WM_STATE_FULLSCREEN");
 	auto cookie_net_wm_state_hidden         = internAtomRequest("_NET_WM_STATE_HIDDEN");
 	auto cookie_net_wm_state_maximized_horz = internAtomRequest("_NET_WM_STATE_MAXIMIZED_HORZ");
 	auto cookie_net_wm_state_maximized_vert = internAtomRequest("_NET_WM_STATE_MAXIMIZED_VERT");
+	auto cookie_wm_change_state             = internAtomRequest("WM_CHANGE_STATE");
+	auto cookie_wm_delete_window            = internAtomRequest("WM_DELETE_WINDOW");
+	auto cookie_wm_protocols                = internAtomRequest("WM_PROTOCOLS");
 
 	xcb_generic_error_t generic_error;
 
-	atom_wm_change_state             = internAtomReply(cookie_wm_change_state, generic_error);
-	atom_wm_delete_window            = internAtomReply(cookie_wm_delete_window, generic_error);
-	atom_wm_protocols                = internAtomReply(cookie_wm_protocols, generic_error);
-	atom_net_frame_extents           = internAtomReply(cookie_net_frame_extents, generic_error);
-	atom_net_wm_state                = internAtomReply(cookie_net_wm_state, generic_error);
-	atom_net_wm_state_fullscreen     = internAtomReply(cookie_net_wm_state_fullscreen, generic_error);
-	atom_net_wm_state_hidden         = internAtomReply(cookie_net_wm_state_hidden, generic_error);
-	atom_net_wm_state_maximized_horz = internAtomReply(cookie_net_wm_state_maximized_horz, generic_error);
-	atom_net_wm_state_maximized_vert = internAtomReply(cookie_net_wm_state_maximized_vert, generic_error);
+	atom_motif_wm_hints              = internAtomReply(cookie_motif_wm_hints              , generic_error);
+	atom_net_frame_extents           = internAtomReply(cookie_net_frame_extents           , generic_error);
+	atom_net_wm_state                = internAtomReply(cookie_net_wm_state                , generic_error);
+	atom_net_wm_state_fullscreen     = internAtomReply(cookie_net_wm_state_fullscreen     , generic_error);
+	atom_net_wm_state_hidden         = internAtomReply(cookie_net_wm_state_hidden         , generic_error);
+	atom_net_wm_state_maximized_horz = internAtomReply(cookie_net_wm_state_maximized_horz , generic_error);
+	atom_net_wm_state_maximized_vert = internAtomReply(cookie_net_wm_state_maximized_vert , generic_error);
+	atom_wm_change_state             = internAtomReply(cookie_wm_change_state             , generic_error);
+	atom_wm_delete_window            = internAtomReply(cookie_wm_delete_window            , generic_error);
+	atom_wm_protocols                = internAtomReply(cookie_wm_protocols                , generic_error);
 
 	if(atom_wm_delete_window == XCB_ATOM_NONE)
 	{

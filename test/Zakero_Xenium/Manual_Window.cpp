@@ -81,8 +81,8 @@ int main()
 	});
 
 	/*
-	window->setDecorations(zakero::Xenium::WindowDecorations::Client_Side);
-	window->setDecorations(zakero::Xenium::WindowDecorations::Server_Side);
+	window->decorationsSet(zakero::Xenium::WindowDecorations::Client_Side);
+	window->decorationsSet(zakero::Xenium::WindowDecorations::Server_Side);
 	window->setSize(zakero::Xenium::SizePixel{500,300});
 	*/
 

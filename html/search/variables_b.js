@@ -1,10 +1,8 @@
 var searchData=
 [
-  ['scale_5ffactor_300',['scale_factor',['../classzakero_1_1Yetani.html#ab5375d0b90c7a271e214825492ef25e2',1,'zakero::Yetani::Output']]],
-  ['shm_5fformat_5fdefault_301',['SHM_FORMAT_DEFAULT',['../classzakero_1_1Yetani.html#a4f0707f559705cee3789766694a00821',1,'zakero::Yetani']]],
-  ['size_302',['size',['../classzakero_1_1Yetani.html#aa1ac798b2d51f3875328f2524d017c40',1,'zakero::Yetani::CursorConfig']]],
-  ['source_303',['source',['../classzakero_1_1Yetani.html#af34dc0d9f26ea2765fd60dffb3810bfd',1,'zakero::Yetani::PointerAxis']]],
-  ['state_304',['state',['../classzakero_1_1Yetani.html#ac655a759e609567edf4dfc0d13bb484d',1,'zakero::Yetani::Key::state()'],['../classzakero_1_1Yetani.html#a43bf422769e8c7c9d6adc4ca2105be25',1,'zakero::Yetani::PointerButton::state()']]],
-  ['steps_305',['steps',['../classzakero_1_1Yetani.html#ac44d001b4c651004769ab16af08fec27',1,'zakero::Yetani::PointerAxis']]],
-  ['subpixel_306',['subpixel',['../classzakero_1_1Yetani.html#acd506e1b19be3ee9838ac9359342ad3a',1,'zakero::Yetani::Output']]]
+  ['physical_5fheight_5fmm_325',['physical_height_mm',['../classzakero_1_1Xenium.html#a02448c59df52f0cc781367103364f218',1,'zakero::Xenium::Output::physical_height_mm()'],['../classzakero_1_1Yetani.html#a68bca5126576bbad530ac3a1867fa8e2',1,'zakero::Yetani::Output::physical_height_mm()']]],
+  ['physical_5fwidth_5fmm_326',['physical_width_mm',['../classzakero_1_1Xenium.html#a599760c437c7cd86af30ffa64b073405',1,'zakero::Xenium::Output::physical_width_mm()'],['../classzakero_1_1Yetani.html#a6c146e3f303ac1087bbb3ec25ee2e90b',1,'zakero::Yetani::Output::physical_width_mm()']]],
+  ['pixels_5fper_5fmm_5fhorizontal_327',['pixels_per_mm_horizontal',['../classzakero_1_1Xenium.html#a69c8d015258de21f366e80056bc09cab',1,'zakero::Xenium::Output::pixels_per_mm_horizontal()'],['../classzakero_1_1Yetani.html#a103e3a5da334fd4f6213be9910e610b8',1,'zakero::Yetani::Output::pixels_per_mm_horizontal()']]],
+  ['pixels_5fper_5fmm_5fvertical_328',['pixels_per_mm_vertical',['../classzakero_1_1Xenium.html#af0683b5d5967084fe322147a502fdbd7',1,'zakero::Xenium::Output::pixels_per_mm_vertical()'],['../classzakero_1_1Yetani.html#a0e2357d626c7b59c41b5ab7dd3897f5a',1,'zakero::Yetani::Output::pixels_per_mm_vertical()']]],
+  ['pressed_329',['pressed',['../classzakero_1_1Xenium.html#aaf53108f1ae61e7941b748aeefc13718',1,'zakero::Xenium::KeyModifier::pressed()'],['../classzakero_1_1Yetani.html#a2fd1a39dff9c0f07d628cca5bca27652',1,'zakero::Yetani::KeyModifier::pressed()']]]
 ];

@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['keyboardonenter_218',['keyboardOnEnter',['../classzakero_1_1Yetani_1_1Window.html#a8dcddd95ed2a4bd63550ed4d8ef0e7f3',1,'zakero::Yetani::Window']]],
-  ['keyboardonkey_219',['keyboardOnKey',['../classzakero_1_1Yetani_1_1Window.html#ae22ea9eadc116a36b604c54e23ba9c95',1,'zakero::Yetani::Window']]],
-  ['keyboardonleave_220',['keyboardOnLeave',['../classzakero_1_1Yetani_1_1Window.html#aff91fdacb5649574ff648d3879b7123e',1,'zakero::Yetani::Window']]],
-  ['keyrepeatdelay_221',['keyRepeatDelay',['../classzakero_1_1Yetani.html#a27cd01ea08eda690b256cf0665b5d892',1,'zakero::Yetani']]],
-  ['keyrepeatrate_222',['keyRepeatRate',['../classzakero_1_1Yetani.html#a715553d39084a9b336ba1dae6f71b9be',1,'zakero::Yetani']]]
+  ['imagenext_243',['imageNext',['../classzakero_1_1Xenium_1_1Window.html#ad95531b46062b716fc385e4926310bf3',1,'zakero::Xenium::Window::imageNext()'],['../classzakero_1_1Yetani_1_1Window.html#ad5b8843f0e5c9588b823770ff109bf73',1,'zakero::Yetani::Window::imageNext()']]],
+  ['imagepresent_244',['imagePresent',['../classzakero_1_1Xenium_1_1Window.html#ace7f533aee1bf444e303376f4f8a1c61',1,'zakero::Xenium::Window::imagePresent()'],['../classzakero_1_1Yetani_1_1Window.html#a2af11551551290895aea42b224dc0656',1,'zakero::Yetani::Window::imagePresent()']]],
+  ['init_245',['init',['../classzakero_1_1MemoryPool.html#a0946eadefd2baeda1bdfe25f7e13c5e5',1,'zakero::MemoryPool']]]
 ];

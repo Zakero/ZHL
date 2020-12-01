@@ -1,16 +1,6 @@
 var searchData=
 [
-  ['key_32',['Key',['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1Key',1,'zakero::Yetani']]],
-  ['keyboardonenter_33',['keyboardOnEnter',['../classzakero_1_1Yetani_1_1Window.html#a8dcddd95ed2a4bd63550ed4d8ef0e7f3',1,'zakero::Yetani::Window']]],
-  ['keyboardonkey_34',['keyboardOnKey',['../classzakero_1_1Yetani_1_1Window.html#ae22ea9eadc116a36b604c54e23ba9c95',1,'zakero::Yetani::Window']]],
-  ['keyboardonleave_35',['keyboardOnLeave',['../classzakero_1_1Yetani_1_1Window.html#aff91fdacb5649574ff648d3879b7123e',1,'zakero::Yetani::Window']]],
-  ['keymodifier_36',['KeyModifier',['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1KeyModifier',1,'zakero::Yetani']]],
-  ['keymodifier_5falt_37',['KeyModifier_Alt',['../classzakero_1_1Yetani.html#a2e098c5d8d812d5e2f719eb493b05abb',1,'zakero::Yetani']]],
-  ['keymodifier_5fcapslock_38',['KeyModifier_CapsLock',['../classzakero_1_1Yetani.html#a521a4cad6cfe5ee277d5c1969843d06a',1,'zakero::Yetani']]],
-  ['keymodifier_5fcontrol_39',['KeyModifier_Control',['../classzakero_1_1Yetani.html#ad3cbf15eef43a53073d45f37818a25b0',1,'zakero::Yetani']]],
-  ['keymodifier_5fmeta_40',['KeyModifier_Meta',['../classzakero_1_1Yetani.html#a371f0af237d1d78292451675519b6d1b',1,'zakero::Yetani']]],
-  ['keymodifier_5fshift_41',['KeyModifier_Shift',['../classzakero_1_1Yetani.html#ae183b0cdf244d4a591166de37356bafd',1,'zakero::Yetani']]],
-  ['keyrepeatdelay_42',['keyRepeatDelay',['../classzakero_1_1Yetani.html#a27cd01ea08eda690b256cf0665b5d892',1,'zakero::Yetani']]],
-  ['keyrepeatrate_43',['keyRepeatRate',['../classzakero_1_1Yetani.html#a715553d39084a9b336ba1dae6f71b9be',1,'zakero::Yetani']]],
-  ['keystate_44',['KeyState',['../classzakero_1_1Yetani.html#a904a1d471bf7a7d3bd7c2b3c067d4eec',1,'zakero::Yetani']]]
+  ['height_33',['height',['../classzakero_1_1Xenium.html#a6f01bbe49681e5e717a4504f5c8d96df',1,'zakero::Xenium::Output::height()'],['../structzakero_1_1Yetani_1_1SizeMm.html#aea09514369038afb866bf3bf4bc40a14',1,'zakero::Yetani::SizeMm::height()'],['../structzakero_1_1Yetani_1_1SizePercent.html#ac7a921a8abf8b175c7181348469baeba',1,'zakero::Yetani::SizePercent::height()'],['../structzakero_1_1Yetani_1_1SizePixel.html#a9a01037b22ebe008881e83df179bfc21',1,'zakero::Yetani::SizePixel::height()'],['../classzakero_1_1Yetani.html#a26b4ae0f485e823355e92796b1d1672e',1,'zakero::Yetani::Output::height()']]],
+  ['hotspot_5fx_34',['hotspot_x',['../classzakero_1_1Yetani.html#a6200a0bb358ab2adfb0f02709d4a6769',1,'zakero::Yetani::CursorConfig']]],
+  ['hotspot_5fy_35',['hotspot_y',['../classzakero_1_1Yetani.html#a7b3e3b9c9b56db6c521df68bfc6933ec',1,'zakero::Yetani::CursorConfig']]]
 ];

@@ -67,6 +67,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
@@ -79,6 +80,12 @@ $(function() {
 <p>A pool of memory.  
  <a href="classzakero_1_1MemoryPool.html#details">More...</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:structzakero_1_1MemoryPool_1_1Segment"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#structzakero_1_1MemoryPool_1_1Segment">Segment</a></td></tr>
+<tr class="memdesc:structzakero_1_1MemoryPool_1_1Segment"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data that defines a segment.  <a href="classzakero_1_1MemoryPool.html#structzakero_1_1MemoryPool_1_1Segment">More...</a><br /></td></tr>
+<tr class="separator:structzakero_1_1MemoryPool_1_1Segment"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
 <tr class="memitem:a5e9291872c2c7b3063a32d0a05408944"><td class="memItemLeft" align="right" valign="top"><a id="a5e9291872c2c7b3063a32d0a05408944"></a>
@@ -96,6 +103,10 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#a06a72834586ae1751ad4d22e421cb307">LambdaSize</a> = std::function&lt; void(size_t)&gt;</td></tr>
 <tr class="memdesc:a06a72834586ae1751ad4d22e421cb307"><td class="mdescLeft">&#160;</td><td class="mdescRight">A lambda that receives a <code>size_t</code> argument. <br /></td></tr>
 <tr class="separator:a06a72834586ae1751ad4d22e421cb307"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a289e83717e7fb3b06dd78155a8851ed3"><td class="memItemLeft" align="right" valign="top"><a id="a289e83717e7fb3b06dd78155a8851ed3"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#a289e83717e7fb3b06dd78155a8851ed3">VectorSegment</a> = std::vector&lt; <a class="el" href="classzakero_1_1MemoryPool.html#structzakero_1_1MemoryPool_1_1Segment">Segment</a> &gt;</td></tr>
+<tr class="memdesc:a289e83717e7fb3b06dd78155a8851ed3"><td class="mdescLeft">&#160;</td><td class="mdescRight">A convenience data type. <br /></td></tr>
+<tr class="separator:a289e83717e7fb3b06dd78155a8851ed3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -147,6 +158,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2f6177d26c44d16f48247171e724552b"><td class="memItemLeft" align="right" valign="top">off_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#a2f6177d26c44d16f48247171e724552b">realloc</a> (off_t, size_t, std::error_code &amp;) noexcept</td></tr>
 <tr class="memdesc:a2f6177d26c44d16f48247171e724552b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Change the size of allocated memory.  <a href="classzakero_1_1MemoryPool.html#a2f6177d26c44d16f48247171e724552b">More...</a><br /></td></tr>
 <tr class="separator:a2f6177d26c44d16f48247171e724552b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classzakero_1_1MemoryPool.html#a289e83717e7fb3b06dd78155a8851ed3">VectorSegment</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae">segmentList</a> () const noexcept</td></tr>
+<tr class="memdesc:afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Information about the current internal state.  <a href="classzakero_1_1MemoryPool.html#afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae">More...</a><br /></td></tr>
+<tr class="separator:afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a794a2098e0cb093647fe01e3bd241583"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classzakero_1_1MemoryPool.html#a794a2098e0cb093647fe01e3bd241583">size</a> () const noexcept</td></tr>
 <tr class="memdesc:a794a2098e0cb093647fe01e3bd241583"><td class="mdescLeft">&#160;</td><td class="mdescRight">The size of the memory pool.  <a href="classzakero_1_1MemoryPool.html#a794a2098e0cb093647fe01e3bd241583">More...</a><br /></td></tr>
 <tr class="separator:a794a2098e0cb093647fe01e3bd241583"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -163,7 +177,43 @@ Static Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Refer to <a class="el" href="Zakero__MemoryPool_8h.html" title="Zakero MemoryPool.">Zakero_MemoryPool.h</a> to learn how to include this library.</p>
 <p>This object will create a region of memory and provide an interface to allocate from that memory. </p>
-</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+</div><hr/><h2 class="groupheader">Class Documentation</h2>
+<a name="structzakero_1_1MemoryPool_1_1Segment" id="structzakero_1_1MemoryPool_1_1Segment"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#structzakero_1_1MemoryPool_1_1Segment">&#9670;&nbsp;</a></span>zakero::MemoryPool::Segment</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">struct zakero::MemoryPool::Segment</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<div class="textblock"></div><table class="fieldtable">
+<tr><th colspan="3">Class Members</th></tr>
+<tr><td class="fieldtype">
+<a id="a652311ca5b8752b5ea8622a4847ba2b6"></a>bool</td>
+<td class="fieldname">
+in_use</td>
+<td class="fielddoc">
+A flag used to determine if the memory chunk is in use. </td></tr>
+<tr><td class="fieldtype">
+<a id="ac0253b4e29c7b0879793ca56cfef1610"></a>off_t</td>
+<td class="fieldname">
+offset</td>
+<td class="fielddoc">
+The offset into the allocated memory pool. </td></tr>
+<tr><td class="fieldtype">
+<a id="a14b4c18edee475ca87d1f874d7703a28"></a>off_t</td>
+<td class="fieldname">
+size</td>
+<td class="fielddoc">
+The size of the allocated memory chunk. </td></tr>
+</table>
+
+</div>
+</div>
+<h2 class="groupheader">Member Enumeration Documentation</h2>
 <a id="a6d1fb194cf769f26b7773ded7c18f954"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6d1fb194cf769f26b7773ded7c18f954">&#9670;&nbsp;</a></span>Alignment</h2>
 
@@ -800,7 +850,7 @@ Static Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>The <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> must be initialized before it can be used. At a minimum, the size of the <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> must be specified in bytes.</p>
+<p>The <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> must be initialized before it can be used. At a minimum, the size of the <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> must be specified in bytes and the size must be greater than 0.</p>
 <p>The maximum allowable size is MemoryPool::Size_Max which represents the largest offset value supported by the <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a>. Your hardware configuration and/or operating system may lower this limit.</p>
 <p>Setting the <code>expandable</code> flag to <code>true</code> will allow the <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> to grow to a larger size. If an allocation request is made that is larger that the largest available contiguous space available, then the Memory Pool will expand just enough to accommodate the request.</p>
 <p>The Byte Boundary of all the allocations for this <a class="el" href="classzakero_1_1MemoryPool.html" title="A pool of memory.">MemoryPool</a> object is specified by the <code>alignment</code>.</p>
@@ -1052,6 +1102,32 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbc7b3a81ee5f0b4a9ddcbed7ccfc4ae">&#9670;&nbsp;</a></span>segmentList()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classzakero_1_1MemoryPool.html#a289e83717e7fb3b06dd78155a8851ed3">MemoryPool::VectorSegment</a> zakero::MemoryPool::segmentList </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<dl class="section return"><dt>Returns</dt><dd>A collection Segments </dd></dl>
+
+</div>
+</div>
 <a id="a794a2098e0cb093647fe01e3bd241583"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a794a2098e0cb093647fe01e3bd241583">&#9670;&nbsp;</a></span>size()</h2>
 
@@ -1131,8 +1207,8 @@ Static Public Member Functions</h2></td></tr>
 </ul>
 </div><!-- contents -->
 <div class="ttc" id="aclasszakero_1_1MemoryPool_html"><div class="ttname"><a href="classzakero_1_1MemoryPool.html">zakero::MemoryPool</a></div><div class="ttdoc">A pool of memory.</div><div class="ttdef"><b>Definition:</b> Zakero_MemoryPool.h:264</div></div>
-<div class="ttc" id="aclasszakero_1_1MemoryPool_html_ac79e330bb9ba2d1d21218f7b463cbfae"><div class="ttname"><a href="classzakero_1_1MemoryPool.html#ac79e330bb9ba2d1d21218f7b463cbfae">zakero::MemoryPool::remap</a></div><div class="ttdeci">static uint8_t * remap(const MemoryPool::AddressMap &amp;, uint8_t *) noexcept</div><div class="ttdoc">Get the new memory address.</div><div class="ttdef"><b>Definition:</b> Zakero_MemoryPool.h:1356</div></div>
-<div class="ttc" id="aclasszakero_1_1MemoryPool_html_a5e9291872c2c7b3063a32d0a05408944"><div class="ttname"><a href="classzakero_1_1MemoryPool.html#a5e9291872c2c7b3063a32d0a05408944">zakero::MemoryPool::AddressMap</a></div><div class="ttdeci">std::map&lt; uint8_t *, uint8_t * &gt; AddressMap</div><div class="ttdoc">A mapping of old addresses to new addresses.</div><div class="ttdef"><b>Definition:</b> Zakero_MemoryPool.h:283</div></div>
+<div class="ttc" id="aclasszakero_1_1MemoryPool_html_ac79e330bb9ba2d1d21218f7b463cbfae"><div class="ttname"><a href="classzakero_1_1MemoryPool.html#ac79e330bb9ba2d1d21218f7b463cbfae">zakero::MemoryPool::remap</a></div><div class="ttdeci">static uint8_t * remap(const MemoryPool::AddressMap &amp;, uint8_t *) noexcept</div><div class="ttdoc">Get the new memory address.</div><div class="ttdef"><b>Definition:</b> Zakero_MemoryPool.h:1362</div></div>
+<div class="ttc" id="aclasszakero_1_1MemoryPool_html_a5e9291872c2c7b3063a32d0a05408944"><div class="ttname"><a href="classzakero_1_1MemoryPool.html#a5e9291872c2c7b3063a32d0a05408944">zakero::MemoryPool::AddressMap</a></div><div class="ttdeci">std::map&lt; uint8_t *, uint8_t * &gt; AddressMap</div><div class="ttdoc">A mapping of old addresses to new addresses.</div><div class="ttdef"><b>Definition:</b> Zakero_MemoryPool.h:290</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by&#160;<a href="http://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.8.20

@@ -20,6 +20,9 @@
  * Include this header in your source code to use these features.
  *
  * \parversion{zakero_base}
+ * __v0.9.3__
+ * - Added tolower()
+ *
  * __v0.9.2__
  * - Added to_string(std::error_code)
  * - Added operator<<(std::ostream&, std::error_code)
@@ -51,6 +54,7 @@
  */
 
 #include <chrono>
+#include <locale>
 #include <string>
 #include <vector>
 
@@ -337,12 +341,36 @@ namespace zakero
 	 * \retval true  The values are equal
 	 * \retval false The values are not equal
 	 */
+	[[nodiscard]]
 	inline bool equalish(const float a     ///< The first value
 		, const float            b     ///< The second value
 		, const float            delta ///< The maximum difference
 		) noexcept
 	{
 		return (std::abs(a - b) < delta);
+	}
+
+
+	/**
+	 * \brief Convert a string to lower case.
+	 *
+	 * The provided string, \p str, will be converted to lower-case using 
+	 * the default locale.
+	 *
+	 * \return The lower-case string.
+	 */
+	[[nodiscard]]
+	inline std::string tolower(std::string str ///< The string to convert
+		) noexcept
+	{
+		std::locale locale;
+
+		for(auto& c : str)
+		{
+			c = std::tolower(c, locale);
+		}
+
+		return str;
 	}
 
 

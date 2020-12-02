@@ -174,10 +174,11 @@
  */
 
 // C++
-#include <iostream>
-#include <thread>
 #include <array>
 #include <future>
+#include <iostream>
+#include <thread>
+#include <unordered_map>
 
 // Linux
 #include <linux/input-event-codes.h>
@@ -720,64 +721,64 @@ namespace zakero
 
 			struct WindowDeleteData
 			{
-				Xenium::Lambda close_request_lambda;
-				xcb_atom_t     atom_close_request;
+				Xenium::Lambda close_request_lambda = { };
+				xcb_atom_t     atom_close_request   = XCB_ATOM_NONE;
 			};
 
 			struct WindowSizeData
 			{
-				Xenium::SizeMm            mm;
-				Xenium::SizeMm            mm_minimum;
-				Xenium::SizeMm            mm_maximum;
-				Xenium::LambdaSizeMm      mm_lambda;
-				Xenium::SizePercent       percent;
-				Xenium::SizePercent       percent_minimum;
-				Xenium::SizePercent       percent_maximum;
-				Xenium::LambdaSizePercent percent_lambda;
-				Xenium::SizePixel         pixel;
-				Xenium::SizePixel         pixel_minimum;
-				Xenium::SizePixel         pixel_maximum;
-				Xenium::LambdaSizePixel   pixel_lambda;
-				Xenium::SizeUnit          unit;
+				Xenium::SizeMm            mm              = { };
+				Xenium::SizeMm            mm_minimum      = { };
+				Xenium::SizeMm            mm_maximum      = { };
+				Xenium::LambdaSizeMm      mm_lambda       = { };
+				Xenium::SizePercent       percent         = { };
+				Xenium::SizePercent       percent_minimum = { };
+				Xenium::SizePercent       percent_maximum = { };
+				Xenium::LambdaSizePercent percent_lambda  = { };
+				Xenium::SizePixel         pixel           = { };
+				Xenium::SizePixel         pixel_minimum   = { };
+				Xenium::SizePixel         pixel_maximum   = { };
+				Xenium::LambdaSizePixel   pixel_lambda    = { };
+				Xenium::SizeUnit          unit            = { };
 			};
 
 			struct WindowModeData
 			{
-				Xenium::WindowMode       window_mode;
-				Xenium::LambdaWindowMode lambda;
+				Xenium::WindowMode       window_mode = Xenium::WindowMode::Normal;
+				Xenium::LambdaWindowMode lambda      = { };
 			};
 
 			struct WindowDecorationsData
 			{
-				Xenium::WindowDecorations       window_decorations;
-				Xenium::LambdaWindowDecorations lambda;
+				Xenium::WindowDecorations       window_decorations = Xenium::WindowDecorations::Server_Side;
+				Xenium::LambdaWindowDecorations lambda             = { };
 			};
 
 			struct WindowOnButtonData
 			{
-				Xenium::LambdaButtonMm      lambda_mm;
-				Xenium::LambdaButtonPercent lambda_percent;
-				Xenium::LambdaButtonPixel   lambda_pixel;
+				Xenium::LambdaButtonMm      lambda_mm      = { };
+				Xenium::LambdaButtonPercent lambda_percent = { };
+				Xenium::LambdaButtonPixel   lambda_pixel   = { };
 			};
 
 			struct WindowOnEnterData
 			{
-				Xenium::LambdaPointMm      lambda_mm;
-				Xenium::LambdaPointPercent lambda_percent;
-				Xenium::LambdaPointPixel   lambda_pixel;
+				Xenium::LambdaPointMm      lambda_mm      = { };
+				Xenium::LambdaPointPercent lambda_percent = { };
+				Xenium::LambdaPointPixel   lambda_pixel   = { };
 			};
 
 			struct WindowOnMotionData
 			{
-				Xenium::LambdaPointMm      lambda_mm;
-				Xenium::LambdaPointPercent lambda_percent;
-				Xenium::LambdaPointPixel   lambda_pixel;
+				Xenium::LambdaPointMm      lambda_mm      = { };
+				Xenium::LambdaPointPercent lambda_percent = { };
+				Xenium::LambdaPointPixel   lambda_pixel   = { };
 			};
 
 			struct WindowKeyboardData
 			{
-				Xenium::Lambda on_enter;
-				Xenium::Lambda on_leave;
+				Xenium::Lambda on_enter = { };
+				Xenium::Lambda on_leave = { };
 			};
 
 			using WindowDecorationsMap = std::unordered_map<Xenium::WindowId, Xenium::WindowDecorationsData>;
@@ -916,7 +917,7 @@ namespace zakero
 
 			struct KeyData
 			{
-				Xenium::Key         key         = { 0 };
+				Xenium::Key         key         = { 0, 0, Xenium::KeyState::Released };
 				Xenium::KeyModifier modifier    = { 0 };
 				Xenium::WindowId    window_id   = { 0 };
 				uint32_t            repeat_time = { 0 };
@@ -928,7 +929,7 @@ namespace zakero
 
 			Xenium::KeyDataArray key_data_array       = { };
 			Xenium::KeyModifier  key_modifier         = { 0 };
-			Xenium::XkbControls  xkb_controls         = {};
+			Xenium::XkbControls  xkb_controls         = { };
 			uint16_t             xkb_modifier_pressed = 0;
 			
 			// -------------------------------------------------- //
@@ -3649,6 +3650,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizeMm& size_mm    ///< The w
 	,	.window_id          = 0
 	,	.output_id          = 0
 	,	.atom_close_request = 0
+	,	.gc                 = 0
 	,	.size_unit          = Xenium::SizeUnit::Millimeter
 	,	.size_mm            = size_mm
 	,	.size_percent       = {}
@@ -3733,6 +3735,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePercent& size_percent ///
 	,	.window_id          = 0
 	,	.output_id          = 0
 	,	.atom_close_request = 0
+	,	.gc                 = 0
 	,	.size_unit          = Xenium::SizeUnit::Percent
 	,	.size_mm            = {}
 	,	.size_percent       = size_percent
@@ -3816,6 +3819,7 @@ Xenium::Window* Xenium::windowCreate(const Xenium::SizePixel& size_pixel ///< Th
 	,	.window_id          = 0
 	,	.output_id          = 0
 	,	.atom_close_request = 0
+	,	.gc                 = 0
 	,	.size_unit          = Xenium::SizeUnit::Pixel
 	,	.size_mm            = {}
 	,	.size_percent       = {}
@@ -4821,7 +4825,7 @@ void Xenium::xcbEvent(const xcb_focus_in_event_t* event ///< The XCB Event
 /**
  * \brief XCB event handler.
  */
-void Xenium::xcbEvent(const xcb_gravity_notify_event_t* event ///< The XCB Event
+void Xenium::xcbEvent(const xcb_gravity_notify_event_t* //event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Gravity Notify:  " << to_string(*event) << '\n';
@@ -5049,7 +5053,7 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event ///< The XCB Event
 /**
  * \brief XCB event handler.
  */
-void Xenium::xcbEvent(const xcb_map_notify_event_t* event ///< The XCB Event
+void Xenium::xcbEvent(const xcb_map_notify_event_t* //event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Map Netify:      " << to_string(*event) << '\n';
@@ -5098,7 +5102,7 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event ///< The XCB Even
 {
 //std::cout << "Property Notify: " << to_string(*event) << '\n';
 
-	xcb_generic_error_t generic_error = {0};
+	xcb_generic_error_t generic_error;
 
 	if(event->atom == atom_net_frame_extents)
 	{
@@ -5186,7 +5190,7 @@ void Xenium::xcbEvent(const xcb_property_notify_event_t* event ///< The XCB Even
 /**
  * \brief XCB event handler.
  */
-void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event ///< The XCB Event
+void Xenium::xcbEvent(const xcb_reparent_notify_event_t* //event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Reparent Notify: " << to_string(*event) << '\n';
@@ -5196,7 +5200,7 @@ void Xenium::xcbEvent(const xcb_reparent_notify_event_t* event ///< The XCB Even
 /**
  * \brief XCB event handler.
  */
-void Xenium::xcbEvent(const xcb_unmap_notify_event_t* event ///< The XCB Event
+void Xenium::xcbEvent(const xcb_unmap_notify_event_t* //event ///< The XCB Event
 	) noexcept
 {
 //std::cout << "Unmap Notify:    " << to_string(*event) << '\n';
@@ -5391,7 +5395,7 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	xcb_size_hints_t size_hints = { 0 };
+	xcb_size_hints_t size_hints;
 	xcb_change_property_checked(this->connection
 		, XCB_PROP_MODE_REPLACE
 		, data->window_id
@@ -6180,7 +6184,7 @@ void Xenium::randrEvent(const xcb_randr_notify_event_t* event ///< The event
 /**
  * \brief Handle the XCB RandR Screen Change Notify event
  */
-void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* event ///< The event
+void Xenium::randrEvent(const xcb_randr_screen_change_notify_event_t* //event ///< The event
 	) noexcept
 {
 //std::cout << "RandR ScrnChange:" << to_string(*event) << '\n';

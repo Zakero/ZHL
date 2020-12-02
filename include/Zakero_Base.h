@@ -337,9 +337,9 @@ namespace zakero
 	 * \retval true  The values are equal
 	 * \retval false The values are not equal
 	 */
-	bool equalish(const float a     ///< The first value
-		, const float     b     ///< The second value
-		, const float     delta ///< The maximum difference
+	inline bool equalish(const float a     ///< The first value
+		, const float            b     ///< The second value
+		, const float            delta ///< The maximum difference
 		) noexcept
 	{
 		return (std::abs(a - b) < delta);

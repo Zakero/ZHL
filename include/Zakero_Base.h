@@ -22,6 +22,7 @@
  * \parversion{zakero_base}
  * __v0.9.3__
  * - Added tolower()
+ * - Added to_string(std::chrono::nanoseconds nanoseconds)
  *
  * __v0.9.2__
  * - Added to_string(std::error_code)
@@ -477,6 +478,41 @@ namespace zakero
 		return vector.erase(std::remove(std::begin(vector), std::end(vector), value), std::end(vector));
 	}
 
+
+	/**
+	 * \brief Convert nanoseconds into a string.
+	 *
+	 * The nanoseconds value will be converted into a string that contains 
+	 * "days", "hours", "minutes", "seconds", and (of course) 
+	 * "nanoseconds".
+	 *
+	 * \return A string
+	 */
+	[[nodiscard]]
+	inline std::string to_string(std::chrono::nanoseconds nanoseconds ///< The value
+		) noexcept
+	{
+		typedef std::chrono::duration<int64_t, std::ratio<86400>> duration_days;
+
+		const auto days = std::chrono::duration_cast<duration_days>(nanoseconds);
+		nanoseconds -= days;
+
+		const auto hours = std::chrono::duration_cast<std::chrono::hours>(nanoseconds);
+		nanoseconds -= hours;
+
+		const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(nanoseconds);
+		nanoseconds -= minutes;
+
+		const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(nanoseconds);
+		nanoseconds -= seconds;
+
+		return    "{ \"days\": "        + std::to_string((int64_t)days.count())
+			+ ", \"hours\": "       + std::to_string((int64_t)hours.count())
+			+ ", \"minutes\": "     + std::to_string((int64_t)minutes.count())
+			+ ", \"seconds\": "     + std::to_string((int64_t)seconds.count())
+			+ ", \"nanoseconds\": " + std::to_string((int64_t)nanoseconds.count())
+			+ " }";
+	}
 
 	/**
 	 * \brief Convert an std::error_code to a std::string.

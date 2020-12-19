@@ -480,6 +480,48 @@ namespace zakero
 
 
 	/**
+	 * \brief Convert a string into a boolean value.
+	 *
+	 * \todo Make the list of "true" string values convertible.  
+	 * (Compile-Time or Run-Time?)
+	 *
+	 * This is intended to be a complement to the std::stod() and 
+	 * std::stoi() family of functions.  However, the main restriction is 
+	 * this method only accepts certain string values to represent a 
+	 * boolean `true` value:
+	 * - "enable"
+	 * - "enabled"
+	 * - "true"
+	 * - "t"
+	 * - "yes"
+	 * - "y"
+	 * - "1"
+	 * If the provided \p str is not one of the above strings, `false` will 
+	 * be returned.
+	 *
+	 * \note The string comparison is __not__ case-sensitive.
+	 *
+	 * \return The string converted to a boolean value.
+	 */
+	[[nodiscard]]
+	inline bool stob(const std::string& str ///< The value to convert.
+		) noexcept
+	{
+		static std::vector<std::string> v =
+		{	"enable"
+		,	"enabled"
+		,	"true"
+		,	"t"
+		,	"yes"
+		,	"y"
+		,	"1"
+		};
+
+		return (vectorContains(v, tolower(str)));
+	}
+
+
+	/**
 	 * \brief Convert nanoseconds into a string.
 	 *
 	 * The nanoseconds value will be converted into a string that contains 
@@ -513,6 +555,7 @@ namespace zakero
 			+ ", \"nanoseconds\": " + std::to_string((int64_t)nanoseconds.count())
 			+ " }";
 	}
+
 
 	/**
 	 * \brief Convert an std::error_code to a std::string.

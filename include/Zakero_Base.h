@@ -21,6 +21,7 @@
  *
  * \parversion{zakero_base}
  * __v0.9.3__
+ * - Added stob()
  * - Added tolower()
  * - Added to_string(std::chrono::nanoseconds nanoseconds)
  *

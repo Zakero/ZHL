@@ -1086,15 +1086,33 @@ namespace zakero
 /**
  * \internal
  * 
+ * \def ZAKERO_XENIUM__DEBUG_ENABLED
+ *
+ * \brief An enabled flag
+ *
+ * If `ZAKERO_XENIUM_ENABLE_DEBUG` is defined then this flag is `true`.
+ * If `ZAKERO_XENIUM_ENABLE_DEBUG` is defined then this flag is `false`.
+ *
+ * The purpose of this is to make other macros easier to read.
+ */
+#ifdef ZAKERO_XENIUM_ENABLE_DEBUG
+#define ZAKERO_XENIUM__DEBUG_ENABLED true
+#else
+#define ZAKERO_XENIUM__DEBUG_ENABLED false
+#endif
+
+/**
+ * \internal
+ * 
  * \def ZAKERO_XENIUM__DEBUG_DISABLED
  *
  * \brief A disabled flag
  *
- * The inverse of ZAKERO_XENIUM_DEBUG_ENABLED and is used to enable or disable 
+ * The inverse of ZAKERO_XENIUM__DEBUG_ENABLED and is used to enable or disable 
  * the debugging messages.
  *
- * If `ZAKERO_XENIUM_ENABLE_DEBUG` is `true` then this flag is `false`.
- * If `ZAKERO_XENIUM_ENABLE_DEBUG` is `false` then this flag is `true`.
+ * If `ZAKERO_XENIUM_ENABLE_DEBUG` is defined then this flag is `false`.
+ * If `ZAKERO_XENIUM_ENABLE_DEBUG` is defined then this flag is `true`.
  *
  * The purpose of this is to make other macros easier to read.
  */

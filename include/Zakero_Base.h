@@ -228,7 +228,7 @@ std::chrono::duration_cast<std::chrono::unit_>(             \
 
 
 /**
- * \brief Prevent "unused variable" compiler warnings.
+ * \brief Prevent "unused variable" compilier warnings.
  *
  * \param var_ The "unused variable".
  */
@@ -379,7 +379,7 @@ namespace zakero
 	/**
 	 * \brief Check the contents of a std::vector.
 	 *
-	 * A convenience method to make searching a vector easier, like 
+	 * A convience method to make searching a vector easier, like 
 	 * std::map::contains().
 	 *
 	 * \par "Example"

@@ -1081,6 +1081,7 @@ namespace zakero
 #endif
 
 // }}}
+// {{{ Macros : Debugging
 
 /**
  * \internal
@@ -1209,18 +1210,8 @@ namespace zakero
 		<< "Error: " << zakero::to_string(var_) \
 		<< "\n";
 
-/**
- * \internal
- *
- * \brief Make generating Error Conditions less verbose.
- *
- * All this Macro Function does is expand into code that creates an 
- * std::error_code.
- *
- * \param err_ The error code
- */
-#define ZAKERO_XENIUM__ERROR(err_) std::error_code(err_, XeniumErrorCategory)
-
+// }}}
+// {{{ Macros : Data Conversion Lookup Tables
 
 /**
  * \internal
@@ -1245,6 +1236,20 @@ namespace zakero
 	X(XCB_RANDR_TRANSFORM_SCALE_UP   , "Scale Up"   ) \
 	X(XCB_RANDR_TRANSFORM_SCALE_DOWN , "Scale Down" ) \
 	X(XCB_RANDR_TRANSFORM_PROJECTIVE , "Projective" ) \
+
+// }}}
+
+/**
+ * \internal
+ *
+ * \brief Make generating Error Conditions less verbose.
+ *
+ * All this Macro Function does is expand into code that creates an 
+ * std::error_code.
+ *
+ * \param err_ The error code
+ */
+#define ZAKERO_XENIUM__ERROR(err_) std::error_code(err_, XeniumErrorCategory)
 
 // }}}
 

@@ -1223,9 +1223,9 @@ namespace zakero
  *
  * \param var_ The variable to write.
  */
-#define ZAKERO_XENIUM__DEBUG_ERROR(var_)                \
-	ZAKERO_XENIUM__DEBUG                            \
-		<< "Error: " << zakero::to_string(var_) \
+#define ZAKERO_XENIUM__DEBUG_ERROR(var_) \
+	ZAKERO_XENIUM__DEBUG         \
+		<< "Error: " << var_ \
 		<< "\n";
 
 // }}}
@@ -1681,7 +1681,7 @@ namespace
 		}
 
 		return ZAKERO_XENIUM__ERROR(Xenium::Error_None);
-	};
+	}
 }
 
 // }}}
@@ -2499,6 +2499,8 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
 	{
 		error = convertConnectionError(xcb_error);
 
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return nullptr;
 	}
 
@@ -2510,6 +2512,8 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
 	{
 		delete xenium;
 
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return nullptr;
 	}
 
@@ -2519,6 +2523,8 @@ Xenium* Xenium::connect(const std::string& display ///< The Display Name or ID
 	if(error)
 	{
 		delete xenium;
+
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
 
 		return nullptr;
 	}
@@ -2584,6 +2590,8 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 	error = xkbInit();
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 	
@@ -2591,12 +2599,16 @@ std::error_code Xenium::init(xcb_connection_t* connection    ///< The XCB Connec
 	error = randrInit();
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
 	error = outputInit();
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
@@ -3336,6 +3348,10 @@ std::error_code Xenium::outputInit() noexcept
 	
 	if(screen_resources == nullptr)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Screen_Resources_Not_Found)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Screen_Resources_Not_Found);
 	}
 
@@ -3346,6 +3362,15 @@ std::error_code Xenium::outputInit() noexcept
 	int output_list_size =
 		xcb_randr_get_screen_resources_current_outputs_length(screen_resources
 			);
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(output_list_size == 0)
+	{
+		ZAKERO_XENIUM__DEBUG
+			<< "No outputs where found in the Screen Resources"
+			;
+	}
+#	endif
 
 	for(int i = 0; i < output_list_size; i++)
 	{
@@ -3413,11 +3438,19 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 {
 	if(randr_crtc == XCB_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Invalid_CRTC_Id)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Invalid_CRTC_Id);
 	}
 
 	if(randr_output == XCB_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Invalid_Output_Id)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Invalid_Output_Id);
 	}
 
@@ -3433,6 +3466,10 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 
 	if(screen_resources == nullptr)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Screen_Resources_Not_Found)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Screen_Resources_Not_Found);
 	}
 
@@ -3449,6 +3486,10 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 	{
 		free(screen_resources);
 
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Not_Found)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Not_Found);
 	}
 
@@ -3458,6 +3499,10 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 	{
 		free(output_info);
 		free(screen_resources);
+
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete)
+			);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete);
 	}
@@ -3475,6 +3520,10 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 	{
 		free(output_info);
 		free(screen_resources);
+
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_CRTC_Info_Not_Found)
+			);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_CRTC_Info_Not_Found);
 	}
@@ -4563,6 +4612,13 @@ std::error_code Xenium::windowSizeSetMinMax(const Xenium::Output& output      //
 		, window_size.pixel_maximum.width, window_size.pixel_maximum.height
 		);
 
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
+
 	return error;
 }
 
@@ -5240,18 +5296,19 @@ void Xenium::xcbEvent(const xcb_unmap_notify_event_t* //event ///< The XCB Event
 void Xenium::xcbWindowCreate(Xenium::WindowCreateData* window_data ///< The window data
 	) noexcept
 {
-	std::error_code error;
-
-	error = xcbWindowCreateValidate(window_data);
-	if(error)
+	window_data->error = xcbWindowCreateValidate(window_data);
+	if(window_data->error)
 	{
-		window_data->error = error;
+		ZAKERO_XENIUM__DEBUG_ERROR(window_data->error);
+
 		return;
 	}
 
-	error = xcbWindowCreateClient(window_data);
-	if(error)
+	window_data->error = xcbWindowCreateClient(window_data);
+	if(window_data->error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(window_data->error);
+
 		Xenium::WindowDestroyData data =
 		{	.barrier   = {}
 		,	.window_id = window_data->window_id
@@ -5260,14 +5317,14 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* window_data ///< The wind
 
 		xcbWindowDestroy(&data);
 
-		window_data->error = error;
-
 		return;
 	}
 
-	error = xcbWindowCreateInit(window_data);
-	if(error)
+	window_data->error = xcbWindowCreateInit(window_data);
+	if(window_data->error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(window_data->error);
+
 		Xenium::WindowDestroyData data =
 		{	.barrier   = {}
 		,	.window_id = window_data->window_id
@@ -5276,12 +5333,8 @@ void Xenium::xcbWindowCreate(Xenium::WindowCreateData* window_data ///< The wind
 
 		xcbWindowDestroy(&data);
 
-		window_data->error = error;
-
 		return;
 	}
-
-	window_data->error = ZAKERO_XENIUM__ERROR(Error_None);
 
 	return;
 }
@@ -5327,6 +5380,10 @@ std::error_code Xenium::xcbWindowCreateValidate(Xenium::WindowCreateData* window
 		|| (size_pixel.width < Window_Size_Minimum)
 		)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Window_Size_Too_Small);
 	}
 
@@ -5613,26 +5670,46 @@ std::error_code Xenium::atomInit() noexcept
 
 	if(atom_wm_delete_window == XCB_ATOM_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_WM_Delete_Window_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_WM_Delete_Window_Not_Available);
 	}
 
 	if(atom_wm_protocols == XCB_ATOM_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_WM_Protocols_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_WM_Protocols_Not_Available);
 	}
 
 	if(atom_net_wm_state == XCB_ATOM_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_NETWM_State_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_NETWM_State_Not_Available);
 	}
 
 	if(atom_net_wm_state_fullscreen == XCB_ATOM_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_Fullscreen_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_Fullscreen_Not_Available);
 	}
 
 	if(atom_net_wm_state_hidden == XCB_ATOM_NONE)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_Hidden_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_Hidden_Not_Available);
 	}
 
@@ -5640,6 +5717,10 @@ std::error_code Xenium::atomInit() noexcept
 		|| (atom_net_wm_state_maximized_vert == XCB_ATOM_NONE)
 		)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_Maximized_Window_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_Maximized_Window_Not_Available);
 	}
 
@@ -6017,6 +6098,10 @@ std::error_code Xenium::randrInit() noexcept
 	
 	if(randr->present == 0)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Not_Available);
 	}
 
@@ -6045,6 +6130,10 @@ std::error_code Xenium::randrInit() noexcept
 			)
 		)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Version_Too_Old)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Version_Too_Old);
 	}
 
@@ -6148,6 +6237,13 @@ void Xenium::randrEvent(const xcb_randr_output_change_t* event ///< The event
 		{
 			output_on_add(output_id);
 		}
+#		if ZAKERO_XENIUM__DEBUG_ENABLED
+		else
+		{
+			ZAKERO_XENIUM__DEBUG_ERROR(error);
+		}
+#		endif
+
 	}
 	else
 	{
@@ -6233,6 +6329,10 @@ std::error_code Xenium::xkbInit() noexcept
 
 	if(extension_reply == nullptr)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_Xcb_Xkb_Not_Available)
+			);
+
 		return ZAKERO_XENIUM__ERROR(Error_Xcb_Xkb_Not_Available);
 	}
 
@@ -6697,7 +6797,7 @@ void Xenium::Window::onFocusChange(Xenium::LambdaBool lambda ///< The lambda
 std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations decorations ///< The requested decorations
 	) noexcept
 {
-	std::error_code error = ZAKERO_XENIUM__ERROR(Error_None);
+	std::error_code error;
 
 	if(decorations == WindowDecorations::Client_Side)
 	{
@@ -6709,6 +6809,13 @@ std::error_code Xenium::Window::decorationsSet(const Xenium::WindowDecorations d
 		// The X11 will render the borders
 		error = xenium->windowBorder(window_id, true);
 	}
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
 
 	return error;
 }
@@ -6789,6 +6896,13 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizeMm& size ///< The %Win
 
 	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
 
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
+
 	return error;
 }
 
@@ -6843,6 +6957,13 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePercent& size ///< The
 
 	std::error_code error = xenium->windowSizeSet(window_id, size_pixel);
 
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
+
 	return error;
 }
 
@@ -6885,6 +7006,13 @@ std::error_code Xenium::Window::sizeSet(const Xenium::SizePixel& size ///< The %
 
 	std::error_code error = xenium->windowSizeSet(window_id, size);
 
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
+
 	return error;
 }
 
@@ -6909,6 +7037,8 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
 	error = validateMinMax<Xenium::SizeMm>(size_min, size_max);
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
@@ -6923,6 +7053,13 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizeMm& size_min ///
 	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
 
 	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
 
 	return error;
 }
@@ -6948,6 +7085,8 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
 	error = validateMinMax<Xenium::SizePercent>(size_min, size_max);
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
@@ -6962,6 +7101,13 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePercent& size_mi
 	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
 
 	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
 
 	return error;
 }
@@ -6987,6 +7133,8 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 	error = validateMinMax<Xenium::SizePixel>(size_min, size_max);
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
@@ -7001,6 +7149,13 @@ std::error_code Xenium::Window::sizeSetMinMax(const Xenium::SizePixel& size_min 
 	Output& output = xenium->output_map[xenium->window_output_map[window_id]];
 
 	error = xenium->windowSizeSetMinMax(output, window_id, window_size);
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
 
 	return error;
 }
@@ -7314,6 +7469,8 @@ std::error_code Xenium::Window::windowModeSet(const Xenium::WindowMode window_mo
 
 	if(error)
 	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+
 		return error;
 	}
 
@@ -7357,6 +7514,13 @@ void Xenium::Window::windowModeOnChange(Xenium::LambdaWindowMode lambda ///< The
 std::error_code Xenium::Window::minimize() noexcept
 {
 	std::error_code error = xenium->windowMinimize(window_id);
+
+#	if ZAKERO_XENIUM__DEBUG_ENABLED
+	if(error)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(error);
+	}
+#	endif
 
 	return error;
 }
@@ -8902,7 +9066,7 @@ bool operator==(Xenium::SizePixel& lhs ///< Left-Hand side
 
 // }}}
 
-};
+}
 
 #endif // ZAKERO_XENIUM_IMPLEMENTATION
 

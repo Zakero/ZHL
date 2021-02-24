@@ -569,14 +569,11 @@ namespace zakero
 	inline std::string to_string(const std::error_code& error ///< The value
 		) noexcept
 	{
-		std::string str = std::string()
-			+ "{ \"category\": \"" + std::string(error.category().name()) + "\""
+		return std::string()
+			+ "{ \"category\": \"" + error.category().name() + "\""
 			+ ", \"value\": "      + std::to_string(error.value())
 			+ ", \"message\": \""  + error.message() + "\""
-			+ " }"
-			;
-
-		return str;
+			+ " }";
 	}
 } // namespace zakero
 
@@ -592,7 +589,7 @@ inline std::ostream& operator<<(std::ostream& stream ///< The stream to use
 	) noexcept
 {
 	stream
-		<< "{ \"category\": \"" << std::string(error.category().name()) << "\""
+		<< "{ \"category\": \"" << error.category().name() << "\""
 		<< ", \"value\": "      << std::to_string(error.value())
 		<< ", \"message\": \""  << error.message() << "\""
 		<< " }"

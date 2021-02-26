@@ -2665,7 +2665,7 @@ namespace
 			* size.height
 			* Yetani::shmFormatBytesPerPixel(format)
 			;
-	};
+	}
 
 
 	/**
@@ -2713,7 +2713,7 @@ namespace
 		}
 
 		return ZAKERO_YETANI__ERROR(Yetani::Error_None);
-	};
+	}
 }
 
 // }}}
@@ -10819,7 +10819,7 @@ bool operator==(Yetani::SizePixel& lhs ///< Left-Hand side
 
 // }}}
 
-};
+}
 
 #endif // ZAKERO_YETANI_IMPLEMENTATION
 

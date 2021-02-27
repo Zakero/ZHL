@@ -4783,7 +4783,7 @@ void Xenium::xcbEvent(const xcb_client_message_event_t* event ///< The XCB Event
 void Xenium::xcbEvent(const xcb_configure_notify_event_t* event ///< XCB Event
 	) noexcept
 {
-//std::cout << "Configue Notify: " << to_string(*event) << '\n';
+//std::cout << "Configure Notify: " << to_string(*event) << '\n';
 	if((event->response_type & 0x80) == 0)
 	{
 		// Only care about events with the "synthetic bit" set
@@ -5163,7 +5163,7 @@ void Xenium::xcbEvent(const xcb_key_press_event_t* event ///< The XCB Event
 void Xenium::xcbEvent(const xcb_map_notify_event_t* //event ///< The XCB Event
 	) noexcept
 {
-//std::cout << "Map Netify:      " << to_string(*event) << '\n';
+//std::cout << "Map Notify:      " << to_string(*event) << '\n';
 }
 
 
@@ -5503,7 +5503,27 @@ std::error_code Xenium::xcbWindowCreateClient(Xenium::WindowCreateData* data ///
 		return ZAKERO_XENIUM__ERROR(Error_Unknown);
 	}
 
-	xcb_size_hints_t size_hints;
+	xcb_size_hints_t size_hints =
+	{	.flags          = 0
+	,	.x              = 0
+	,	.y              = 0
+	,	.width          = 0
+	,	.height         = 0
+	,	.min_width      = 0
+	,	.min_height     = 0
+	,	.max_width      = 0
+	,	.max_height     = 0
+	,	.width_inc      = 0
+	,	.height_inc     = 0
+	,	.min_aspect_num = 0
+	,	.min_aspect_den = 0
+	,	.max_aspect_num = 0
+	,	.max_aspect_den = 0
+	,	.base_width     = 0
+	,	.base_height    = 0
+	,	.win_gravity    = 0
+	};
+
 	xcb_change_property_checked(this->connection
 		, XCB_PROP_MODE_REPLACE
 		, data->window_id

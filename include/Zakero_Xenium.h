@@ -3386,8 +3386,6 @@ std::error_code Xenium::outputInit() noexcept
 		if(output_info == nullptr
 			|| output_info->connection != XCB_RANDR_CONNECTION_CONNECTED
 			|| output_info->crtc == XCB_NONE
-			|| output_info->mm_width == 0
-			|| output_info->mm_height == 0
 			)
 		{
 			// Output Info is not usable
@@ -3411,38 +3409,25 @@ std::error_code Xenium::outputInit() noexcept
 			continue;
 		}
 
+		// Some Virtual Machines do not fully populate the output
+		// devices for X11.  Calculate the `mm` size if it is missing.
+		if(output_info->mm_width == 0 || output_info->mm_height == 0)
+		{
+			ZAKERO_XENIUM__DEBUG_ERROR(
+				ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete)
+				);
+
+			const float pixels_per_mm_horizontal = (float)this->screen->width_in_pixels  / this->screen->width_in_millimeters;
+			const float pixels_per_mm_vertical   = (float)this->screen->height_in_pixels / this->screen->height_in_millimeters;
+
+			output_info->mm_width  = crtc_info->width  / pixels_per_mm_horizontal;
+			output_info->mm_height = crtc_info->height / pixels_per_mm_vertical;
+		}
+
 		outputAdd(crtc_info, output_info);
 
 		free(crtc_info);
 		free(output_info);
-	}
-
-	// Some Virtual Machines do not fully populate the output devices for
-	// X11.  If the outpu_map is empty, create a custom output device using
-	// the Screen data.
-	if(output_map.empty())
-	{
-		ZAKERO_XENIUM__DEBUG
-			<< "No output devices found, creating custom device."
-			;
-
-		this->output_map[~0] =
-		{	.name                     = "Output-Unknown"
-		//,	.make                     = ""
-		//,	.model                    = ""
-		,	.x                        = 0
-		,	.y                        = 0
-		,	.width                    = this->screen->width_in_pixels
-		,	.height                   = this->screen->height_in_pixels
-		,	.physical_width_mm        = this->screen->width_in_millimeters
-		,	.physical_height_mm       = this->screen->height_in_millimeters
-		,	.subpixel                 = XCB_RENDER_SUB_PIXEL_UNKNOWN
-		//,	.refresh_mHz              = 0 // ????
-		//,	.scale_factor             = 0 // ????
-		,	.transform                = XCB_RANDR_TRANSFORM_UNIT
-		,	.pixels_per_mm_horizontal = (float)this->screen->width_in_pixels  / this->screen->width_in_millimeters
-		,	.pixels_per_mm_vertical   = (float)this->screen->height_in_pixels / this->screen->height_in_millimeters
-		};
 	}
 
 	free(screen_resources);
@@ -3521,20 +3506,6 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Not_Found);
 	}
 
-	if(output_info->mm_width == 0
-		|| output_info->mm_height == 0
-		)
-	{
-		free(output_info);
-		free(screen_resources);
-
-		ZAKERO_XENIUM__DEBUG_ERROR(
-			ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete)
-			);
-
-		return ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete);
-	}
-
 	xcb_randr_get_crtc_info_reply_t* crtc_info =
 		xcb_randr_get_crtc_info_reply(this->connection
 			, xcb_randr_get_crtc_info(this->connection
@@ -3554,6 +3525,21 @@ std::error_code Xenium::outputAdd(xcb_randr_crtc_t randr_crtc   ///< The RandR C
 			);
 
 		return ZAKERO_XENIUM__ERROR(Error_RandR_CRTC_Info_Not_Found);
+	}
+
+	// Some Virtual Machines do not fully populate the output
+	// devices for X11.  Calculate the `mm` size if it is missing.
+	if(output_info->mm_width == 0 || output_info->mm_height == 0)
+	{
+		ZAKERO_XENIUM__DEBUG_ERROR(
+			ZAKERO_XENIUM__ERROR(Error_RandR_Output_Info_Is_Incomplete)
+			);
+
+		const float pixels_per_mm_horizontal = (float)this->screen->width_in_pixels  / this->screen->width_in_millimeters;
+		const float pixels_per_mm_vertical   = (float)this->screen->height_in_pixels / this->screen->height_in_millimeters;
+
+		output_info->mm_width  = crtc_info->width  / pixels_per_mm_horizontal;
+		output_info->mm_height = crtc_info->height / pixels_per_mm_vertical;
 	}
 
 	outputAdd(crtc_info, output_info);
@@ -8723,7 +8709,7 @@ std::string to_string(const Xenium::Output& output ///< The value to convert
 	) noexcept
 {
 	return std::string()
-		+ "{ \"name\": \""                     + output.name + "\""
+		+ "{ \"name\": \""                   + output.name + "\""
 		+ ", \"x\": "                        + std::to_string(output.x)
 		+ ", \"y\": "                        + std::to_string(output.y)
 		+ ", \"width\": "                    + std::to_string(output.width)

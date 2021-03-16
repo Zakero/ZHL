@@ -23,6 +23,7 @@
  * __v0.9.3__
  * - Added stob()
  * - Added tolower()
+ * - Added to_string(const bool)
  * - Added to_string(std::chrono::nanoseconds nanoseconds)
  *
  * __v0.9.2__
@@ -519,6 +520,26 @@ namespace zakero
 		};
 
 		return (vectorContains(v, tolower(str)));
+	}
+
+
+	/**
+	 * \brief Convert a bool into a string.
+	 *
+	 * Converts a bool value in to either "true" or "false".
+	 *
+	 * \return A string
+	 */
+	[[nodiscard]]
+	inline std::string to_string(const bool value ///< The value
+		) noexcept
+	{
+		if(value)
+		{
+			return std::string("true");
+		}
+
+		return std::string("false");
 	}
 
 

@@ -31,6 +31,9 @@ int main()
 		std::cout << "Error: " << error << '\n';
 		return 1;
 	}
+	zakero::Xenium::OutputId output_id = xenium->outputVector().front();
+	zakero::Xenium::Output output = xenium->output(output_id);
+	printf("%s\n", zakero::to_string(output).c_str());
 
 	xenium->outputOnAdd([&](const zakero::Xenium::OutputId id)
 	{

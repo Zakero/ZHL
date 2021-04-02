@@ -506,7 +506,7 @@ namespace zakero
 	 * \return The string converted to a boolean value.
 	 */
 	[[nodiscard]]
-	inline bool stob(const std::string& str ///< The value to convert.
+	inline bool stob(const std::string_view str ///< The value to convert.
 		) noexcept
 	{
 		static std::vector<std::string> v =
@@ -519,7 +519,7 @@ namespace zakero
 		,	"1"
 		};
 
-		return (vectorContains(v, tolower(str)));
+		return (vectorContains(v, tolower(std::string(str))));
 	}
 
 

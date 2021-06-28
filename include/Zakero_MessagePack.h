@@ -411,6 +411,9 @@ namespace
 {
 	enum class Type : uint8_t
 	{
+		/**
+		 * \brief Convert ZAKERO_MESSAGEPACK__FORMAT_DATA into code.
+		 */
 #define X(type_, id_, mask_, text_) \
 		type_ = id_, \
 
@@ -2370,6 +2373,8 @@ void MessagePack::deserialize(const std::vector<uint8_t>& data ///< The packed d
  *
  * reply(host_ip, result);
  * \endparcode
+ *
+ * \return The packed data.
  */
 std::vector<uint8_t> MessagePack::serialize() noexcept
 {

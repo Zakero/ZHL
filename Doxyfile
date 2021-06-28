@@ -269,33 +269,43 @@ TAB_SIZE               = 8
 # commands \{ and \} for these it is advised to use the version @{ and @} or use
 # a double escape (\\{ and \\})
 
-ALIASES                = null=`nullptr` \
-                         nullptr=`nullptr` \
+ALIASES                = "null=`nullptr`" \
+                         "nullptr=`nullptr`" \
+			 \
                          "parcode=\par \"Example\"\parblock\code" \
-                         endparcode=\endcode\endparblock \
+                         "endparcode=\endcode\endparblock" \
+			 \
                          "deprecated{1}=\deprecated Will be replaced by <code>[\1]</code>" \
+			 \
                          "api{1}=\ref \1 \"API\"" \
-                         "refdeps{1}=\ref \1_dependencies \"Dependencies\"" \
-                         "pardeps{1}=\anchor \1_dependencies\par \"Dependencies\"\parblock" \
-                         endpardeps=\endparblock \
-                         "reftldr{1}=\ref \1_tl_dr \"TL;DR\"" \
-                         "partldr{1}=\anchor \1_tl_dr\par \"TL;DR:\"\parblock" \
-                         endpartldr=\endparblock \
-                         "refwhat{1}=\ref \1_what_is_it \"What Is It?\"" \
-                         "parwhat{1}=\anchor \1_what_is_it\par \"What Is It?\"\parblock" \
-                         endparwhat=\endparblock \
-                         "refwhy{1}=\ref \1_why_use_it \"Why Use It?\"" \
-                         "parwhy{1}=\anchor \1_why_use_it\par \"Why Use It?\"\parblock" \
-                         endparwhy=\endparblock \
-                         "refhow{1}=\ref \1_how_to_use_it \"How To Use It?\"" \
-                         "parhow{1}=\anchor \1_how_to_use_it\par \"How To Use It?\"\parblock" \
-                         endparhow=\endparblock \
-                         "refversion{1}=\ref \1_version \"Version\"" \
-                         "parversion{1}=\anchor \1_version\par \"Version\"\parblock" \
-                         endparversion=\endparblock \
+			 \
+                         "refdeps{1}=\ref \1_deps \"Dependencies\"" \
+                         "pardeps{1}=\anchor \1_deps \par \"Dependencies\"\parblock" \
+                         "endpardeps=\endparblock" \
+			 \
+                         "reftldr{1}=\ref \1_tldr \"TL;DR\"" \
+                         "partldr{1}=\anchor \1_tldr \par \"TL;DR:\"\parblock" \
+                         "endpartldr=\endparblock" \
+			 \
+                         "refwhat{1}=\ref \1_what \"What Is It?\"" \
+                         "parwhat{1}=\anchor \1_what \par \"What Is It?\"\parblock" \
+                         "endparwhat=\endparblock" \
+			 \
+                         "refwhy{1}=\ref \1_whys \"Why Use It?\"" \
+                         "parwhy{1}=\anchor \1_whys \par \"Why Use It?\"\parblock" \
+                         "endparwhy=\endparblock" \
+			 \
+                         "refhow{1}=\ref \1_hows \"How To Use It?\"" \
+                         "parhow{1}=\anchor \1_hows \par \"How To Use It?\"\parblock" \
+                         "endparhow=\endparblock" \
+			 \
+                         "refversion{1}=\ref \1_vers \"Version\"" \
+                         "parversion{1}=\anchor \1_vers \par \"Version\"\parblock" \
+                         "endparversion=\endparblock" \
+			 \
                          "thread{1}=\internal __Accessed By Thread: \1__" \
-                         thread_user=\thread{User} \
-                         thread_wayland=\thread{Wayland}
+                         "thread_user=\thread{User}" \
+                         "thread_wayland=\thread{Wayland}" \
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For

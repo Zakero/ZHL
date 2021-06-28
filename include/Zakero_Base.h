@@ -19,6 +19,7 @@
  *
  * Include this header in your source code to use these features.
  *
+ *
  * \parversion{zakero_base}
  * __v0.9.3__
  * - Added stob()
@@ -44,8 +45,10 @@
  * - The initial collection
  * \endparversion
  *
+ *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
+ *
  *
  * \author Andrew "Zakero" Moore
  * - Original Author

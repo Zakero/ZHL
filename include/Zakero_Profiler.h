@@ -22,9 +22,11 @@
  * 
  * \note "Invasive" means that you must add profiler code to your source code.
  *  
+ *
  * \pardeps{zakero_profiler}
  * - Zakero_Base.h
  * \endpardeps
+ *
  *
  * \partldr{zakero_profiler}
  * This library will generate profiling data while your application is running.  
@@ -53,6 +55,7 @@
  * Finally, add the profiler macros to your code.
  * \endpartldr
  *
+ *
  * \parwhat{zakero_profiler}
  * Profiling a program helps you determine how much time is being used by 
  * different sections of code.  This information can be used to determine where 
@@ -76,6 +79,7 @@
  * minimum by using a few macros.
  * \endparwhat
  *
+ *
  * \parwhy{zakero_profiler}
  * The first benefit is the generated profiler output is JSON formatted.  There 
  * are many JSON parsers available allowing you to parse and use the data 
@@ -89,6 +93,7 @@
  * Header Library".  Just include the header file where ever you need or want 
  * to add profiling.
  * \endparwhy
+ *
  *
  * \parhow{zakero_profiler}
  * __Step 0__
@@ -210,6 +215,7 @@
  * Next, drag the _Zakero Profiler_ output file into the tab to see your data.
  * \endparhow
  *
+ *
  * \parversion{zakero_profiler}
  * __0.9.1__
  * - Improved ZAKERO_PROFILER_INIT() so that the MetaData is now optional.
@@ -240,8 +246,10 @@
  * - Add "instant" markers to the timeline
  * \endparversion
  *
+ *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
+ *
  *
  * \author Andrew "Zakero" Moore
  * 	- Original Author

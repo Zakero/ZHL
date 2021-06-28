@@ -21,9 +21,11 @@
  * Here, you will find information about and how to add the _Zakero_MemoryPool_ 
  * to your project.
  *
+ *
  * \pardeps{zakero_memorypool}
  * - None
  * \endpardeps
+ *
  *
  * \partldr{zakero_memorypool}
  * This library will provide a memory pool for your application.
@@ -40,6 +42,7 @@
  *    \endcode
  * \endpartldr
  *
+ *
  * \parwhat{zakero_memorypool}
  * The _Zakero MemoryPool_ library will create and manage a region of memory.
  * From this pool of memory, sections of memory can be allocated and freed.
@@ -52,6 +55,7 @@
  * the file to a larger area as needed.  And since all allocated memory uses an 
  * offset, no pointers end up pointing to a bad location.
  * \endparwhat
+ *
  *
  * \parwhy{zakero_memorypool}
  * As with many things, there are benefits and draw backs to using a memory 
@@ -108,6 +112,7 @@
  * 
  * _This implementation is limited to signed 32-bit file sizes._
  * \endparwhy
+ *
  *
  * \parhow{zakero_memorypool}
  * __Step 0__
@@ -169,6 +174,7 @@
  * ~~~
  * \endparhow
  *
+ *
  * \parversion{zakero_memorypool}
  * __0.9.0__
  * - Updated to use `std::error_code` instead of `std::error_code`
@@ -187,11 +193,14 @@
  * - Share the region of memory using the file descriptor
  * \endparversion
  *
+ *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
  *
+ *
  * \author Andrew "Zakero" Moore
  * - Original Author
+ *
  *
  * \todo Add support for huge file sizes (64-bit / huge table fs)
  *       - Maybe toggled via a macro flag

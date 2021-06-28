@@ -110,7 +110,7 @@
  * ~~~
  * zakero::MessagePack message_pack;
  *
- * constexpr size_t text;
+ * size_t text;
  * message_pack.append(uint64_t(42));
  * message_pack.append(true);
  * message_pack.append("Hello, World!", &text);
@@ -220,6 +220,7 @@ namespace zakero
 	class MessagePack
 	{
 		public:
+			// Rename to Type
 			enum class DataType
 			{	Null
 			,	Bool
@@ -2049,6 +2050,9 @@ TEST_CASE("Append: Nill")
  * by using its index value. The data object's type will be the C++ datatype 
  * and not the MessagePack format type.
  *
+ * The data-type of the object can be changed as needed. However, be sure to 
+ * __update the `type`__ to match the new value.
+ *
  * \parcode
  * zakero::MessagePack message_pack;
  * size_t mp_foo;
@@ -2057,14 +2061,18 @@ TEST_CASE("Append: Nill")
  * message_pack.append(int64_t(0), &mp_bar);
  *
  * int64_t val = rand();
- * message_pack.object(mp_foo).set(val);
+ * message_pack.object(mp_foo).int64_ = val;
  * if(val & 1)
  * {
- * 	message_pack.object(mp_bar).set(val << 1);
+ *      // Change to string
+ * 	message_pack.object(mp_bar).type   = zakero::MessagePack::DataType::String
+ * 	message_pack.object(mp_bar).string = "That's odd...";
  * }
  * else
  * {
- * 	message_pack.object(mp_bar).set(val >> 1);
+ *      // Change to boolean
+ * 	message_pack.object(mp_bar).type  = zakero::MessagePack::DataType::Bool
+ * 	message_pack.object(mp_bar).bool_ = true;
  * }
  * \endparcode
  *

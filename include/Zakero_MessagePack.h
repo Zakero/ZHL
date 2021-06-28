@@ -333,43 +333,43 @@ namespace zakero
  */
 #define ZAKERO_MESSAGEPACK__FORMAT_DATA \
 	/* Type Name      Type Id  Type Id Mask  Type Spec Name   */ \
-	X(Fixed_Int_Pos , 0x00   , 0b1000'0000 , "positive fixint" ) \
-	X(fixmap        , 0x80   , 0b0000'0000 , "fixmap"          ) \
-	X(fixarray      , 0x90   , 0b0000'0000 , "fixarray"        ) \
-	X(Fixed_Str     , 0xa0   , 0b1110'0000 , "fixstr"          ) \
-	X(Nill          , 0xc0   , 0b0000'0000 , "nill"            ) \
-	X(never_used    , 0xc1   , 0b0000'0000 , "(never used)"    ) \
-	X(False         , 0xc2   , 0b0000'0000 , "false"           ) \
-	X(True          , 0xc3   , 0b0000'0000 , "true"            ) \
-	X(Bin8          , 0xc4   , 0b1111'1111 , "bin 8"           ) \
-	X(Bin16         , 0xc5   , 0b1111'1111 , "bin 16"          ) \
-	X(Bin32         , 0xc6   , 0b1111'1111 , "bin 32"          ) \
-	X(ext8          , 0xc7   , 0b0000'0000 , "ext 8"           ) \
-	X(ext16         , 0xc8   , 0b0000'0000 , "ext 16"          ) \
-	X(ext32         , 0xc9   , 0b0000'0000 , "ext 32"          ) \
-	X(Float32       , 0xca   , 0b1111'1111 , "float 32"        ) \
-	X(Float64       , 0xcb   , 0b1111'1111 , "float 64"        ) \
-	X(Uint8         , 0xcc   , 0b1111'1111 , "uint 8"          ) \
-	X(Uint16        , 0xcd   , 0b1111'1111 , "uint 16"         ) \
-	X(Uint32        , 0xce   , 0b1111'1111 , "uint 32"         ) \
-	X(Uint64        , 0xcf   , 0b1111'1111 , "uint 64"         ) \
-	X(Int8          , 0xd0   , 0b1111'1111 , "int 8"           ) \
-	X(Int16         , 0xd1   , 0b1111'1111 , "int 16"          ) \
-	X(Int32         , 0xd2   , 0b1111'1111 , "int 32"          ) \
-	X(Int64         , 0xd3   , 0b1111'1111 , "int 64"          ) \
-	X(fixext1       , 0xd4   , 0b0000'0000 , "fixext 1"        ) \
-	X(fixext2       , 0xd5   , 0b0000'0000 , "fixext 2"        ) \
-	X(fixext4       , 0xd6   , 0b0000'0000 , "fixext 4"        ) \
-	X(fixext8       , 0xd7   , 0b0000'0000 , "fixext 8"        ) \
-	X(fixext16      , 0xd8   , 0b0000'0000 , "fixext 16"       ) \
-	X(Str8          , 0xd9   , 0b0000'0000 , "str 8"           ) \
-	X(Str16         , 0xda   , 0b0000'0000 , "str 16"          ) \
-	X(Str32         , 0xdb   , 0b0000'0000 , "str 32"          ) \
-	X(array16       , 0xdc   , 0b0000'0000 , "array 16"        ) \
-	X(array32       , 0xdd   , 0b0000'0000 , "array 32"        ) \
-	X(map16         , 0xde   , 0b0000'0000 , "map 16"          ) \
-	X(map32         , 0xdf   , 0b0000'0000 , "map 32"          ) \
-	X(Fixed_Int_Neg , 0xe0   , 0b1110'0000 , "negative fixint" ) \
+	X(Fixed_Int_Pos , 0x00   , 0b10000000  , "positive fixint" ) \
+	X(fixmap        , 0x80   , 0b00000000  , "fixmap"          ) \
+	X(fixarray      , 0x90   , 0b00000000  , "fixarray"        ) \
+	X(Fixed_Str     , 0xa0   , 0b11100000  , "fixstr"          ) \
+	X(Nill          , 0xc0   , 0b00000000  , "nill"            ) \
+	X(never_used    , 0xc1   , 0b00000000  , "(never used)"    ) \
+	X(False         , 0xc2   , 0b00000000  , "false"           ) \
+	X(True          , 0xc3   , 0b00000000  , "true"            ) \
+	X(Bin8          , 0xc4   , 0b11111111  , "bin 8"           ) \
+	X(Bin16         , 0xc5   , 0b11111111  , "bin 16"          ) \
+	X(Bin32         , 0xc6   , 0b11111111  , "bin 32"          ) \
+	X(ext8          , 0xc7   , 0b00000000  , "ext 8"           ) \
+	X(ext16         , 0xc8   , 0b00000000  , "ext 16"          ) \
+	X(ext32         , 0xc9   , 0b00000000  , "ext 32"          ) \
+	X(Float32       , 0xca   , 0b11111111  , "float 32"        ) \
+	X(Float64       , 0xcb   , 0b11111111  , "float 64"        ) \
+	X(Uint8         , 0xcc   , 0b11111111  , "uint 8"          ) \
+	X(Uint16        , 0xcd   , 0b11111111  , "uint 16"         ) \
+	X(Uint32        , 0xce   , 0b11111111  , "uint 32"         ) \
+	X(Uint64        , 0xcf   , 0b11111111  , "uint 64"         ) \
+	X(Int8          , 0xd0   , 0b11111111  , "int 8"           ) \
+	X(Int16         , 0xd1   , 0b11111111  , "int 16"          ) \
+	X(Int32         , 0xd2   , 0b11111111  , "int 32"          ) \
+	X(Int64         , 0xd3   , 0b11111111  , "int 64"          ) \
+	X(fixext1       , 0xd4   , 0b00000000  , "fixext 1"        ) \
+	X(fixext2       , 0xd5   , 0b00000000  , "fixext 2"        ) \
+	X(fixext4       , 0xd6   , 0b00000000  , "fixext 4"        ) \
+	X(fixext8       , 0xd7   , 0b00000000  , "fixext 8"        ) \
+	X(fixext16      , 0xd8   , 0b00000000  , "fixext 16"       ) \
+	X(Str8          , 0xd9   , 0b00000000  , "str 8"           ) \
+	X(Str16         , 0xda   , 0b00000000  , "str 16"          ) \
+	X(Str32         , 0xdb   , 0b00000000  , "str 32"          ) \
+	X(array16       , 0xdc   , 0b00000000  , "array 16"        ) \
+	X(array32       , 0xdd   , 0b00000000  , "array 32"        ) \
+	X(map16         , 0xde   , 0b00000000  , "map 16"          ) \
+	X(map32         , 0xdf   , 0b00000000  , "map 32"          ) \
+	X(Fixed_Int_Neg , 0xe0   , 0b11100000  , "negative fixint" ) \
 
 // }}}
 // {{{ Documentation

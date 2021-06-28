@@ -53,8 +53,8 @@
  *
  *
  * \parwhy{zakero_messagepack}
- * There are many libraries available to do the same thing, however the _Zakero 
- * MessagePack_ library offers the following:
+ * There are many libraries available to do the same thing, however the 
+ * _Zakero_MessagePack_ library offers the following:
  * 
  * __Benefits__
  * - Single Header Library

@@ -10,7 +10,6 @@ g++ -std=c++20 -Wall -Werror -o Zakero_MessagePack Zakero_MessagePack.cpp && ./Z
 
 int main(int argc, char** argv)
 {
-	printf("size: %lu\n", sizeof(long));
 	doctest::Context context;
 
 	// --- Configuration: Defaults --- //

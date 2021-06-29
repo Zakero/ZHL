@@ -176,23 +176,6 @@
 // {{{ Macros
 
 /**
- * \brief Don't allow implicit parameter conversion.
- *
- * When passing a value to a function's parameter which does not have a 
- * matching type, the compiler will try to inject code to convert the value 
- * into the function's expected type.  Usually, this is fine.  But in some 
- * instances can lead to very subtle bugs.  Placing the function name in this 
- * macro will prevent the compiler from doing this automatic type conversion.
- *
- * \param func_name_ The name of the function.
- *
- * \todo Move to Zakero_Base
- */
-#define ZAKERO_DISABLE_IMPLICIT_CASTS(func_name_) \
-	template <typename... T>                  \
-	void func_name_(T...) = delete
-
-/**
  * \internal
  *
  * \brief _Error_Table_

@@ -20,10 +20,12 @@
  *
  * Making the Wayland windowing system easy to use.
  *
+ *
  * \pardeps{zakero_yetani}
  * - Zakero_Base.h
  * - Zakero_MemoryPool.h
  * \endpardeps
+ *
  *
  * \partldr{zakero_yetani}
  * This library makes it very easy to connect to Wayland and display windows.
@@ -46,6 +48,7 @@
  *    -lpthread -lwayland-client
  *    \endcode
  * \endpartldr
+ *
  *
  * \parwhat{zakero_yetani}
  * Wayland is a Windowing System and was intended to strip all the cruft that 
@@ -73,6 +76,7 @@
  * pixel sizes.
  * \endparwhat
  *
+ *
  * \parwhy{zakero_yetani}
  * Wayland was intended to strip all the cruft that has built up in X11 and 
  * focus on three things.  The part of Wayland that does the rendering is the 
@@ -86,6 +90,7 @@
  * second and third "Wayland Client", much of this code is duplicated.  
  * Consolidating the redundant code is the purpose of the Yetani.
  * \endparwhy
+ *
  *
  * \parhow{zakero_yetani}
  * __Step 0__
@@ -176,6 +181,7 @@
  * > ./example
  * ~~~
  * \endparhow
+ *
  *
  * \parversion{zakero_yetani}
  * __v0.6.1__

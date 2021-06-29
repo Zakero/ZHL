@@ -20,10 +20,12 @@
  *
  * Making the X11/XCB windowing system easy to use.
  *
+ *
  * \pardeps{zakero_xenium}
  * - Zakero_Base.h
  * - Zakero_MemoryPool.h
  * \endpardeps
+ *
  *
  * \partldr{zakero_xenium}
  * This library makes it very easy to connect to an X11 server and display 
@@ -46,6 +48,7 @@
  *    \endcode
  * \endpartldr
  *
+ *
  * \parwhat{zakero_xenium}
  * X11 is a Windowing System and is used in many of the Unix-based operating 
  * systems such as Linux and BSD.  X11/XCB has three parts: the client, the 
@@ -62,6 +65,7 @@
  * adding as little overhead as possible.
  * \endparwhat
  *
+ *
  * \parwhy{zakero_xenium}
  * XCB was created to allow developers to faster and more responsive 
  * applications by by-passing the original X11 libraries.  Not only was this 
@@ -75,6 +79,7 @@
  * for all XCB applications, zakero::Xenium only creates one for you, it will 
  * only notify you of the events that were supplied lambdas.
  * \endparwhy
+ *
  *
  * \parhow{zakero_xenium}
  * __Step 0__
@@ -157,6 +162,7 @@
  * > ./example
  * ~~~
  * \endparhow
+ *
  *
  * \parversion{zakero_xenium}
  * __v0.1.0__

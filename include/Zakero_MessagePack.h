@@ -110,7 +110,7 @@
  * ~~~
  * zakero::MessagePack message_pack;
  *
- * constexpr size_t text;
+ * size_t text;
  * message_pack.append(uint64_t(42));
  * message_pack.append(true);
  * message_pack.append("Hello, World!", &text);
@@ -143,8 +143,10 @@
  * - The initial implementation
  * \endparversion
  *
+ *
  * \copyright [Mozilla Public License 
  * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
+ *
  *
  * \author Andrew "Zakero" Moore
  * - Original Author
@@ -173,23 +175,6 @@
  */
 
 // {{{ Macros
-
-/**
- * \brief Don't allow implicit parameter conversion.
- *
- * When passing a value to a function's parameter which does not have a 
- * matching type, the compiler will try to inject code to convert the value 
- * into the function's expected type.  Usually, this is fine.  But in some 
- * instances can lead to very subtle bugs.  Placing the function name in this 
- * macro will prevent the compiler from doing this automatic type conversion.
- *
- * \param func_name_ The name of the function.
- *
- * \todo Move to Zakero_Base
- */
-#define ZAKERO_DISABLE_IMPLICIT_CASTS(func_name_) \
-	template <typename... T>                  \
-	void func_name_(T...) = delete
 
 /**
  * \internal
@@ -221,6 +206,7 @@ namespace zakero
 	class MessagePack
 	{
 		public:
+			// Rename to Type
 			enum class DataType
 			{	Null
 			//,	Bool
@@ -2118,6 +2104,9 @@ TEST_CASE("Append: Nill")
  * by using its index value. The data object's type will be the C++ datatype 
  * and not the MessagePack format type.
  *
+ * The data-type of the object can be changed as needed. However, be sure to 
+ * __update the `type`__ to match the new value.
+ *
  * \parcode
  * zakero::MessagePack message_pack;
  * size_t mp_foo;
@@ -2126,14 +2115,18 @@ TEST_CASE("Append: Nill")
  * message_pack.append(int64_t(0), &mp_bar);
  *
  * int64_t val = rand();
- * message_pack.object(mp_foo).set(val);
+ * message_pack.object(mp_foo).int64_ = val;
  * if(val & 1)
  * {
- * 	message_pack.object(mp_bar).set(val << 1);
+ *      // Change to string
+ * 	message_pack.object(mp_bar).type   = zakero::MessagePack::DataType::String
+ * 	message_pack.object(mp_bar).string = "That's odd...";
  * }
  * else
  * {
- * 	message_pack.object(mp_bar).set(val >> 1);
+ *      // Change to boolean
+ * 	message_pack.object(mp_bar).type  = zakero::MessagePack::DataType::Bool
+ * 	message_pack.object(mp_bar).bool_ = true;
  * }
  * \endparcode
  *

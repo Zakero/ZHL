@@ -2,7 +2,7 @@
  * Copyright 2021 Andrew Moore
  * 
  * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * License, value. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
@@ -207,8 +207,8 @@ namespace zakero
 	{
 		public:
 			// Rename to Type
-			enum class DataType
-			{	Null
+			//enum class DataType
+			//{	Null
 			//,	Bool
 			//,	Int64
 			//,	Uint64
@@ -216,7 +216,7 @@ namespace zakero
 			//,	Double
 			//,	String
 			//,	Vector
-			};
+			//};
 
 			struct Object
 			{
@@ -228,8 +228,14 @@ namespace zakero
 					, double
 					, std::string
 					, std::vector<uint8_t>
-					> v = {std::monostate()};
-				DataType type;
+					> value;
+
+				                     [[nodiscard]] constexpr bool isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
+				template<typename T> [[nodiscard]] constexpr bool is() const noexcept { return std::holds_alternative<T>(value); };
+				template<typename T> [[nodiscard]] constexpr T&   get() const noexcept { return std::get<T>(value); };
+
+				// --- Deprecated --- //
+				//DataType type;
 				//union
 				//{
 					//bool     bool_;
@@ -241,16 +247,16 @@ namespace zakero
 				//std::string          string = {};
 				//std::vector<uint8_t> vector = {};
 
-				Object() noexcept;
-				Object(const Object&) noexcept;
-				Object(Object&&) noexcept;
+				//Object() noexcept;
+				//Object(const Object&) noexcept;
+				//Object(Object&&) noexcept;
 				//Object(const bool) noexcept;
 				//Object(const int64_t) noexcept;
 				//Object(const uint64_t) noexcept;
 				//Object(const float) noexcept;
 				//Object(const double) noexcept;
 				//Object(const std::string_view) noexcept;
-				Object(std::vector<uint8_t>) noexcept;
+				//Object(std::vector<uint8_t>) noexcept;
 			};
 
 			MessagePack() = default;
@@ -262,8 +268,9 @@ namespace zakero
 			void                               append(const double, size_t* = nullptr) noexcept;
 			void                               append(const std::string_view, size_t* = nullptr) noexcept;
 			void                               append(const std::vector<uint8_t>&, size_t* = nullptr) noexcept;
-			void                               append(uint8_t*, size_t, size_t* = nullptr);
-			//void                               appendArray(size_t* = nullptr);
+			void                               append(std::vector<uint8_t>&&, size_t* = nullptr) noexcept;
+			void                               append(const uint8_t*, const size_t, size_t* = nullptr) noexcept;
+			//Array                              appendArray(size_t* = nullptr);
 			//void                               appendExtension(int8_t, std::vector<uint8_t>&, size_t* = nullptr);
 			//void                               appendExtension(int8_t, uint8_t*, size_t, size_t* = nullptr);
 			//void                               appendMap(size_t* = nullptr);
@@ -512,9 +519,7 @@ void MessagePack::append(const bool value ///< The value to add
 		*index = object_vector.size();
 	}
 
-	//object_vector.emplace_back(value);
-	Object& o = object_vector.emplace_back();
-	o.v = value;
+	object_vector.emplace_back(value);
 }
 
 
@@ -549,14 +554,14 @@ TEST_CASE("Append: Bool")
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(0);
-		//CHECK(object.type  == MessagePack::DataType::Bool);
-		CHECK(std::get<bool>(object.v) == true);
+		CHECK(object.is<bool>() == true);
+		CHECK(std::get<bool>(object.value) == true);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
-		//CHECK(object.type  == MessagePack::DataType::Bool);
-		CHECK(std::get<bool>(object.v) == false);
+		CHECK(object.is<bool>() == true);
+		CHECK(std::get<bool>(object.value) == false);
 	}
 }
 #endif // }}}
@@ -586,7 +591,7 @@ void MessagePack::append(const int64_t value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = value;
+	o.value = value;
 }
 
 
@@ -637,35 +642,35 @@ TEST_CASE("Append: Fixed_Int")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == fixint_zero);
-		CHECK(std::get<int64_t>(object.v) == fixint_zero);
+		CHECK(std::get<int64_t>(object.value) == fixint_zero);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == fixint_max);
-		CHECK(std::get<int64_t>(object.v) == fixint_max);
+		CHECK(std::get<int64_t>(object.value) == fixint_max);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == fixint_min);
-		CHECK(std::get<int64_t>(object.v) == fixint_min);
+		CHECK(std::get<int64_t>(object.value) == fixint_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(3);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == fixint_p24);
-		CHECK(std::get<int64_t>(object.v) == fixint_p24);
+		CHECK(std::get<int64_t>(object.value) == fixint_p24);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(4);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == fixint_n24);
-		CHECK(std::get<int64_t>(object.v) == fixint_n24);
+		CHECK(std::get<int64_t>(object.value) == fixint_n24);
 	}
 }
 
@@ -707,14 +712,14 @@ TEST_CASE("Append: Int8")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i8_min1);
-		CHECK(std::get<int64_t>(object.v) == i8_min1);
+		CHECK(std::get<int64_t>(object.value) == i8_min1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i8_min2);
-		CHECK(std::get<int64_t>(object.v) == i8_min2);
+		CHECK(std::get<int64_t>(object.value) == i8_min2);
 	}
 }
 
@@ -775,28 +780,28 @@ TEST_CASE("Append: Int16")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i16_min1);
-		CHECK(std::get<int64_t>(object.v) == i16_min1);
+		CHECK(std::get<int64_t>(object.value) == i16_min1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i16_max1);
-		CHECK(std::get<int64_t>(object.v) == i16_max1);
+		CHECK(std::get<int64_t>(object.value) == i16_max1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i16_min2);
-		CHECK(std::get<int64_t>(object.v) == i16_min2);
+		CHECK(std::get<int64_t>(object.value) == i16_min2);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(3);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i16_max2);
-		CHECK(std::get<int64_t>(object.v) == i16_max2);
+		CHECK(std::get<int64_t>(object.value) == i16_max2);
 	}
 }
 
@@ -865,28 +870,28 @@ TEST_CASE("Append: Int32")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i32_min1);
-		CHECK(std::get<int64_t>(object.v) == i32_min1);
+		CHECK(std::get<int64_t>(object.value) == i32_min1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i32_max1);
-		CHECK(std::get<int64_t>(object.v) == i32_max1);
+		CHECK(std::get<int64_t>(object.value) == i32_max1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i32_min2);
-		CHECK(std::get<int64_t>(object.v) == i32_min2);
+		CHECK(std::get<int64_t>(object.value) == i32_min2);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(3);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i32_max2);
-		CHECK(std::get<int64_t>(object.v) == i32_max2);
+		CHECK(std::get<int64_t>(object.value) == i32_max2);
 	}
 }
 
@@ -971,28 +976,28 @@ TEST_CASE("Append: Int64")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i64_min1);
-		CHECK(std::get<int64_t>(object.v) == i64_min1);
+		CHECK(std::get<int64_t>(object.value) == i64_min1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i64_max1);
-		CHECK(std::get<int64_t>(object.v) == i64_max1);
+		CHECK(std::get<int64_t>(object.value) == i64_max1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i64_min2);
-		CHECK(std::get<int64_t>(object.v) == i64_min2);
+		CHECK(std::get<int64_t>(object.value) == i64_min2);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(3);
 		//CHECK(object.type   == MessagePack::DataType::Int64);
 		//CHECK(object.int64_ == i64_max2);
-		CHECK(std::get<int64_t>(object.v) == i64_max2);
+		CHECK(std::get<int64_t>(object.value) == i64_max2);
 	}
 }
 #endif // }}}
@@ -1022,7 +1027,7 @@ void MessagePack::append(const uint64_t value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = value;
+	o.value = value;
 }
 
 
@@ -1062,14 +1067,14 @@ TEST_CASE("Append: Uint8")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u8_min);
-		CHECK(std::get<uint64_t>(object.v) == u8_min);
+		CHECK(std::get<uint64_t>(object.value) == u8_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u8_max);
-		CHECK(std::get<uint64_t>(object.v) == u8_max);
+		CHECK(std::get<uint64_t>(object.value) == u8_max);
 	}
 }
 
@@ -1114,14 +1119,14 @@ TEST_CASE("Append: Uint16")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u16_min);
-		CHECK(std::get<uint64_t>(object.v) == u16_min);
+		CHECK(std::get<uint64_t>(object.value) == u16_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u16_max);
-		CHECK(std::get<uint64_t>(object.v) == u16_max);
+		CHECK(std::get<uint64_t>(object.value) == u16_max);
 	}
 }
 
@@ -1170,14 +1175,14 @@ TEST_CASE("Append: Uint32")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u32_min);
-		CHECK(std::get<uint64_t>(object.v) == u32_min);
+		CHECK(std::get<uint64_t>(object.value) == u32_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u32_max);
-		CHECK(std::get<uint64_t>(object.v) == u32_max);
+		CHECK(std::get<uint64_t>(object.value) == u32_max);
 	}
 }
 
@@ -1234,14 +1239,14 @@ TEST_CASE("Append: Uint64")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u64_min);
-		CHECK(std::get<uint64_t>(object.v) == u64_min);
+		CHECK(std::get<uint64_t>(object.value) == u64_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type    == MessagePack::DataType::Uint64);
 		//CHECK(object.uint64_ == u64_max);
-		CHECK(std::get<uint64_t>(object.v) == u64_max);
+		CHECK(std::get<uint64_t>(object.value) == u64_max);
 	}
 }
 #endif // }}}
@@ -1271,7 +1276,7 @@ void MessagePack::append(const float value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = value;
+	o.value = value;
 }
 
 
@@ -1329,21 +1334,21 @@ TEST_CASE("Append: Float32")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::Float);
 		//CHECK(object.float_ == f32_min);
-		CHECK(std::get<float>(object.v) == f32_min);
+		CHECK(std::get<float>(object.value) == f32_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::Float);
 		//CHECK(object.float_ == f32_max);
-		CHECK(std::get<float>(object.v) == f32_max);
+		CHECK(std::get<float>(object.value) == f32_max);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::Float);
 		//CHECK(object.float_ == f32_zero);
-		CHECK(std::get<float>(object.v) == f32_zero);
+		CHECK(std::get<float>(object.value) == f32_zero);
 	}
 }
 #endif // }}}
@@ -1373,7 +1378,7 @@ void MessagePack::append(const double value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = value;
+	o.value = value;
 }
 
 
@@ -1443,21 +1448,21 @@ TEST_CASE("Append: Float64")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type    == MessagePack::DataType::Double);
 		//CHECK(object.double_ == f64_min);
-		CHECK(std::get<double>(object.v) == f64_min);
+		CHECK(std::get<double>(object.value) == f64_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type    == MessagePack::DataType::Double);
 		//CHECK(object.double_ == f64_max);
-		CHECK(std::get<double>(object.v) == f64_max);
+		CHECK(std::get<double>(object.value) == f64_max);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type    == MessagePack::DataType::Double);
 		//CHECK(object.double_ == f64_zero);
-		CHECK(std::get<double>(object.v) == f64_zero);
+		CHECK(std::get<double>(object.value) == f64_zero);
 	}
 }
 #endif // }}}
@@ -1487,7 +1492,7 @@ void MessagePack::append(const std::string_view value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = std::string(value);
+	o.value = std::string(value);
 }
 
 
@@ -1552,21 +1557,21 @@ TEST_CASE("Append: Fixed_Str")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_empty);
-		CHECK(std::get<std::string>(object.v) == str_empty);
+		CHECK(std::get<std::string>(object.value) == str_empty);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_1);
-		CHECK(std::get<std::string>(object.v) == str_1);
+		CHECK(std::get<std::string>(object.value) == str_1);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(2);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_31);
-		CHECK(std::get<std::string>(object.v) == str_31);
+		CHECK(std::get<std::string>(object.value) == str_31);
 	}
 }
 
@@ -1621,14 +1626,14 @@ TEST_CASE("Append: Str8")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_min);
-		CHECK(std::get<std::string>(object.v) == str_min);
+		CHECK(std::get<std::string>(object.value) == str_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_max);
-		CHECK(std::get<std::string>(object.v) == str_max);
+		CHECK(std::get<std::string>(object.value) == str_max);
 	}
 }
 
@@ -1687,14 +1692,14 @@ TEST_CASE("Append: Str16")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_min);
-		CHECK(std::get<std::string>(object.v) == str_min);
+		CHECK(std::get<std::string>(object.value) == str_min);
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_max);
-		CHECK(std::get<std::string>(object.v) == str_max);
+		CHECK(std::get<std::string>(object.value) == str_max);
 	}
 }
 
@@ -1758,7 +1763,7 @@ TEST_CASE("Append: Str32")
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type   == MessagePack::DataType::String);
 		//CHECK(object.string == str_min);
-		CHECK(std::get<std::string>(object.v) == str_min);
+		CHECK(std::get<std::string>(object.value) == str_min);
 	}
 
 	//{
@@ -1795,12 +1800,12 @@ void MessagePack::append(const std::vector<uint8_t>& value ///< The value to add
 
 	//object_vector.emplace_back(value);
 	Object& o = object_vector.emplace_back();
-	o.v = value;
+	o.value = value;
 }
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Bin8")
+TEST_CASE("Append: Bin8 (Const Ref)")
 {
 	MessagePack mesg_pack;
 
@@ -1851,7 +1856,7 @@ TEST_CASE("Append: Bin8")
 	{
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type == MessagePack::DataType::Vector);
-		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.v);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
 		CHECK(vector.size() == bin_min.size());
 		for(size_t i = 0; i < bin_min.size(); i++)
 		{
@@ -1862,7 +1867,7 @@ TEST_CASE("Append: Bin8")
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type == MessagePack::DataType::Vector);
-		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.v);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
 		CHECK(vector.size() == bin_max.size());
 		for(size_t i = 0; i < bin_max.size(); i++)
 		{
@@ -1926,7 +1931,7 @@ TEST_CASE("Append: Bin16")
 	{
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type == MessagePack::DataType::Vector);
-		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.v);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
 		CHECK(vector.size() == bin_min.size());
 		for(size_t i = 0; i < bin_min.size(); i++)
 		{
@@ -1937,7 +1942,7 @@ TEST_CASE("Append: Bin16")
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
 		//CHECK(object.type == MessagePack::DataType::Vector);
-		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.v);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
 		CHECK(vector.size() == bin_max.size());
 		for(size_t i = 0; i < bin_max.size(); i++)
 		{
@@ -2008,7 +2013,7 @@ TEST_CASE("Append: Bin32")
 	{
 		const MessagePack::Object& object = mesg_pack.object(0);
 		//CHECK(object.type == MessagePack::DataType::Vector);
-		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.v);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
 		CHECK(vector.size() == bin_min.size());
 		for(size_t i = 0; i < bin_min.size(); i++)
 		{
@@ -2026,6 +2031,226 @@ TEST_CASE("Append: Bin32")
 	//	}
 	//}
 }
+#endif // }}}
+
+
+/**
+ * \brief Append a binary data.
+ *
+ * The \p value will be appended to the current contents of the MessagePack 
+ * data. If \p index is not \nullptr, the index location of the \p value will 
+ * be stored in \p index.
+ *
+ * \note The contents of \p value will be **moved**.
+ *
+ * \parcode
+ * zakero::MessagePack message_pack;
+ * size_t index;
+ * std::vector<uint8_t> binary_data(1024, 0);
+ * message_pack.append(std::move(binary_data), &index);
+ * \endparcode
+ */
+void MessagePack::append(std::vector<uint8_t>&& value ///< The value to add
+	, size_t* const                         index ///< The index
+	) noexcept
+{
+	if(index != nullptr)
+	{
+		*index = object_vector.size();
+	}
+
+	object_vector.emplace_back(std::move(value));
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("Append: Bin8 (Move)")
+{
+	MessagePack mesg_pack;
+
+	std::vector<uint8_t> bin_min = {};
+	std::vector<uint8_t> bin_max(std::numeric_limits<uint8_t>::max(), 'X');
+	size_t count = 0;
+
+	std::vector<uint8_t> temp_min = bin_min;
+	std::vector<uint8_t> temp_max = bin_max;
+
+	mesg_pack.append(std::move(temp_min)); count++;
+	mesg_pack.append(std::move(temp_max)); count++;
+
+	CHECK(temp_min.size() == 0);
+	CHECK(temp_max.size() == 0);
+	CHECK(mesg_pack.size() == count);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = mesg_pack.serialize();
+
+	size_t size = (count * 2 * sizeof(uint8_t))
+		+ bin_min.size()
+		+ bin_max.size()
+		;
+	CHECK(data.size() == size);
+
+	size_t bin_len = 0;
+	size_t index = 0;
+
+	CHECK(data[index] == ((uint8_t)Type::Bin8));
+	bin_len = data[++index];
+	CHECK(bin_len == bin_min.size());
+	for(size_t i = 0; i < bin_len; i++)
+	{
+		CHECK(data[++index] == bin_min[i]);
+	}
+
+	CHECK(data[++index] == ((uint8_t)Type::Bin8));
+	bin_len = data[++index];
+	CHECK(bin_len == bin_max.size());
+	for(size_t i = 0; i < bin_len; i++)
+	{
+		CHECK(data[++index] == bin_max[i]);
+	}
+
+	// Check deserialized data
+
+	mesg_pack.deserialize(data);
+
+	CHECK(mesg_pack.size() == count);
+
+	{
+		const MessagePack::Object& object = mesg_pack.object(0);
+		//CHECK(object.type == MessagePack::DataType::Vector);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
+		CHECK(vector.size() == bin_min.size());
+		for(size_t i = 0; i < bin_min.size(); i++)
+		{
+			CHECK(vector[i] == bin_min[i]);
+		}
+	}
+
+	{
+		const MessagePack::Object& object = mesg_pack.object(1);
+		//CHECK(object.type == MessagePack::DataType::Vector);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
+		CHECK(vector.size() == bin_max.size());
+		for(size_t i = 0; i < bin_max.size(); i++)
+		{
+			CHECK(vector[i] == bin_max[i]);
+		}
+	}
+}
+
+// All the other tests would be the same as the (Const Ref) test case.
+// The only difference would be using the `move operator`.
+// Unneeded redundancy...
+#endif // }}}
+
+
+/**
+ * \brief Append a binary data.
+ *
+ * The \p value will be appended to the current contents of the MessagePack 
+ * data. If \p index is not \nullptr, the index location of the \p value will 
+ * be stored in \p index.
+ *
+ * \parcode
+ * zakero::MessagePack message_pack;
+ * size_t index;
+ * size_t binary_length = 1024;
+ * uint8_t binary_data[binary_length] = { 0 };
+ * message_pack.append(binary_data, binary_length, &index);
+ * \endparcode
+ */
+void MessagePack::append(const uint8_t* value ///< The value to add
+	, const size_t                  size  ///< The value count
+	, size_t* const                 index ///< The index
+	) noexcept
+{
+	std::vector<uint8_t> vector(size);
+	memcpy(vector.data(), value, size);
+
+	append(std::move(vector));
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("Append: Bin8 (C-Style)")
+{
+	MessagePack mesg_pack;
+
+	size_t  bin_min_size = 0;
+	uint8_t bin_min[bin_min_size];
+	size_t  bin_max_size = std::numeric_limits<uint8_t>::max();
+	uint8_t bin_max[bin_max_size];
+	memset(bin_max, 'X', bin_max_size);
+	size_t count = 0;
+
+	mesg_pack.append(bin_min, bin_min_size); count++;
+	mesg_pack.append(bin_max, bin_max_size); count++;
+
+	CHECK(mesg_pack.size() == count);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = mesg_pack.serialize();
+
+	size_t size = (count * 2 * sizeof(uint8_t))
+		+ bin_min_size
+		+ bin_max_size
+		;
+	CHECK(data.size() == size);
+
+	size_t bin_len = 0;
+	size_t index = 0;
+
+	CHECK(data[index] == ((uint8_t)Type::Bin8));
+	bin_len = data[++index];
+	CHECK(bin_len == bin_min_size);
+	for(size_t i = 0; i < bin_len; i++)
+	{
+		CHECK(data[++index] == bin_min[i]);
+	}
+
+	CHECK(data[++index] == ((uint8_t)Type::Bin8));
+	bin_len = data[++index];
+	CHECK(bin_len == bin_max_size);
+	for(size_t i = 0; i < bin_len; i++)
+	{
+		CHECK(data[++index] == bin_max[i]);
+	}
+
+	// Check deserialized data
+
+	mesg_pack.deserialize(data);
+
+	CHECK(mesg_pack.size() == count);
+
+	{
+		const MessagePack::Object& object = mesg_pack.object(0);
+		//CHECK(object.type == MessagePack::DataType::Vector);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
+		CHECK(vector.size() == bin_min_size);
+		for(size_t i = 0; i < bin_min_size; i++)
+		{
+			CHECK(vector[i] == bin_min[i]);
+		}
+	}
+
+	{
+		const MessagePack::Object& object = mesg_pack.object(1);
+		//CHECK(object.type == MessagePack::DataType::Vector);
+		const std::vector<uint8_t>& vector = std::get<std::vector<uint8_t>>(object.value);
+		CHECK(vector.size() == bin_max_size);
+		for(size_t i = 0; i < bin_max_size; i++)
+		{
+			CHECK(vector[i] == bin_max[i]);
+		}
+	}
+}
+
+// All the other tests would be the same as the (Const Ref) test case.
+// The only difference would be using the `move operator`.
+// Unneeded redundancy...
 #endif // }}}
 
 
@@ -2084,14 +2309,12 @@ TEST_CASE("Append: Nill")
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(0);
-		CHECK(object.type   == MessagePack::DataType::Null);
-		//CHECK(object.int64_ == 0);
+		CHECK(object.isNull());
 	}
 
 	{
 		const MessagePack::Object& object = mesg_pack.object(1);
-		CHECK(object.type   == MessagePack::DataType::Null);
-		//CHECK(object.int64_ == 0);
+		CHECK(object.isNull());
 	}
 }
 #endif // }}}
@@ -2381,11 +2604,11 @@ void MessagePack::deserialize(const std::vector<uint8_t>& data ///< The packed d
 		{
 			size_t length = data[++index];
 
-			std::vector<uint8_t> vector(length, 0);
+			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			index += length - 1;
+			append(std::move(vector));
 
-			append(vector);
+			index += length - 1;
 		}
 		else if(byte == (uint8_t)Type::Bin16)
 		{
@@ -2394,11 +2617,11 @@ void MessagePack::deserialize(const std::vector<uint8_t>& data ///< The packed d
 
 			size_t length = Convert.uint16;
 
-			std::vector<uint8_t> vector(length, 0);
+			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			index += length - 1;
+			append(std::move(vector));
 
-			append(vector);
+			index += length - 1;
 		}
 		else if(byte == (uint8_t)Type::Bin32)
 		{
@@ -2409,11 +2632,11 @@ void MessagePack::deserialize(const std::vector<uint8_t>& data ///< The packed d
 
 			size_t length = Convert.uint32;
 
-			std::vector<uint8_t> vector(length, 0);
+			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			index += length - 1;
+			append(std::move(vector));
 
-			append(vector);
+			index += length - 1;
 		}
 	}
 }
@@ -2450,7 +2673,7 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			vector.push_back((uint8_t)Type::Nill);
 		}
 		*/
-		if(std::holds_alternative<std::monostate>(object.v))
+		if(std::holds_alternative<std::monostate>(object.value))
 		{
 			vector.push_back((uint8_t)Type::Nill);
 		}
@@ -2463,9 +2686,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 				);
 		}
 		*/
-		else if(std::holds_alternative<bool>(object.v))
+		else if(std::holds_alternative<bool>(object.value))
 		{
-			vector.push_back(std::get<bool>(object.v)
+			vector.push_back(std::get<bool>(object.value)
 				? (uint8_t)Type::True
 				: (uint8_t)Type::False
 				);
@@ -2574,9 +2797,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			}
 		}
 		*/
-		else if(std::holds_alternative<int64_t>(object.v))
+		else if(std::holds_alternative<int64_t>(object.value))
 		{
-			int64_t value = std::get<int64_t>(object.v);
+			int64_t value = std::get<int64_t>(object.value);
 
 			if(value < 0)
 			{
@@ -2728,9 +2951,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			}
 		}
 		*/
-		else if(std::holds_alternative<uint64_t>(object.v))
+		else if(std::holds_alternative<uint64_t>(object.value))
 		{
-			uint64_t value = std::get<uint64_t>(object.v);
+			uint64_t value = std::get<uint64_t>(object.value);
 
 			if(value <= std::numeric_limits<uint8_t>::max())
 			{
@@ -2792,9 +3015,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			vector.push_back(Convert_Byte0);
 		}
 		*/
-		else if(std::holds_alternative<float>(object.v))
+		else if(std::holds_alternative<float>(object.value))
 		{
-			float value = std::get<float>(object.v);
+			float value = std::get<float>(object.value);
 
 			vector.reserve(vector.size() + 5);
 
@@ -2824,9 +3047,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			vector.push_back(Convert_Byte0);
 		}
 		*/
-		else if(std::holds_alternative<double>(object.v))
+		else if(std::holds_alternative<double>(object.value))
 		{
-			double value = std::get<double>(object.v);
+			double value = std::get<double>(object.value);
 
 			vector.push_back((uint8_t)Type::Float64);
 
@@ -2904,9 +3127,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			}
 		}
 		*/
-		else if(std::holds_alternative<std::string>(object.v))
+		else if(std::holds_alternative<std::string>(object.value))
 		{
-			std::string_view value = std::get<std::string>(object.v);
+			std::string_view value = std::get<std::string>(object.value);
 
 			const size_t string_length = value.size();
 
@@ -3019,9 +3242,9 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 			}
 		}
 		*/
-		else if(std::holds_alternative<std::vector<uint8_t>>(object.v))
+		else if(std::holds_alternative<std::vector<uint8_t>>(object.value))
 		{
-			const std::vector<uint8_t>& value = std::get<std::vector<uint8_t>>(object.v);
+			const std::vector<uint8_t>& value = std::get<std::vector<uint8_t>>(object.value);
 
 			const size_t vector_length = value.size();
 
@@ -3154,25 +3377,24 @@ std::vector<uint8_t> MessagePack::serialize() noexcept
 
 /**
  * \brief Construct a Null data object.
- */
 MessagePack::Object::Object() noexcept
-	: type(DataType::Null)
+	//: type(DataType::Null)
 	//, uint64_(0)
 {
 }
+ */
 
 
 /**
  * \brief Copy Constructor.
- */
 MessagePack::Object::Object(const Object& object ///< The object to copy.
 	) noexcept
-	: type(object.type)
+	//: type(object.type)
 	//, uint64_(0)
 {
-	switch(type)
-	{
-		case DataType::Null:                             break;
+	//switch(type)
+	//{
+		//case DataType::Null:                             break;
 		//case DataType::Bool:   bool_   = object.bool_;   break;
 		//case DataType::Int64:  int64_  = object.int64_;  break;
 		//case DataType::Uint64: uint64_ = object.uint64_; break;
@@ -3180,23 +3402,23 @@ MessagePack::Object::Object(const Object& object ///< The object to copy.
 		//case DataType::Double: double_ = object.double_; break;
 		//case DataType::String: string  = object.string;  break;
 		//case DataType::Vector: vector  = object.vector;  break;
-	}
+	//}
 
-	v = object.v;
+	value = object.value;
 }
+ */
 
 
 /**
  * \brief Copy Constructor.
- */
 MessagePack::Object::Object(Object&& object ///< The object to move from.
 	) noexcept
-	: type(object.type)
+	//: type(object.type)
 	//, uint64_(0)
 {
-	switch(type)
-	{
-		case DataType::Null:                             break;
+	//switch(type)
+	//{
+		//case DataType::Null:                             break;
 		//case DataType::Bool:   bool_   = object.bool_;   break;
 		//case DataType::Int64:  int64_  = object.int64_;  break;
 		//case DataType::Uint64: uint64_ = object.uint64_; break;
@@ -3204,15 +3426,16 @@ MessagePack::Object::Object(Object&& object ///< The object to move from.
 		//case DataType::Double: double_ = object.double_; break;
 		//case DataType::String: string  = object.string;  break;
 		//case DataType::Vector: vector  = object.vector;  break;
-	}
+	//}
 
-	v = object.v;
+	value = object.value;
 
-	object.type    = DataType::Null;
+	//object.type    = DataType::Null;
 	//object.uint64_ = 0;
 	//object.string.clear();
 	//object.vector.clear();
 }
+ */
 
 
 /**
@@ -3278,7 +3501,7 @@ MessagePack::Object::Object(const std::string_view value ///< The value to set
 	, string(value)
 {
 	//std::cout << "t: '" << (uint32_t)type << "'\n";
-	//std::cout << "v: '" << v << "'\n";
+	//std::cout << "value: '" << value << "'\n";
 	//std::cout << "s: '" << string << "'\n";
 }
  */

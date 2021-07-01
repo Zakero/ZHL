@@ -139,6 +139,9 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.2.0__
+ * - Added support for Arrays
+ *
  * __v0.1.0__
  * - The initial implementation
  * \endparversion

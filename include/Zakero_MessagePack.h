@@ -223,10 +223,8 @@
 // }}}
 
 
-namespace zakero
+namespace zakero::messagepack
 {
-	namespace messagepack
-	{
 		// {{{ Declaration
 
 		struct Object;
@@ -294,8 +292,6 @@ namespace zakero
 		[[nodiscard]] std::string to_string(const messagepack::Object&) noexcept;
 
 		// }}}
-
-	}
 }
 
 // {{{ Operators

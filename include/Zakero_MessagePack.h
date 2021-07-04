@@ -140,6 +140,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.3.0__
+ * - Added support for Maps
+ * - Complete rewrite
+ *
  * __v0.2.0__
  * - Added support for Arrays
  *
@@ -163,8 +167,8 @@
 
 // C++
 #include <cstring>
-#include <string>
 #include <limits>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -239,6 +243,30 @@ namespace zakero::messagepack
 		};
 
 		// }}} Array
+		// {{{ Map
+
+		struct Map
+		{
+			              size_t               set(Object&, Object&) noexcept;
+			              size_t               set(const Object&, const Object&) noexcept;
+			[[nodiscard]] inline const Object& keyAt(const size_t index) const noexcept { return object_key[index]; };
+			[[nodiscard]] inline Object&       keyAt(const size_t index) noexcept { return object_key[index]; };
+			[[nodiscard]] bool                 keyExists(const Object&) const noexcept;
+			[[nodiscard]] size_t               keyIndex(const Object&) const noexcept;
+			[[nodiscard]] inline const Object& valueAt(const size_t index) const noexcept { return object_value[index]; };
+			[[nodiscard]] inline Object&       valueAt(const size_t index) noexcept { return object_value[index]; };
+			[[nodiscard]] Object&              valueOf(Object&) noexcept;
+			[[nodiscard]] const Object&        valueOf(const Object&) const noexcept;
+
+			              void                 erase(const Object&) noexcept;
+			              inline void          clear() noexcept { object_key.clear(); object_value.clear(); };
+			[[nodiscard]] inline size_t        size() const noexcept { return object_key.size(); };
+
+			std::vector<Object> object_key = {};
+			std::vector<Object> object_value = {};
+		};
+
+		// }}} Map
 		// {{{ Object
 
 		struct Object
@@ -252,12 +280,15 @@ namespace zakero::messagepack
 				, std::string
 				, std::vector<uint8_t>
 				, zakero::messagepack::Array
+				, zakero::messagepack::Map
 				> value;
 
 			template<typename T> [[nodiscard]] T&                          as() noexcept { return std::get<T>(value); };
 			template<typename T> [[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); };
 			                     [[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
 			                     [[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
+			                     [[nodiscard]] messagepack::Map&           asMap() noexcept { return std::get<messagepack::Map>(value); };
+			                     [[nodiscard]] const messagepack::Map&     asMap() const noexcept { return std::get<messagepack::Map>(value); };
 			                     [[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept { return std::get<std::vector<uint8_t>>(value); };
 			                     [[nodiscard]] const std::vector<uint8_t>& asBinary() const noexcept { return std::get<std::vector<uint8_t>>(value); };
 			                     [[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value); };
@@ -265,6 +296,7 @@ namespace zakero::messagepack
 			template<typename T> [[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); };
 			                     [[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
 			                     [[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
+			                     [[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
 			                     [[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
 			                     [[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
 		};
@@ -276,6 +308,7 @@ namespace zakero::messagepack
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Array&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Object&) noexcept;
 
@@ -285,7 +318,10 @@ namespace zakero::messagepack
 // {{{ Operators
 
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Array&) noexcept;
+std::ostream& operator<<(std::ostream&, const zakero::messagepack::Map&) noexcept;
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noexcept;
+
+bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepack::Object& rhs) noexcept;
 
 // }}}
 // {{{ Implementation
@@ -330,7 +366,7 @@ std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noex
 #define ZAKERO_MESSAGEPACK__FORMAT_TYPE \
 	/* Format Name    Format Id   Format Mask   Format Name      */ \
 	X(Fixed_Int_Pos , 0x00      , 0b10000000  , "positive fixint" ) \
-	X(fixmap        , 0x80      , 0b00000000  , "fixmap"          ) \
+	X(Fixed_Map     , 0x80      , 0b11110000  , "fixmap"          ) \
 	X(Fixed_Array   , 0x90      , 0b11110000  , "fixarray"        ) \
 	X(Fixed_Str     , 0xa0      , 0b11100000  , "fixstr"          ) \
 	X(Nill          , 0xc0      , 0b11111111  , "nill"            ) \
@@ -363,8 +399,8 @@ std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noex
 	X(Str32         , 0xdb      , 0b11111111  , "str 32"          ) \
 	X(Array16       , 0xdc      , 0b11111111  , "array 16"        ) \
 	X(Array32       , 0xdd      , 0b11111111  , "array 32"        ) \
-	X(map16         , 0xde      , 0b00000000  , "map 16"          ) \
-	X(map32         , 0xdf      , 0b00000000  , "map 32"          ) \
+	X(Map16         , 0xde      , 0b11111111  , "map 16"          ) \
+	X(Map32         , 0xdf      , 0b11111111  , "map 32"          ) \
 	X(Fixed_Int_Neg , 0xe0      , 0b11100000  , "negative fixint" ) \
 
 // }}}
@@ -482,6 +518,7 @@ namespace
 
 
 	void serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
+	void serialize_(const messagepack::Map&, std::vector<uint8_t>&) noexcept;
 
 	void serialize_(const messagepack::Object& object
 		, std::vector<uint8_t>&            vector
@@ -852,6 +889,55 @@ namespace
 			serialize_(object, vector);
 		}
 	}
+
+
+	void serialize_(const messagepack::Map& map
+		, std::vector<uint8_t>&         vector
+		) noexcept
+	{
+		const size_t map_size = map.size();
+
+		if(map_size < 16)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Map
+				| (uint8_t)map_size
+				);
+		}
+		else if(map_size <= std::numeric_limits<uint16_t>::max())
+		{
+			vector.push_back((uint8_t)Format::Map16);
+
+			Convert.uint16 = (uint16_t)map_size;
+			vector.push_back(Convert_Byte1);
+			vector.push_back(Convert_Byte0);
+		}
+		else if(map_size <= std::numeric_limits<uint32_t>::max())
+		{
+			vector.push_back((uint8_t)Format::Map32);
+
+			Convert.uint32 = (uint32_t)map_size;
+			vector.push_back(Convert_Byte3);
+			vector.push_back(Convert_Byte2);
+			vector.push_back(Convert_Byte1);
+			vector.push_back(Convert_Byte0);
+		}
+		else
+		{
+			/**
+			 * \todo ERROR
+			 */
+		}
+			
+		/**
+		 * \todo Add `vector.reserve()` support. May need to 
+		 * add `Object::size()`.
+		 */
+		for(size_t i = 0; i < map.object_key.size(); i++)
+		{
+			serialize_(map.object_key[i]  , vector);
+			serialize_(map.object_value[i], vector);
+		}
+	}
 }
 
 // }}}
@@ -881,7 +967,7 @@ size_t Array::append(const bool value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Bool")
+TEST_CASE("array/append/bool")
 {
 	Array array;
 
@@ -953,7 +1039,7 @@ size_t Array::append(const int64_t value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: int64_t")
+TEST_CASE("array/append/int64_t")
 {
 	const int64_t i8_min = -31;
 	const int64_t i8_max = 127;
@@ -1048,7 +1134,7 @@ size_t Array::append(const uint64_t value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: uint64_t")
+TEST_CASE("array/append/uint64_t")
 {
 	const uint64_t u8_min = -31;
 	const uint64_t u8_max = 127;
@@ -1143,7 +1229,7 @@ size_t Array::append(const float value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: float")
+TEST_CASE("array/append/float")
 {
 	const float f32_min = std::numeric_limits<float>::min();
 	const float f32_max = std::numeric_limits<float>::max();
@@ -1202,7 +1288,7 @@ size_t Array::append(const double value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: double")
+TEST_CASE("array/append/double")
 {
 	const double f64_min = std::numeric_limits<double>::min();
 	const double f64_max = std::numeric_limits<double>::max();
@@ -1261,7 +1347,7 @@ size_t Array::append(const std::string_view value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: string")
+TEST_CASE("array/append/string")
 {
 	const std::string str_0;
 	const std::string str_f (31, '_');
@@ -1339,7 +1425,7 @@ size_t Array::append(const std::vector<uint8_t>& value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: binary (copy)")
+TEST_CASE("array/append/binary (copy)")
 {
 	const std::vector<uint8_t> bin_0;
 	const std::vector<uint8_t> bin_8 (32, 'X');
@@ -1411,7 +1497,7 @@ size_t Array::append(std::vector<uint8_t>& value ///< The value to add
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: binary (move)")
+TEST_CASE("array/append/binary (move)")
 {
 	const std::vector<uint8_t> bin_0;
 	const std::vector<uint8_t> bin_8 (32, 'X');
@@ -1497,7 +1583,7 @@ size_t Array::append(const Array& array
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Array (copy)")
+TEST_CASE("array/append/array (copy)")
 {
 	messagepack::Array sub_0;
 	messagepack::Array sub_1;
@@ -1597,7 +1683,7 @@ size_t Array::append(Array& array
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Array (move)")
+TEST_CASE("array/append/array (move)")
 {
 	messagepack::Array sub_0;
 	messagepack::Array sub_1;
@@ -1692,7 +1778,7 @@ size_t Array::append(const Object& object
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Object (copy)")
+TEST_CASE("array/append/object (copy)")
 {
 	messagepack::Object obj_0 = Object{true};
 	messagepack::Object obj_1 = Object{(uint64_t)42};
@@ -1765,7 +1851,7 @@ size_t Array::append(Object& object
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Object (move)")
+TEST_CASE("array/append/object (move)")
 {
 	messagepack::Object obj_0 = Object{true};
 	messagepack::Object obj_1 = Object{(uint64_t)42};
@@ -1836,7 +1922,7 @@ size_t Array::appendNull() noexcept
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("Append: Null")
+TEST_CASE("array/append/null")
 {
 	const size_t count = std::numeric_limits<uint16_t>::max() + 1;
 	Array array;
@@ -1967,6 +2053,635 @@ TEST_CASE("Append: Null")
 // No tests needed, a pass-thru to the std::vector<Object>.
 
 // }}} Array
+// {{{ Map
+
+/**
+ * \struct Map
+ *
+ * \brief A Data Object.
+ *
+ * This structure contains the basic data-types supported by MessagePack.
+ */
+
+/**
+ * \brief Set a key/value pair.
+ *
+ * The provide \p key / \p value pair will be added ot the Map. If the \p key 
+ * already exists, its value will be replaced with \p value.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set({std::string("Error Code")}   , {uint64_t(42)});
+ * map.set({std::string("Error Message")}, {std::string("All the errors!")});
+ * \endexamplecode
+ *
+ * \return The index of the \p key / \p value pair.
+ */
+size_t Map::set(const Object& key   ///< The key
+	, const Object&       value ///< The value
+	) noexcept
+{
+	for(size_t i = 0; i < object_key.size(); i++)
+	{
+		if(object_key[i] == key)
+		{
+			object_value[i] = value;
+
+			return i;
+		}
+	}
+
+	const size_t index = object_key.size();
+
+	object_key.emplace_back(key);
+	object_value.emplace_back(value);
+
+	return index;
+}
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/set (copy)")
+{
+	const Object key_null  = {};
+	const Object key_zero  = {int64_t(0)};
+	const Object val_null  = {};
+	const Object val_zero  = {int64_t(0)};
+
+	Map map;
+
+	SUBCASE("Same Key, Same Value")
+	{
+		map.set(key_null, val_null);
+		CHECK(map.size() == 1);
+		const Object& obj_1 = map.valueOf(key_null);
+		CHECK(obj_1  == val_null);
+		CHECK(&obj_1 != &val_null);
+
+		map.set(key_null, val_null);
+		CHECK(map.size() == 1);
+		const Object& obj_2 = map.valueOf(key_null);
+		CHECK(obj_2  == val_null);
+		CHECK(&obj_2 != &val_null);
+	}
+
+	SUBCASE("Same Key, Differnt Value")
+	{
+		map.set(key_null, val_null);
+		CHECK(map.size() == 1);
+		const Object& obj_1 = map.valueOf(key_null);
+		CHECK(obj_1 == val_null);
+
+		map.set(key_null, val_zero);
+		CHECK(map.size() == 1);
+		const Object& obj_2 = map.valueOf(key_null);
+		CHECK(obj_2 == val_zero);
+	}
+
+	SUBCASE("Different Key, Same Value")
+	{
+		map.set(key_null, val_null);
+		map.set(key_zero, val_null);
+		CHECK(map.size() == 2);
+
+		const Object& obj_1 = map.valueOf(key_null);
+		CHECK(obj_1 == val_null);
+
+		const Object& obj_2 = map.valueOf(key_zero);
+		CHECK(obj_2 == val_null);
+	}
+
+	SUBCASE("Different Key, Different Value")
+	{
+		map.set(key_null, val_null);
+		map.set(key_zero, val_zero);
+		CHECK(map.size() == 2);
+
+		const Object& obj_1 = map.valueOf(key_null);
+		CHECK(obj_1 == val_null);
+
+		const Object& obj_2 = map.valueOf(key_zero);
+		CHECK(obj_2 == val_zero);
+	}
+}
+#endif // }}}
+
+
+/**
+ * \brief Set a key/value pair.
+ *
+ * The provide \p key / \p value pair will be added ot the Map. If the \p key 
+ * already exists, its value will be replaced with \p value.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set({std::string("Error Code")}   , {uint64_t(42)});
+ * map.set({std::string("Error Message")}, {std::string("All the errors!")});
+ * \endexamplecode
+ *
+ * \return The index of the \p key / \p value pair.
+ *
+ * \todo Storing the key/value pairs in vectors is very slow. Look into using 
+ * std::hash<std::variant> to create a std::map().
+ */
+size_t Map::set(Object& key   ///< The key
+	, Object&       value ///< The value
+	) noexcept
+{
+	for(size_t i = 0; i < object_key.size(); i++)
+	{
+		if(object_key[i] == key)
+		{
+			object_value[i] = std::move(value);
+
+			return i;
+		}
+	}
+
+	const size_t index = object_key.size();
+
+	object_key.emplace_back(key);
+	object_value.emplace_back(std::move(value));
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/set")
+{
+	Object key_true = Object{true};
+	Object key_zero = Object{int64_t(0)};
+	Object val_true = Object{true};
+	Object val_zero = Object{int64_t(0)};
+
+	Map map;
+
+	SUBCASE("Same Key, Same Value")
+	{
+		map.set(key_true, val_true);
+		CHECK(map.size() == 1);
+
+		Object& obj_1 = map.valueOf(key_true);
+		CHECK(obj_1 == val_true);
+		obj_1 = {val_zero};
+		CHECK(map.valueOf(key_true) == val_zero);
+
+		map.set(key_true, val_zero);
+		CHECK(map.size() == 1);
+
+		Object& obj_2 = map.valueOf(key_true);
+		CHECK(obj_2 == val_zero);
+	}
+
+	SUBCASE("Same Key, Differnt Value")
+	{
+		map.set(key_true, val_true);
+		CHECK(map.size() == 1);
+
+		CHECK(map.valueOf(key_true) == val_true);
+
+		map.set(key_true, val_zero);
+		CHECK(map.size() == 1);
+		CHECK(map.valueOf(key_true) == val_zero);
+	}
+
+	SUBCASE("Different Key, Same Value")
+	{
+		map.set(key_true, val_true);
+		map.set(key_zero, val_true);
+		CHECK(map.size() == 2);
+		CHECK(map.valueOf(key_true) == val_true);
+		CHECK(map.valueOf(key_zero) == val_true);
+	}
+
+	SUBCASE("Different Key, Different Value")
+	{
+		map.set(key_true, val_true);
+		map.set(key_zero, val_zero);
+		CHECK(map.size() == 2);
+		CHECK(map.valueOf(key_true) == val_true);
+		CHECK(map.valueOf(key_zero) == val_zero);
+	}
+}
+#endif // }}}
+
+
+/**
+ * \brief Erase a key/value pair.
+ *
+ * If the specified \p key exists, the \p key and matching value will be 
+ * removed frome the Map.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * // What is true?
+ * map.set({true}, {uint64_t(123456)});
+ *
+ * // Truth can not be defined...
+ * map.erase({true});
+ * \endexamplecode
+ */
+void Map::erase(const Object& key ///< The key
+	) noexcept
+{
+	auto key_iter = object_key.begin();
+	auto val_iter = object_value.begin();
+
+	while(key_iter != object_key.end())
+	{
+		if(*key_iter == key)
+		{
+			object_key.erase(key_iter);
+			object_value.erase(val_iter);
+
+			break;
+		}
+
+		key_iter++;
+		val_iter++;
+	}
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/erase")
+{
+	Object key_nope = Object{};
+	Object key_true = Object{true};
+	Object key_zero = Object{int64_t(0)};
+	Object val_null = Object{};
+
+	Map map;
+
+	map.erase(key_nope); // Nothing should happen
+
+	map.set(key_true, val_null);
+	map.set(key_zero, val_null);
+	CHECK(map.keyExists(key_true) == true);
+	CHECK(map.keyExists(key_zero) == true);
+
+	map.erase(key_nope); // Nothing should happen
+	CHECK(map.size() == 2);
+
+	map.erase(key_true);
+	CHECK(map.size() == 1);
+	CHECK(map.keyExists(key_true) == false);
+	CHECK(map.keyExists(key_zero) == true);
+
+	map.erase(key_true);
+	CHECK(map.size() == 1);
+	CHECK(map.keyExists(key_true) == false);
+	CHECK(map.keyExists(key_zero) == true);
+
+	map.erase(key_zero);
+	CHECK(map.size() == 0);
+	CHECK(map.keyExists(key_true) == false);
+	CHECK(map.keyExists(key_zero) == false);
+
+	map.erase(key_zero);
+	CHECK(map.size() == 0);
+	CHECK(map.keyExists(key_true) == false);
+	CHECK(map.keyExists(key_zero) == false);
+}
+#endif // }}}
+
+
+/**
+ * \brief Check if a key exists.
+ *
+ * Search the Map and return \true if the \p key exists. If the \p key was not 
+ * found, return \false.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set(Object{}, Object{});
+ * if(map.keyExists(Object{}))
+ * {
+ * 	// In the Key of Null
+ * }
+ * \endexamplecode
+ */
+bool Map::keyExists(const Object& key
+	) const noexcept
+{
+	for(const auto& key_ : object_key)
+	{
+		if(key_ == key)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/keyexists")
+{
+	Object key_true = Object{true};
+	Object key_zero = Object{int64_t(0)};
+	Object val_null = Object{};
+
+	Map map;
+
+	CHECK(map.size() == 0);
+	CHECK(map.keyExists(key_true) == false);
+	CHECK(map.keyExists(key_zero) == false);
+
+	map.set(key_true, val_null);
+	CHECK(map.keyExists(key_true) == true);
+	CHECK(map.keyExists(key_zero) == false);
+
+	map.set(key_zero, val_null);
+	CHECK(map.keyExists(key_true) == true);
+	CHECK(map.keyExists(key_zero) == true);
+}
+#endif // }}}
+
+
+/**
+ * \brief Get the index of a key/value pair.
+ *
+ * Use this method to get the index of a \p key. The benefits of using an index 
+ * is to avoid constantly searching the Map. Also, using the index is the only 
+ * way of changing the \p key.
+ *
+ * \note If any key\value pair is inserted or removed, all indexes after 
+ * changed location are no longer valid.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set(Object{}, Object{});
+ * size_t index = map.keyIndex(Object{});
+ * map.keyAt(index)   = Object{true);
+ * map.valueAt(index) = Object{std::string("true"));
+ * \endexamplecode
+ *
+ * \return The index
+ */
+size_t Map::keyIndex(const Object& key ///< The key
+	) const noexcept
+{
+	size_t index = 0;
+
+	for(const auto& key_ : object_key)
+	{
+		if(key_ == key)
+		{
+			return index;
+		}
+
+		index++;
+	}
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/keyindex")
+{
+	Object key_nope = Object{};
+	Object key_true = Object{true};
+	Object key_zero = Object{int64_t(0)};
+	Object val_null = Object{};
+
+	Map map;
+
+	CHECK(map.size() == 0);
+	CHECK(map.keyIndex(key_true) >= map.size());
+
+	// Assumes key/values are added sequetially
+
+	map.set(key_true, val_null);
+	CHECK(map.keyIndex(key_true) == 0);
+
+	map.set(key_zero, val_null);
+	CHECK(map.keyIndex(key_zero) == 1);
+
+	CHECK(map.keyIndex(key_nope) >= map.size());
+}
+#endif // }}}
+
+
+/**
+ * \brief Get the value of a key.
+ *
+ * The value associated with the provided \p key will be returned. If the \p 
+ * key does not exist, then a reference to the \p key will be returned.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
+ *
+ * const zakero::messagepack::Object key = Object{true};
+ * const zakero::messagepack::Object& object = map.valueOf({true});
+ *
+ * if(&object == &key)
+ * {
+ * 	// key not found
+ * }
+ * \endexamplecode
+ *
+ * \return The value.
+ */
+const Object& Map::valueOf(const Object& key ///< The key
+	) const noexcept
+{
+	for(size_t i = 0; i < object_key.size(); i++)
+	{
+		if(object_key[i] == key)
+		{
+			return object_value[i];
+		}
+	}
+
+	return key;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/valueof (const)")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		const Object key_null   = {};
+		const Object key_bool   = {true};
+		const Object key_int64  = {int64_t(0)};
+		const Object key_uint64 = {uint64_t(0)};
+		const Object key_float  = {float(0)};
+		const Object key_double = {double(0)};
+		const Object key_string = {std::string("_")};
+		const Object key_binary = {std::vector<uint8_t>(1, 'X')};
+
+		const Object value_0 = {uint64_t(0)};
+		const Object value_1 = {uint64_t(1)};
+		const Object value_2 = {uint64_t(2)};
+		const Object value_3 = {uint64_t(3)};
+		const Object value_4 = {uint64_t(4)};
+		const Object value_5 = {uint64_t(5)};
+		const Object value_6 = {uint64_t(6)};
+		const Object value_7 = {uint64_t(7)};
+
+		map.object_key =
+		{	key_null
+		,	key_bool
+		,	key_int64
+		,	key_uint64
+		,	key_float
+		,	key_double
+		,	key_string
+		,	key_binary
+		};
+
+		map.object_value =
+		{	value_0
+		,	value_1
+		,	value_2
+		,	value_3
+		,	value_4
+		,	value_5
+		,	value_6
+		,	value_7
+		};
+
+		CHECK(map.valueOf(key_null)   == value_0);
+		CHECK(map.valueOf(key_bool)   == value_1);
+		CHECK(map.valueOf(key_int64)  == value_2);
+		CHECK(map.valueOf(key_uint64) == value_3);
+		CHECK(map.valueOf(key_float)  == value_4);
+		CHECK(map.valueOf(key_double) == value_5);
+		CHECK(map.valueOf(key_string) == value_6);
+		CHECK(map.valueOf(key_binary) == value_7);
+	}
+
+	SUBCASE("Not Exists")
+	{
+		const Object  bad_key = {};
+		const Object& bad_val = map.valueOf(bad_key);
+		CHECK(&bad_key == &bad_val);
+	}
+}
+#endif // }}}
+
+
+/**
+ * \brief Get the value of a key.
+ *
+ * The value associated with the provided \p key will be returned. If the \p 
+ * key does not exist, then a reference to the \p key will be returned.
+ *
+ * \examplecode
+ * zakero::messagepack::Map map;
+ *
+ * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
+ *
+ * zakero::messagepack::Object key = Object{true};
+ * zakero::messagepack::Object& object = map.valueOf({true});
+ *
+ * if(&object == &key)
+ * {
+ * 	// key not found
+ * }
+ * \endexamplecode
+ *
+ * \return The value.
+ */
+Object& Map::valueOf(Object& key ///< The key
+	) noexcept
+{
+	for(size_t i = 0; i < object_key.size(); i++)
+	{
+		if(object_key[i] == key)
+		{
+			return object_value[i];
+		}
+	}
+
+	return key;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("map/valueof")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		Object key_null   = {};
+		Object key_bool   = {true};
+		Object key_int64  = {int64_t(0)};
+		Object key_uint64 = {uint64_t(0)};
+		Object key_float  = {float(0)};
+		Object key_double = {double(0)};
+		Object key_string = {std::string("_")};
+		Object key_binary = {std::vector<uint8_t>(1, 'X')};
+
+		Object value_0 = {uint64_t(0)};
+		Object value_1 = {uint64_t(1)};
+		Object value_2 = {uint64_t(2)};
+		Object value_3 = {uint64_t(3)};
+		Object value_4 = {uint64_t(4)};
+		Object value_5 = {uint64_t(5)};
+		Object value_6 = {uint64_t(6)};
+		Object value_7 = {uint64_t(7)};
+
+		map.object_key =
+		{	key_null
+		,	key_bool
+		,	key_int64
+		,	key_uint64
+		,	key_float
+		,	key_double
+		,	key_string
+		,	key_binary
+		};
+
+		map.object_value =
+		{	value_0
+		,	value_1
+		,	value_2
+		,	value_3
+		,	value_4
+		,	value_5
+		,	value_6
+		,	value_7
+		};
+
+		CHECK(map.valueOf(key_null)   == value_0);
+		CHECK(map.valueOf(key_bool)   == value_1);
+		CHECK(map.valueOf(key_int64)  == value_2);
+		CHECK(map.valueOf(key_uint64) == value_3);
+		CHECK(map.valueOf(key_float)  == value_4);
+		CHECK(map.valueOf(key_double) == value_5);
+		CHECK(map.valueOf(key_string) == value_6);
+		CHECK(map.valueOf(key_binary) == value_7);
+
+		map.valueOf(key_null) = {false};
+		CHECK(map.valueOf(key_null) == Object{false});
+
+	}
+
+	SUBCASE("Not Exists")
+	{
+		Object  bad_key = {};
+		Object& bad_val = map.valueOf(bad_key);
+		CHECK(&bad_key == &bad_val);
+	}
+}
+#endif // }}}
+
+// }}} Map
 // {{{ Object
 
 /**
@@ -1977,8 +2692,7 @@ TEST_CASE("Append: Null")
  * This structure contains the basic data-types supported by MessagePack.
  */
 
-
-// }}} MessagePack::Object
+// }}} Object
 // {{{ Utilities
 
 /**
@@ -2274,10 +2988,53 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			return object;
 		}
 
+		case Format::Map16:
+		{
+			Object object = {Map{}};
+
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t count = Convert.uint64;
+
+			for(size_t i = 0; i < count; i++)
+			{
+				Object key = deserialize(data, index);
+				Object val = deserialize(data, index);
+
+				object.asMap().set(std::move(key), std::move(val));
+			}
+
+			return object;
+		}
+
+		case Format::Map32:
+		{
+			Object object = {Map{}};
+
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t count = Convert.uint64;
+
+			for(size_t i = 0; i < count; i++)
+			{
+				Object key = deserialize(data, index);
+				Object val = deserialize(data, index);
+
+				object.asMap().set(std::move(key), std::move(val));
+			}
+
+			return object;
+		}
+
 		case Format::Fixed_Int_Pos:
 		case Format::Fixed_Int_Neg:
 		case Format::Fixed_Array:
 		case Format::Fixed_Str:
+		case Format::Fixed_Map:
 			// Handled outside of this swith() statement
 			break;
 
@@ -2289,9 +3046,6 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		case Format::fixext4:
 		case Format::fixext8:
 		case Format::fixext16:
-		case Format::map16:
-		case Format::map32:
-		case Format::fixmap:
 		case Format::never_used:
 			break;
 	}
@@ -2342,6 +3096,23 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		return object;
 	}
 	
+	if((byte & (uint8_t)Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map)
+	{
+		Object object = {Map{}};
+
+		const size_t count = byte & (uint8_t)Fixed_Map_Value;
+
+		for(size_t i = 0; i < count; i++)
+		{
+			Object key = deserialize(data, index);
+			Object val = deserialize(data, index);
+
+			object.asMap().set(std::move(key), std::move(val));
+		}
+
+		return object;
+	}
+	
 	return {};
 }
 
@@ -2376,6 +3147,253 @@ std::vector<uint8_t> serialize(const Array& array
 
 
 /**
+ * \brief Serialize Map data.
+ *
+ * The contents of the Map will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Map map;
+ * map.set(Object{uint64_t(42)}, Object{true});
+ *
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(map);
+ *
+ * reply(host_ip, result);
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Map& map
+	) noexcept
+{
+	std::vector<uint8_t> vector;
+
+	serialize_(map, vector);
+
+	return vector;
+}
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("serialize/map (fixed_map)")
+{
+	Map map;
+	std::vector<uint8_t> data;
+
+	SUBCASE("empty")
+	{
+		data = serialize(map);
+		CHECK(data.size() == 1);
+		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
+		CHECK((data[0] & Fixed_Map_Value) == 0);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == 0);
+	}
+
+	SUBCASE("max")
+	{
+		size_t max = 15;
+
+		for(size_t i = 0; i < max; i++)
+		{
+			// i          ==> 1 byte
+			// str(0-9)   ==> 2 bytes
+			// str(10-14) ==> 3 bytes
+			map.set(Object{int64_t(i)}, Object{std::to_string(i)});
+		}
+
+		data = serialize(map);
+		CHECK(data.size() == 51);
+		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
+		CHECK((data[0] & Fixed_Map_Value) == max);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == max);
+
+		for(size_t i = 0; i < max; i++)
+		{
+			Object key = Object{int64_t(i)};
+			CHECK(map.keyExists(key) == true);
+			
+			Object value = map.valueOf(key);
+			CHECK(value.asString() == std::to_string(i));
+		}
+	}
+}
+
+
+TEST_CASE("serialize/map (map16)")
+{
+	Map map;
+	std::vector<uint8_t> data;
+
+	SUBCASE("min")
+	{
+		const size_t min = 16;
+
+		for(size_t i = 0; i < min; i++)
+		{
+			map.set(Object{int64_t(i)}, Object{std::to_string(i)});
+		}
+
+		data = serialize(map);
+		CHECK(data.size() == 57);
+		CHECK(data[0] == (uint8_t)Format::Map16);
+		Convert.uint64 = 0;
+		Convert_Byte1 = data[1];
+		Convert_Byte0 = data[2];
+		CHECK(Convert.uint16 == min);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == min);
+
+		for(size_t i = 0; i < min; i++)
+		{
+			Object key = Object{int64_t(i)};
+			CHECK(map.keyExists(key) == true);
+			
+			Object value = map.valueOf(key);
+			CHECK(value.asString() == std::to_string(i));
+		}
+	}
+
+#if 0 // Takes a long time
+	SUBCASE("max")
+	{
+		const size_t max = std::numeric_limits<uint16_t>::max();
+		map.object_key.reserve(max);
+		map.object_value.reserve(max);
+
+		printf("Generating %lu Map entries\n", max);
+		for(size_t i = 0; i < max; i++)
+		{
+			Object key = {int64_t(i)};
+			Object val = {std::to_string(i)};
+			map.set(std::move(key), std::move(val));
+
+			if(i % 1000 == 0) { printf("%lu/%lu\n", i, max); }
+		}
+
+		data = serialize(map);
+		CHECK(data.size() == 643986);
+		CHECK(data[0] == (uint8_t)Format::Map16);
+		Convert.uint64 = 0;
+		Convert_Byte1 = data[1];
+		Convert_Byte0 = data[2];
+		CHECK(Convert.uint16 == max);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == max);
+
+		for(size_t i = 0; i < max; i++)
+		{
+			Object key = Object{int64_t(i)};
+			CHECK(map.keyExists(key) == true);
+			
+			Object value = map.valueOf(key);
+			CHECK(value.asString() == std::to_string(i));
+		}
+	}
+#endif
+}
+
+
+TEST_CASE("serialize/map (map32)")
+{
+	Map map;
+	std::vector<uint8_t> data;
+
+#if 0 // Takes a long time
+	SUBCASE("min")
+	{
+		const size_t min = std::numeric_limits<uint16_t>::max() + 1;
+		map.object_key.reserve(min);
+		map.object_value.reserve(min);
+
+		printf("Generating %lu Map entries\n", min);
+		for(size_t i = 0; i < min; i++)
+		{
+			Object key = {int64_t(i)};
+			Object val = {std::to_string(i)};
+			map.set(std::move(key), std::move(val));
+
+			if(i % 1000 == 0) { printf("%lu/%lu\n", i, min); }
+		}
+
+		data = serialize(map);
+		CHECK(data.size() == 643999);
+		CHECK(data[0] == (uint8_t)Format::Map32);
+		Convert.uint64 = 0;
+		Convert_Byte3 = data[1];
+		Convert_Byte2 = data[2];
+		Convert_Byte1 = data[3];
+		Convert_Byte0 = data[4];
+		CHECK(Convert.uint32 == min);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == min);
+
+		for(size_t i = 0; i < min; i++)
+		{
+			Object key = Object{int64_t(i)};
+			CHECK(map.keyExists(key) == true);
+			
+			Object value = map.valueOf(key);
+			CHECK(value.asString() == std::to_string(i));
+		}
+	}
+#endif
+
+#if 0 // Will use too much memory and take to long
+	SUBCASE("max")
+	{
+		const size_t max = std::numeric_limits<uint32_t>::max();
+		map.object_key.reserve(max);
+		map.object_value.reserve(max);
+
+		printf("Generating %lu Map entries\n", max);
+		for(size_t i = 0; i < max; i++)
+		{
+			Object key = {int64_t(i)};
+			Object val = {std::to_string(i)};
+			map.set(std::move(key), std::move(val));
+
+			if(i % 1000 == 0) { printf("%lu/%lu\n", i, max); }
+		}
+
+		data = serialize(map);
+		CHECK(data.size() == 0); // Unknown
+		CHECK(data[0] == (uint8_t)Format::Map32);
+		Convert.uint64 = 0;
+		Convert_Byte3 = data[1];
+		Convert_Byte2 = data[2];
+		Convert_Byte1 = data[3];
+		Convert_Byte0 = data[4];
+		CHECK(Convert.uint32 == max);
+
+		Object object = deserialize(data);
+		CHECK(object.isMap() == true);
+		CHECK(object.asMap().size() == max);
+
+		for(size_t i = 0; i < max; i++)
+		{
+			Object key = Object{int64_t(i)};
+			CHECK(map.keyExists(key) == true);
+			
+			Object value = map.valueOf(key);
+			CHECK(value.asString() == std::to_string(i));
+		}
+	}
+#endif
+}
+#endif // }}}
+
+
+/**
  * \brief Serialize Object data.
  *
  * The contents of the Object will be packed into the returned std::vector.
@@ -2403,7 +3421,7 @@ std::vector<uint8_t> serialize(const Object& object
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
 
-TEST_CASE("Object: Nill")
+TEST_CASE("serialize/object/nill")
 {
 	Object object = {};
 	CHECK(object.isNull());
@@ -2423,7 +3441,7 @@ TEST_CASE("Object: Nill")
 }
 
 
-TEST_CASE("Object: Bool")
+TEST_CASE("serialize/object/bool")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -2470,7 +3488,7 @@ TEST_CASE("Object: Bool")
 }
 
 
-TEST_CASE("Object: Fixed_Int")
+TEST_CASE("serialize/object/fixed_int")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -2603,7 +3621,7 @@ TEST_CASE("Object: Fixed_Int")
 }
 
 
-TEST_CASE("Object: Int8")
+TEST_CASE("serialize/object/int8")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -2666,7 +3684,7 @@ TEST_CASE("Object: Int8")
 }
 
 
-TEST_CASE("Object: Int16")
+TEST_CASE("serialize/object/int16")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -2790,7 +3808,7 @@ TEST_CASE("Object: Int16")
 }
 
 
-TEST_CASE("Object: Int32")
+TEST_CASE("serialize/object/int32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -2922,7 +3940,7 @@ TEST_CASE("Object: Int32")
 }
 
 
-TEST_CASE("Object: Int64")
+TEST_CASE("serialize/object/int64")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3070,7 +4088,7 @@ TEST_CASE("Object: Int64")
 }
 
 
-TEST_CASE("Object: Uint8")
+TEST_CASE("serialize/object/uint8")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3128,7 +4146,7 @@ TEST_CASE("Object: Uint8")
 }
 
 
-TEST_CASE("Object: Uint16")
+TEST_CASE("serialize/object/uint16")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3190,7 +4208,7 @@ TEST_CASE("Object: Uint16")
 }
 
 
-TEST_CASE("Object: Uint32")
+TEST_CASE("serialize/object/uint32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3256,7 +4274,7 @@ TEST_CASE("Object: Uint32")
 }
 
 
-TEST_CASE("Object: Uint64")
+TEST_CASE("serialize/object/uint64")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3330,7 +4348,7 @@ TEST_CASE("Object: Uint64")
 }
 
 
-TEST_CASE("Object: Float32")
+TEST_CASE("serialize/object/float32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3425,7 +4443,7 @@ TEST_CASE("Object: Float32")
 }
 
 
-TEST_CASE("Object: Float64")
+TEST_CASE("serialize/object/float64")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3532,7 +4550,7 @@ TEST_CASE("Object: Float64")
 }
 
 
-TEST_CASE("Object: Fixed_Str")
+TEST_CASE("serialize/object/fixed_str")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3619,7 +4637,7 @@ TEST_CASE("Object: Fixed_Str")
 }
 
 
-TEST_CASE("Object: Str8")
+TEST_CASE("serialize/object/str8")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3680,7 +4698,7 @@ TEST_CASE("Object: Str8")
 }
 
 
-TEST_CASE("Object: Str16")
+TEST_CASE("serialize/object/str16")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3745,7 +4763,7 @@ TEST_CASE("Object: Str16")
 }
 
 
-TEST_CASE("Object: Str32")
+TEST_CASE("serialize/object/str32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3819,7 +4837,7 @@ TEST_CASE("Object: Str32")
 }
 
 
-TEST_CASE("Object: Bin8")
+TEST_CASE("serialize/object/bin8")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3890,7 +4908,7 @@ TEST_CASE("Object: Bin8")
 }
 
 
-TEST_CASE("Object: Bin16")
+TEST_CASE("serialize/object/bin16")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -3965,7 +4983,7 @@ TEST_CASE("Object: Bin16")
 }
 
 
-TEST_CASE("Object: Bin32")
+TEST_CASE("serialize/object/bin32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -4049,7 +5067,7 @@ TEST_CASE("Object: Bin32")
 }
 
 
-TEST_CASE("Object: Fixed_Array")
+TEST_CASE("serialize/object/fixed_array")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -4120,7 +5138,7 @@ TEST_CASE("Object: Fixed_Array")
 }
 
 
-TEST_CASE("Object: Array16")
+TEST_CASE("serialize/object/array16")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -4209,7 +5227,7 @@ TEST_CASE("Object: Array16")
 }
 
 
-TEST_CASE("Object: Array32")
+TEST_CASE("serialize/object/array32")
 {
 	Object               object;
 	std::vector<uint8_t> data;
@@ -4332,6 +5350,35 @@ std::string to_string(const messagepack::Array& array ///< The Array to convert.
 	}
 
 	s += "]";
+
+	return s;
+}
+
+
+/**
+ * \brief Convert to a JSON formatted string.
+ *
+ * \return A string.
+ */
+std::string to_string(const messagepack::Map& map ///< The Map to convert.
+	) noexcept
+{
+	std::string s = "{";
+
+	std::string prefix = " ";
+
+	for(size_t i = 0; i < map.size(); i++)
+	{
+		s += prefix
+			+ to_string(map.keyAt(i))
+			+ ": "
+			+ to_string(map.valueAt(i))
+			;
+
+		prefix = ", ";
+	}
+
+	s += " }";
 
 	return s;
 }
@@ -4466,6 +5513,24 @@ std::ostream& operator<<(std::ostream&      stream ///< The stream to use.
 /**
  * \brief OStream operator.
  *
+ * The \p map will be converted into a JSON formatted string and writen to the 
+ * \p stream.
+ *
+ * \return The \p stream object.
+ */
+std::ostream& operator<<(std::ostream&    stream ///< The stream to use.
+	, const zakero::messagepack::Map& map ///< The data to write.
+	) noexcept
+{
+	stream << zakero::messagepack::to_string(map);
+	
+	return stream;
+}
+
+
+/**
+ * \brief OStream operator.
+ *
  * The \p object will be converted into a JSON formatted string and writen to 
  * the \p stream.
  *
@@ -4479,6 +5544,80 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use.
 	
 	return stream;
 }
+
+bool operator==(const zakero::messagepack::Object& lhs
+	, const zakero::messagepack::Object&       rhs
+	) noexcept
+{
+	if(&lhs == &rhs)
+	{
+		return true;
+	}
+
+	if(lhs.isNull() && rhs.isNull())
+	{
+		return true;
+	}
+
+	if(lhs.is<bool>() && rhs.is<bool>())
+	{
+		return (lhs.as<bool>() == rhs.as<bool>());
+	}
+
+	if(lhs.is<int64_t>() && rhs.is<int64_t>())
+	{
+		return (lhs.as<int64_t>() == rhs.as<int64_t>());
+	}
+
+	if(lhs.is<uint64_t>() && rhs.is<uint64_t>())
+	{
+		return (lhs.as<uint64_t>() == rhs.as<uint64_t>());
+	}
+
+	if(lhs.is<float>() && rhs.is<float>())
+	{
+		return (lhs.as<float>() == rhs.as<float>());
+	}
+
+	if(lhs.is<double>() && rhs.is<double>())
+	{
+		return (lhs.as<double>() == rhs.as<double>());
+	}
+
+	if(lhs.isString() && rhs.isString())
+	{
+		return (lhs.asString() == rhs.asString());
+	}
+
+	if(lhs.isBinary() && rhs.isBinary())
+	{
+		return (lhs.asBinary() == rhs.asBinary());
+	}
+
+	if(lhs.isArray() && rhs.isArray())
+	{
+		const zakero::messagepack::Array& l_array = lhs.asArray();
+		const zakero::messagepack::Array& r_array = rhs.asArray();
+
+		if(l_array.size() != r_array.size())
+		{
+			return false;
+		}
+
+		for(size_t i = 0; i < l_array.size(); i++)
+		{
+			if(l_array.object(i) != r_array.object(i))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 
 // }}}
 

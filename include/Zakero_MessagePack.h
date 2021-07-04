@@ -19,7 +19,8 @@
 | \api{zakero::MessagePack} | \refdeps{zakero_messagepack} | \reftldr{zakero_messagepack} | \refwhat{zakero_messagepack} | \refwhy{zakero_messagepack} | \refhow{zakero_messagepack} | \refversion{zakero_messagepack} |
  * 
  * The _Zakero_MessagePack_ will serialize and deserialize data using the 
- * MessagePack specification.
+ * [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) 
+ * specification.
  *
  *
  * \pardeps{zakero_messagepack}
@@ -199,33 +200,16 @@
 	X(Error_None    ,  0 , "No Error"                                                        ) \
 	X(Error_Unknown ,  1 , "An unknown error has occurred"                                   ) \
 
-
-/**
- * \internal
- *
- * \brief _Object_Types_
- *
- * An X-Macro of supported Object data-types.
- * -# __Name__: The name of the Object Type
- * -# __Type__: The C++ data-type
- */
-#define ZAKERO_MESSAGEPACK__OBJECT_TYPE \
-	/* Name      Type                      */ \
-	X(Bool     , bool                       ) \
-	X(Int64_t  , int64_t                    ) \
-	X(Uint64_t , uint64_t                   ) \
-	X(Float    , float                      ) \
-	X(Double   , double                     ) \
-	X(String   , std::string                ) \
-	X(Binary   , std::vector<uint8_t>       ) \
-	X(Array    , zakero::messagepack::Array ) \
-
 // }}}
 
 
+/******************************************************************************
+ * Objects
+ */
+
 namespace zakero::messagepack
 {
-		// {{{ Declaration
+		// {{{ Array
 
 		struct Object;
 
@@ -251,19 +235,23 @@ namespace zakero::messagepack
 				      inline void          clear() noexcept { return object_vector.clear(); };
 			[[nodiscard]] inline size_t        size() const noexcept { return object_vector.size(); };
 
-			[[nodiscard]] std::vector<uint8_t> serialize() const noexcept;
-
 			std::vector<Object> object_vector = {};
 		};
+
+		// }}} Array
+		// {{{ Object
 
 		struct Object
 		{
 			std::variant<std::monostate
-#define X(name_,type_) \
-				, type_ \
-
-				ZAKERO_MESSAGEPACK__OBJECT_TYPE
-#undef X
+				, bool
+				, int64_t
+				, uint64_t
+				, float
+				, double
+				, std::string
+				, std::vector<uint8_t>
+				, zakero::messagepack::Array
 				> value;
 
 			template<typename T> [[nodiscard]] T&                          as() noexcept { return std::get<T>(value); };
@@ -279,20 +267,20 @@ namespace zakero::messagepack
 			                     [[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
 			                     [[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
 			                     [[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
-
-			                     [[nodiscard]] std::vector<uint8_t>        serialize() const noexcept;
 		};
 
-		// }}}
+		// }}} Object
 		// {{{ Utilities
 
-		[[nodiscard]] Object      deserialize(const std::vector<uint8_t>&) noexcept;
-		[[nodiscard]] Object      deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
-		[[nodiscard]] std::string to_string(const messagepack::Array&) noexcept;
-		[[nodiscard]] std::string to_string(const messagepack::Object&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&) noexcept;
+		[[nodiscard]] std::string          to_string(const messagepack::Array&) noexcept;
+		[[nodiscard]] std::string          to_string(const messagepack::Object&) noexcept;
 
 		// }}}
-}
+} // zakero::messagepack
 
 // {{{ Operators
 
@@ -382,38 +370,10 @@ std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noex
 // }}}
 // {{{ Documentation
 
-/**
- * \class zakero::MessagePack
- *
- * \brief Object and Data Serialization.
- *
- * This class implements the 
- * [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) 
- * specification. Usage is simple:
- *
- * __To Serialize:__
- *
- * -# Create a MessagePack instance
- * -# Add data
- * -# Serialize the data into a std::vector
- *
- * __To Deserialize:__
- * -# Create a MessagePack instance
- * -# Pass a std::vector to be deserialized
- * -# Access the data objects
- */
-
-/**
- * \enum zakero::MessagePack::DataType
- *
- * \brief The supported C++ data-types.
- */
 
 // }}}
 
-namespace zakero
-{
-namespace messagepack
+namespace zakero::messagepack
 {
 // {{{ Anonymous Namespace
 
@@ -434,7 +394,8 @@ namespace
 
 	/**
 	 * \brief Format ID names.
-	 */
+	 *
+	 * Useful for debugging.
 	std::map<uint8_t, std::string> Format_Name =
 	{
 	#define X(format_, id_, mask_, name_) \
@@ -443,6 +404,7 @@ namespace
 		ZAKERO_MESSAGEPACK__FORMAT_TYPE
 	#undef X
 	};
+	 */
 
 
 	/**
@@ -474,22 +436,6 @@ namespace
 
 
 	/**
-	 * \brief Object Type names.
-	 */
-	const std::string Object_Type_Name[] =
-	{	"Null"
-		/**
-		 * \brief Convert ZAKERO_MESSAGEPACK__FORMAT_TYPE into code.
-		 */
-#define X(name_, type_) \
-	,	#name_ \
-
-		ZAKERO_MESSAGEPACK__OBJECT_TYPE
-#undef X
-	};
-
-
-	/**
 	 * \brief In-Place Byte Conversion.
 	 */
 	union
@@ -503,6 +449,7 @@ namespace
 		float    float32;
 		double   float64;
 		uint8_t  uint8[8];
+		int8_t   int8[8];
 	} Convert;
 
 
@@ -534,141 +481,7 @@ namespace
 	 */
 
 
-	using VectorObject = std::vector<messagepack::Object>;
-
-	inline size_t append_(const bool value  ///< The value to add
-		, VectorObject&          vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(const int64_t value  ///< The value to add
-		, VectorObject&             vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(const uint64_t value  ///< The value to add
-		, VectorObject&              vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(const float value  ///< The value to add
-		, VectorObject&           vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(const double value  ///< The value to add
-		, VectorObject&            vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(const std::string_view value  ///< The value to add
-		, VectorObject&                      vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(std::string(value));
-
-		return index;
-	}
-
-
-	inline size_t append_(const std::vector<uint8_t>& value  ///< The value to add
-		, VectorObject&                           vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(value);
-
-		return index;
-	}
-
-
-	inline size_t append_(std::vector<uint8_t>&& value  ///< The value to add
-		, VectorObject&                      vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(std::move(value));
-
-		return index;
-	}
-
-
-	inline size_t append_(const uint8_t* value  ///< The value to add
-		, const size_t               size   ///< The value count
-		, VectorObject&              vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		std::vector<uint8_t> data(size);
-		memcpy(data.data(), value, size);
-
-		vector.emplace_back(std::move(data));
-
-		return index;
-	}
-
-
-	inline size_t appendArray_(VectorObject& vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back(messagepack::Array{});
-
-		return index;
-	}
-
-
-	inline size_t appendNull_(VectorObject& vector ///< The vector
-		) noexcept
-	{
-		const size_t index = vector.size();
-
-		vector.emplace_back();
-
-		return index;
-	}
-
+	void serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
 
 	void serialize_(const messagepack::Object& object
 		, std::vector<uint8_t>&            vector
@@ -986,48 +799,9 @@ namespace
 		}
 		else if(object.isArray())
 		{
-			/**
-			 * \todo Add `vector.reserve()` support. May need to 
-			 * add `Object::size()`.
-			 */
 			const messagepack::Array& array = object.asArray();
-			const size_t              array_size = array.size();
 
-			if(array_size <= 15)
-			{
-				vector.push_back((uint8_t)Format::Fixed_Array
-					| (uint8_t)array_size
-					);
-			}
-			else if(array_size <= std::numeric_limits<uint16_t>::max())
-			{
-				vector.push_back((uint8_t)Format::Array16);
-
-				Convert.uint16 = (uint16_t)array_size;
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else if(array_size <= std::numeric_limits<uint32_t>::max())
-			{
-				vector.push_back((uint8_t)Format::Array32);
-
-				Convert.uint32 = (uint32_t)array_size;
-				vector.push_back(Convert_Byte3);
-				vector.push_back(Convert_Byte2);
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else
-			{
-				/**
-				 * \todo ERROR
-				 */
-			}
-				
-			for(size_t i = 0; i < array_size; i++)
-			{
-				serialize_(array.object(i), vector);
-			}
+			serialize_(array, vector);
 		}
 	}
 
@@ -1078,271 +852,6 @@ namespace
 			serialize_(object, vector);
 		}
 	}
-
-
-#if 0 // REMOVE ???
-	void deserialize_(const std::vector<uint8_t>& data
-		, size_t&                             index
-		, std::vector<messagepack::Object>&   object_vector
-		) noexcept
-	{
-		const uint8_t byte = data[index];
-
-		if(byte == (uint8_t)Format::Nill)
-		{
-			appendNull_(object_vector);
-		}
-		else if(byte == (uint8_t)Format::False)
-		{
-			append_(false, object_vector);
-		}
-		else if(byte == (uint8_t)Format::True)
-		{
-			append_(true, object_vector);
-		}
-		else if((byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
-		{
-			const int64_t value = byte & (uint8_t)Fixed_Int_Pos_Value;
-			append_(value, object_vector);
-		}
-		else if((byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
-		{
-			const int64_t value = (int8_t)(byte & Fixed_Int_Neg_Value) - 32;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Int8)
-		{
-			const int64_t value = (int8_t)data[++index];
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Int16)
-		{
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const int64_t value = Convert.int16;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Int32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const int64_t value = Convert.int32;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Int64)
-		{
-			Convert_Byte7 = data[++index];
-			Convert_Byte6 = data[++index];
-			Convert_Byte5 = data[++index];
-			Convert_Byte4 = data[++index];
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const int64_t value = Convert.int64;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Uint8)
-		{
-			const uint64_t value = data[++index];
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Uint16)
-		{
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const uint64_t value = Convert.uint16;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Uint32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const uint64_t value = Convert.uint32;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Uint64)
-		{
-			Convert_Byte7 = data[++index];
-			Convert_Byte6 = data[++index];
-			Convert_Byte5 = data[++index];
-			Convert_Byte4 = data[++index];
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const uint64_t value = Convert.uint64;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Float32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const float value = Convert.float32;
-			append_(value, object_vector);
-		}
-		else if(byte == (uint8_t)Format::Float64)
-		{
-			Convert_Byte7 = data[++index];
-			Convert_Byte6 = data[++index];
-			Convert_Byte5 = data[++index];
-			Convert_Byte4 = data[++index];
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const double value = Convert.float64;
-			append_(value, object_vector);
-		}
-		else if((byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
-		{
-			const size_t length = byte & Fixed_Str_Value;
-
-			if(length == 0)
-			{
-				append_(std::string_view(""), object_vector);
-			}
-			else
-			{
-				std::string_view str((char*)&data[++index], length);
-				append_(str, object_vector);
-
-				index += length - 1;
-			}
-		}
-		else if(byte == (uint8_t)Format::Str8)
-		{
-			const size_t length = data[++index];
-
-			std::string_view str((char*)&data[++index], length);
-			append_(str, object_vector);
-
-			index += length - 1;
-		}
-		else if(byte == (uint8_t)Format::Str16)
-		{
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t length = Convert.uint16;
-			const std::string_view str((char*)&data[++index], length);
-			append_(str, object_vector);
-
-			index += length - 1;
-		}
-		else if(byte == (uint8_t)Format::Str32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t length = Convert.uint32;
-			const std::string_view str((char*)&data[++index], length);
-			append_(str, object_vector);
-
-			index += length - 1;
-		}
-		else if(byte == (uint8_t)Format::Bin8)
-		{
-			const size_t length = data[++index];
-
-			std::vector<uint8_t> vector(length);
-			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			append_(std::move(vector), object_vector);
-
-			index += length - 1;
-		}
-		else if(byte == (uint8_t)Format::Bin16)
-		{
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t length = Convert.uint16;
-
-			std::vector<uint8_t> vector(length);
-			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			append_(std::move(vector), object_vector);
-
-			index += length - 1;
-		}
-		else if(byte == (uint8_t)Format::Bin32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t length = Convert.uint32;
-
-			std::vector<uint8_t> vector(length);
-			memcpy((void*)vector.data(), (void*)&data[++index], length);
-			append_(std::move(vector), object_vector);
-
-			index += length - 1;
-		}
-/**
- * \todo Re-enable
-		else if((byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
-		{
-			const size_t array_index = appendArray_(object_vector);
-			const size_t count = byte & (uint8_t)Fixed_Array_Value;
-
-			object_vector[array_index]
-				.asArray()
-				.deserialize(data, ++index, count)
-				;
-			index--;
-		}
-		else if(byte == (uint8_t)Format::Array16)
-		{
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t array_index = appendArray_(object_vector);
-			const size_t count = Convert.uint16;
-
-			object_vector[array_index]
-				.asArray()
-				.deserialize(data, ++index, count)
-				;
-			index--;
-		}
-		else if(byte == (uint8_t)Format::Array32)
-		{
-			Convert_Byte3 = data[++index];
-			Convert_Byte2 = data[++index];
-			Convert_Byte1 = data[++index];
-			Convert_Byte0 = data[++index];
-
-			const size_t array_index = appendArray_(object_vector);
-			const size_t count = Convert.uint32;
-
-			object_vector[array_index]
-				.asArray()
-				.deserialize(data, ++index, count)
-				;
-			index--;
-		}
-*/
-
-		index++;
-	}
-#endif
 }
 
 // }}}
@@ -1388,7 +897,7 @@ TEST_CASE("Append: Bool")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 	CHECK(data.size() == 3);
 
 	index = 0;
@@ -1470,7 +979,7 @@ TEST_CASE("Append: int64_t")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1565,7 +1074,7 @@ TEST_CASE("Append: uint64_t")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1648,7 +1157,7 @@ TEST_CASE("Append: float")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1707,7 +1216,7 @@ TEST_CASE("Append: double")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1772,7 +1281,7 @@ TEST_CASE("Append: string")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1848,7 +1357,7 @@ TEST_CASE("Append: binary (copy)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -1929,7 +1438,7 @@ TEST_CASE("Append: binary (move)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2020,7 +1529,7 @@ TEST_CASE("Append: Array (copy)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2120,7 +1629,7 @@ TEST_CASE("Append: Array (move)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2206,7 +1715,7 @@ TEST_CASE("Append: Object (copy)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2279,7 +1788,7 @@ TEST_CASE("Append: Object (move)")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2341,7 +1850,7 @@ TEST_CASE("Append: Null")
 
 	// Check serialized data
 
-	std::vector<uint8_t> data = array.serialize();
+	std::vector<uint8_t> data = serialize(array);
 
 	// Check deserialized data
 
@@ -2457,6 +1966,385 @@ TEST_CASE("Append: Null")
 
 // No tests needed, a pass-thru to the std::vector<Object>.
 
+// }}} Array
+// {{{ Object
+
+/**
+ * \struct Object
+ *
+ * \brief A Data Object.
+ *
+ * This structure contains the basic data-types supported by MessagePack.
+ */
+
+
+// }}} MessagePack::Object
+// {{{ Utilities
+
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * object = zakero::messagepack::deserialize(command_result);
+ * if(object.isArray() == false)
+ * {
+ * 	writeError(ERROR_INVALID_COMMAND_RESULT);
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t error_index = 1;
+ * constexpr size_t error_code_index = 2;
+ * if(array(error_index).boolean == true)
+ * {
+ * 	writeError(array(error_code_index).int64_);
+ * }
+ * \endparcode
+ *
+ * \todo Add error codes.
+ *       - Error_None
+ *       - Error_Bad_Format_Type
+ *       - Error_Incomplete
+ */
+Object deserialize(const std::vector<uint8_t>& data ///< The packed data
+	) noexcept
+{
+	size_t index = 0;
+
+	return deserialize(data, index);
+}
+
+
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * size_t index;
+ * object = zakero::messagepack::deserialize(command_result, index);
+ * if(object.isArray() == false)
+ * {
+ *	writeError(ERROR_INVALID_COMMAND_RESULT);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
+ *
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t error_index = 1;
+ * constexpr size_t error_code_index = 2;
+ * if(array(error_index).boolean == true)
+ * {
+ * 	writeError(array(error_code_index).int64_);
+ * }
+ * \endparcode
+ *
+ * \todo Add error codes.
+ *       - Error_None
+ *       - Error_Bad_Format_Type
+ *       - Error_Incomplete
+ */
+Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
+	, size_t&                              index ///< The starting index
+	) noexcept
+{
+	const uint8_t byte = data[index++];
+
+	switch((Format)byte)
+	{
+		case Format::Nill:
+			return Object{};
+
+		case Format::False:
+			return Object{false};
+
+		case Format::True:
+			return Object{true};
+
+		case Format::Int8:
+			Convert.int64 = (int8_t)data[index++];
+			return Object{Convert.int64};
+	
+		case Format::Int16:
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.int16};
+
+		case Format::Int32:
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.int32};
+	
+		case Format::Int64:
+			Convert_Byte7 = data[index++];
+			Convert_Byte6 = data[index++];
+			Convert_Byte5 = data[index++];
+			Convert_Byte4 = data[index++];
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.int64};
+	
+		case Format::Uint8:
+			Convert.uint64 = data[index++];
+			return Object{Convert.uint64};
+	
+		case Format::Uint16:
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.uint64};
+	
+		case Format::Uint32:
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.uint64};
+
+		case Format::Uint64:
+			Convert_Byte7 = data[index++];
+			Convert_Byte6 = data[index++];
+			Convert_Byte5 = data[index++];
+			Convert_Byte4 = data[index++];
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.uint64};
+	
+		case Format::Float32:
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.float32};
+	
+		case Format::Float64:
+			Convert_Byte7 = data[index++];
+			Convert_Byte6 = data[index++];
+			Convert_Byte5 = data[index++];
+			Convert_Byte4 = data[index++];
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			return Object{Convert.float64};
+	
+		case Format::Str8:
+		{
+			const size_t length = data[index++];
+
+			std::string_view str((char*)&data[index], length);
+
+			index += length;
+
+			return Object{std::string(str)};
+		}
+
+		case Format::Str16:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t length = Convert.uint64;
+
+			const std::string_view str((char*)&data[index], length);
+
+			index += length;
+
+			return Object{std::string(str)};
+		}
+	
+		case Format::Str32:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t length = Convert.uint64;
+
+			const std::string_view str((char*)&data[index], length);
+
+			index += length;
+
+			return Object{std::string(str)};
+		}
+	
+		case Format::Bin8:
+		{
+			const size_t length = data[index++];
+
+			std::vector<uint8_t> vector(length);
+			memcpy((void*)vector.data(), (void*)&data[index], length);
+
+			index += length;
+
+			return Object{std::move(vector)};
+		}
+	
+		case Format::Bin16:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t length = Convert.uint64;
+
+			std::vector<uint8_t> vector(length);
+			memcpy((void*)vector.data(), (void*)&data[index], length);
+
+			index += length;
+
+			return Object{std::move(vector)};
+		}
+	
+		case Format::Bin32:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t length = Convert.uint64;
+
+			std::vector<uint8_t> vector(length);
+			memcpy((void*)vector.data(), (void*)&data[index], length);
+
+			index += length;
+
+			return Object{std::move(vector)};
+		}
+
+		case Format::Array16:
+		{
+			Object object = {Array{}};
+
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t count = Convert.uint64;
+
+			for(size_t i = 0; i < count; i++)
+			{
+				object.asArray().append(deserialize(data, index));
+			}
+
+			return object;
+		}
+	
+		case Format::Array32:
+		{
+			Object object = {Array{}};
+
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t count = Convert.uint64;
+
+			for(size_t i = 0; i < count; i++)
+			{
+				object.asArray().append(deserialize(data, index));
+			}
+
+			return object;
+		}
+
+		case Format::Fixed_Int_Pos:
+		case Format::Fixed_Int_Neg:
+		case Format::Fixed_Array:
+		case Format::Fixed_Str:
+			// Handled outside of this swith() statement
+			break;
+
+		case Format::ext8:
+		case Format::ext16:
+		case Format::ext32:
+		case Format::fixext1:
+		case Format::fixext2:
+		case Format::fixext4:
+		case Format::fixext8:
+		case Format::fixext16:
+		case Format::map16:
+		case Format::map32:
+		case Format::fixmap:
+		case Format::never_used:
+			break;
+	}
+
+	if((byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
+	{
+		const int64_t value = byte & (uint8_t)Fixed_Int_Pos_Value;
+
+		return Object{value};
+	}
+
+	if((byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
+	{
+		const int64_t value = (int8_t)(byte & Fixed_Int_Neg_Value) - 32;
+
+		return Object{value};
+	}
+	
+	if((byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
+	{
+		const size_t length = byte & Fixed_Str_Value;
+
+		if(length == 0)
+		{
+			return Object{""};
+		}
+		else
+		{
+			std::string_view str((char*)&data[index], length);
+
+			index += length;
+
+			return Object{std::string(str)};
+		}
+	}
+	
+	if((byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
+	{
+		Object object = {Array{}};
+
+		const size_t count = byte & (uint8_t)Fixed_Array_Value;
+
+		for(size_t i = 0; i < count; i++)
+		{
+			object.asArray().append(deserialize(data, index));
+		}
+
+		return object;
+	}
+	
+	return {};
+}
+
 
 /**
  * \brief Serialize Array data.
@@ -2476,361 +2364,38 @@ TEST_CASE("Append: Null")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> Array::serialize() const noexcept
+std::vector<uint8_t> serialize(const Array& array
+	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(*this, vector);
+	serialize_(array, vector);
 
 	return vector;
 }
 
 
-// No tests needed, functionality is tested else where.
-
-
-// }}} Array
-// {{{ Object
-
 /**
- * \struct Object
+ * \brief Serialize Object data.
  *
- * \brief A Data Object.
+ * The contents of the Object will be packed into the returned std::vector.
  *
- * This structure contains the basic data-types supported by MessagePack.
+ * \parcode
+ * zakero::messagepack::Object object = { true };
+ *
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(object);
+ *
+ * reply(host_ip, result);
+ * \endparcode
+ *
+ * \return The packed data.
  */
-
-/**
- * \var Object::Type
- *
- * \brief The data-type.
- *
- * For the primitive data-types, there is a one-to-one correlation to the 
- * anonymous union. If the \p type is DataType::Bool, then the `bool_` value 
- * should be used.
- */
-std::vector<uint8_t> Object::serialize() const noexcept
+std::vector<uint8_t> serialize(const Object& object
+	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	if(this->isNull())
-	{
-		vector.push_back((uint8_t)Format::Nill);
-	}
-	else if(this->is<bool>())
-	{
-		const int64_t value = this->as<bool>();
-
-		vector.push_back(value
-			? (uint8_t)Format::True
-			: (uint8_t)Format::False
-			);
-	}
-	else if(this->is<int64_t>())
-	{
-		const int64_t value = this->as<int64_t>();
-
-		if(value < 0)
-		{
-			if(value >= -32)
-			{
-				vector.push_back((uint8_t)Format::Fixed_Int_Neg
-					| (uint8_t)(value & Fixed_Int_Neg_Value)
-					);
-			}
-			else if(value >= std::numeric_limits<int8_t>::min())
-			{
-				vector.reserve(vector.size() + 2);
-
-				vector.push_back((uint8_t)Format::Int8);
-				vector.push_back((int8_t)value);
-			}
-			else if(value >= std::numeric_limits<int16_t>::min())
-			{
-				vector.reserve(vector.size() + 3);
-
-				vector.push_back((uint8_t)Format::Int16);
-
-				Convert.int16 = (int16_t)value;
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else if(value >= std::numeric_limits<int32_t>::min())
-			{
-				vector.reserve(vector.size() + 5);
-
-				vector.push_back((uint8_t)Format::Int32);
-
-				Convert.int32 = (int32_t)value;
-				vector.push_back(Convert_Byte3);
-				vector.push_back(Convert_Byte2);
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else if(value >= std::numeric_limits<int64_t>::min())
-			{
-				vector.reserve(vector.size() + 9);
-
-				vector.push_back((uint8_t)Format::Int64);
-
-				Convert.int64 = (int64_t)value;
-				vector.push_back(Convert_Byte7);
-				vector.push_back(Convert_Byte6);
-				vector.push_back(Convert_Byte5);
-				vector.push_back(Convert_Byte4);
-				vector.push_back(Convert_Byte3);
-				vector.push_back(Convert_Byte2);
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-		}
-		else
-		{
-			if(value <= std::numeric_limits<int8_t>::max())
-			{
-				vector.push_back((int8_t)value);
-			}
-			else if(value <= std::numeric_limits<int16_t>::max())
-			{
-				vector.reserve(vector.size() + 3);
-
-				vector.push_back((uint8_t)Format::Int16);
-
-				Convert.int16 = (int16_t)value;
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else if(value <= std::numeric_limits<int32_t>::max())
-			{
-				vector.reserve(vector.size() + 5);
-
-				vector.push_back((uint8_t)Format::Int32);
-
-				Convert.int32 = (int32_t)value;
-				vector.push_back(Convert_Byte3);
-				vector.push_back(Convert_Byte2);
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-			else if(value <= std::numeric_limits<int64_t>::max())
-			{
-				vector.reserve(vector.size() + 9);
-
-				vector.push_back((uint8_t)Format::Int64);
-
-				Convert.int64 = (int64_t)value;
-				vector.push_back(Convert_Byte7);
-				vector.push_back(Convert_Byte6);
-				vector.push_back(Convert_Byte5);
-				vector.push_back(Convert_Byte4);
-				vector.push_back(Convert_Byte3);
-				vector.push_back(Convert_Byte2);
-				vector.push_back(Convert_Byte1);
-				vector.push_back(Convert_Byte0);
-			}
-		}
-	}
-	else if(this->is<uint64_t>())
-	{
-		const uint64_t value = this->as<uint64_t>();
-
-		if(value <= std::numeric_limits<uint8_t>::max())
-		{
-			vector.reserve(vector.size() + 2);
-
-			vector.push_back((uint8_t)Format::Uint8);
-			vector.push_back((uint8_t)value);
-		}
-		else if(value <= std::numeric_limits<uint16_t>::max())
-		{
-			vector.reserve(vector.size() + 3);
-
-			vector.push_back((uint8_t)Format::Uint16);
-
-			Convert.uint16 = (uint16_t)value;
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-		}
-		else if(value <= std::numeric_limits<uint32_t>::max())
-		{
-			vector.reserve(vector.size() + 5);
-
-			vector.push_back((uint8_t)Format::Uint32);
-
-			Convert.uint32 = (uint32_t)value;
-			vector.push_back(Convert_Byte3);
-			vector.push_back(Convert_Byte2);
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-		}
-		else
-		{
-			vector.reserve(vector.size() + 9);
-
-			vector.push_back((uint8_t)Format::Uint64);
-
-			Convert.uint64 = value;
-			vector.push_back(Convert_Byte7);
-			vector.push_back(Convert_Byte6);
-			vector.push_back(Convert_Byte5);
-			vector.push_back(Convert_Byte4);
-			vector.push_back(Convert_Byte3);
-			vector.push_back(Convert_Byte2);
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-		}
-	}
-	else if(this->is<float>())
-	{
-		float value = this->as<float>();
-
-		vector.reserve(vector.size() + 5);
-
-		vector.push_back((uint8_t)Format::Float32);
-
-		Convert.float32 = value;
-		vector.push_back(Convert_Byte3);
-		vector.push_back(Convert_Byte2);
-		vector.push_back(Convert_Byte1);
-		vector.push_back(Convert_Byte0);
-	}
-	else if(this->is<double>())
-	{
-		double value = this->as<double>();
-
-		vector.push_back((uint8_t)Format::Float64);
-
-		Convert.float64 = value;
-		vector.push_back(Convert_Byte7);
-		vector.push_back(Convert_Byte6);
-		vector.push_back(Convert_Byte5);
-		vector.push_back(Convert_Byte4);
-		vector.push_back(Convert_Byte3);
-		vector.push_back(Convert_Byte2);
-		vector.push_back(Convert_Byte1);
-		vector.push_back(Convert_Byte0);
-	}
-	else if(this->isString())
-	{
-		const std::string& value = this->asString();
-
-		const size_t string_length = value.size();
-
-		if(string_length <= 31)
-		{
-			vector.reserve(string_length + 1);
-
-			vector.push_back((uint8_t)Format::Fixed_Str
-				| (uint8_t)string_length
-				);
-
-			for(const auto& c : value)
-			{
-				vector.push_back((uint8_t)c);
-			}
-		}
-		else if(string_length <= std::numeric_limits<uint8_t>::max())
-		{
-			vector.reserve(string_length + 2);
-
-			vector.push_back((uint8_t)Format::Str8);
-			vector.push_back((uint8_t)string_length);
-
-			for(const auto& c : value)
-			{
-				vector.push_back((uint8_t)c);
-			}
-		}
-		else if(string_length <= std::numeric_limits<uint16_t>::max())
-		{
-			vector.reserve(string_length + 3);
-
-			vector.push_back((uint8_t)Format::Str16);
-
-			Convert.uint16 = (uint16_t)string_length;
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-
-			for(const auto& c : value)
-			{
-				vector.push_back((uint8_t)c);
-			}
-		}
-		else if(string_length <= std::numeric_limits<uint32_t>::max())
-		{
-			vector.reserve(string_length + 5);
-
-			vector.push_back((uint8_t)Format::Str32);
-
-			Convert.uint32 = (uint32_t)string_length;
-			vector.push_back(Convert_Byte3);
-			vector.push_back(Convert_Byte2);
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-
-			for(const auto& c : value)
-			{
-				vector.push_back((uint8_t)c);
-			}
-		}
-	}
-	else if(this->isBinary())
-	{
-		const std::vector<uint8_t>& value = this->asBinary();
-
-		const size_t vector_length = value.size();
-
-		if(vector_length <= std::numeric_limits<uint8_t>::max())
-		{
-			vector.reserve(vector_length + 2);
-
-			vector.push_back((uint8_t)Format::Bin8);
-			vector.push_back((uint8_t)vector_length);
-
-			vector.insert(vector.end()
-				, value.begin()
-				, value.end()
-				);
-		}
-		else if(vector_length <= std::numeric_limits<uint16_t>::max())
-		{
-			vector.reserve(vector_length + 3);
-
-			vector.push_back((uint8_t)Format::Bin16);
-
-			Convert.uint16 = (uint16_t)vector_length;
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-
-			vector.insert(vector.end()
-				, value.begin()
-				, value.end()
-				);
-		}
-		else if(vector_length <= std::numeric_limits<uint32_t>::max())
-		{
-			vector.reserve(vector_length + 5);
-
-			vector.push_back((uint8_t)Format::Bin32);
-
-			Convert.uint32 = (uint32_t)vector_length;
-			vector.push_back(Convert_Byte3);
-			vector.push_back(Convert_Byte2);
-			vector.push_back(Convert_Byte1);
-			vector.push_back(Convert_Byte0);
-
-			vector.insert(vector.end()
-				, value.begin()
-				, value.end()
-				);
-		}
-	}
-	else if(this->isArray())
-	{
-		const messagepack::Array& array = this->asArray();
-
-		serialize_(array, vector);
-	}
+	serialize_(object, vector);
 
 	return vector;
 }
@@ -2843,8 +2408,12 @@ TEST_CASE("Object: Nill")
 	Object object = {};
 	CHECK(object.isNull());
 
-	std::vector<uint8_t> data = object.serialize();
+	// Check serialized data
+
+	std::vector<uint8_t> data = serialize(object);
 	CHECK(data.size() == 1);
+
+	// Check deserialized data
 
 	size_t index = 0;
 	CHECK(data[index] == (uint8_t)Format::Nill);
@@ -2860,32 +2429,44 @@ TEST_CASE("Object: Bool")
 	std::vector<uint8_t> data;
 	size_t               index = 0;
 
-	object = {true};
-	CHECK(object.is<bool>());
+	SUBCASE("True")
+	{
+		object = {true};
+		CHECK(object.is<bool>());
 
-	data = object.serialize();
-	CHECK(data.size() == 1);
+		// Check serialized data
 
-	index = 0;
-	CHECK(data[index] == (uint8_t)Format::True);
+		data = serialize(object);
+		CHECK(data.size() == 1);
 
-	object = deserialize(data);
-	CHECK(object.is<bool>());
-	CHECK(object.as<bool>() == true);
+		index = 0;
+		CHECK(data[index] == (uint8_t)Format::True);
 
-	// --------------------------------------------
+		// Check deserialized data
 
-	object = {false};
-	CHECK(object.is<bool>());
+		object = deserialize(data);
+		CHECK(object.is<bool>());
+		CHECK(object.as<bool>() == true);
+	}
 
-	data = object.serialize();
-	CHECK(data.size() == 1);
-	index = 0;
-	CHECK(data[index] == (uint8_t)Format::False);
+	SUBCASE("False")
+	{
+		object = {false};
+		CHECK(object.is<bool>());
 
-	object = deserialize(data);
-	CHECK(object.is<bool>());
-	CHECK(object.as<bool>() == false);
+		// Check serialized data
+
+		data = serialize(object);
+		CHECK(data.size() == 1);
+		index = 0;
+		CHECK(data[index] == (uint8_t)Format::False);
+
+		// Check deserialized data
+
+		object = deserialize(data);
+		CHECK(object.is<bool>());
+		CHECK(object.as<bool>() == false);
+	}
 }
 
 
@@ -2904,12 +2485,16 @@ TEST_CASE("Object: Fixed_Int")
 		object = {fixint_zero};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos);
 		CHECK((data[index] & Fixed_Int_Pos_Value) == fixint_zero);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -2925,12 +2510,16 @@ TEST_CASE("Object: Fixed_Int")
 		object = {fixint_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos);
 		CHECK((data[index] & Fixed_Int_Pos_Value) == fixint_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -2946,12 +2535,16 @@ TEST_CASE("Object: Fixed_Int")
 		object = {fixint_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg);
 		CHECK(((data[index] & Fixed_Int_Neg_Value) - 32) == fixint_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -2967,12 +2560,16 @@ TEST_CASE("Object: Fixed_Int")
 		object = {fixint_p24};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos);
 		CHECK((data[index] & Fixed_Int_Pos_Value) == fixint_p24);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -2988,12 +2585,16 @@ TEST_CASE("Object: Fixed_Int")
 		object = {fixint_n24};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg);
 		CHECK(((data[index] & Fixed_Int_Neg_Value) - 32) == fixint_n24);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3020,13 +2621,17 @@ TEST_CASE("Object: Int8")
 		object = {i8_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 2);
 
 		index = 0;
 		CHECK(data[index] == (uint8_t)Format::Int8);
 		index++;
 		CHECK((int8_t)data[index] == i8_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3042,13 +2647,17 @@ TEST_CASE("Object: Int8")
 		object = {i8_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 2);
 
 		index = 0;
 		CHECK(data[index] == (uint8_t)Format::Int8);
 		index++;
 		CHECK((int8_t)data[index] == i8_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3072,7 +2681,9 @@ TEST_CASE("Object: Int16")
 		object = {i16_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3082,6 +2693,8 @@ TEST_CASE("Object: Int16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int16 == i16_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3097,7 +2710,9 @@ TEST_CASE("Object: Int16")
 		object = {i16_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3107,6 +2722,8 @@ TEST_CASE("Object: Int16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int16 == i16_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3122,7 +2739,9 @@ TEST_CASE("Object: Int16")
 		object = {i16_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3132,6 +2751,8 @@ TEST_CASE("Object: Int16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int16 == i16_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3147,7 +2768,9 @@ TEST_CASE("Object: Int16")
 		object = {i16_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3157,6 +2780,8 @@ TEST_CASE("Object: Int16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int16 == i16_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3180,7 +2805,9 @@ TEST_CASE("Object: Int32")
 		object = {i32_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3192,6 +2819,8 @@ TEST_CASE("Object: Int32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int32 == i32_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3207,7 +2836,9 @@ TEST_CASE("Object: Int32")
 		object = {i32_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3219,6 +2850,8 @@ TEST_CASE("Object: Int32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int32 == i32_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3234,7 +2867,9 @@ TEST_CASE("Object: Int32")
 		object = {i32_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3246,6 +2881,8 @@ TEST_CASE("Object: Int32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int32 == i32_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3261,7 +2898,9 @@ TEST_CASE("Object: Int32")
 		object = {i32_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3273,6 +2912,8 @@ TEST_CASE("Object: Int32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int32 == i32_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3296,7 +2937,9 @@ TEST_CASE("Object: Int64")
 		object = {i64_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3312,6 +2955,8 @@ TEST_CASE("Object: Int64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int64 == i64_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3327,7 +2972,9 @@ TEST_CASE("Object: Int64")
 		object = {i64_min};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3344,6 +2991,8 @@ TEST_CASE("Object: Int64")
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int64 == i64_min);
 
+		// Check deserialized data
+
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
 		CHECK(object.as<int64_t>() == i64_min);
@@ -3358,7 +3007,9 @@ TEST_CASE("Object: Int64")
 		object = {i64_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3374,6 +3025,8 @@ TEST_CASE("Object: Int64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int64 == i64_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3389,7 +3042,9 @@ TEST_CASE("Object: Int64")
 		object = {i64_max};
 		CHECK(object.is<int64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3405,6 +3060,8 @@ TEST_CASE("Object: Int64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.int64 == i64_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<int64_t>());
@@ -3428,12 +3085,16 @@ TEST_CASE("Object: Uint8")
 		object = {u8_min};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 2);
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Uint8);
 		CHECK(data[index++] == u8_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3449,12 +3110,16 @@ TEST_CASE("Object: Uint8")
 		object = {u8_max};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 2);
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Uint8);
 		CHECK(data[index++] == u8_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3478,7 +3143,9 @@ TEST_CASE("Object: Uint16")
 		object = {u16_min};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3486,6 +3153,8 @@ TEST_CASE("Object: Uint16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint16 == u16_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3501,7 +3170,9 @@ TEST_CASE("Object: Uint16")
 		object = {u16_max};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 3);
 
 		index = 0;
@@ -3509,6 +3180,8 @@ TEST_CASE("Object: Uint16")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint16 == u16_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3532,7 +3205,9 @@ TEST_CASE("Object: Uint32")
 		object = {u32_min};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3542,6 +3217,8 @@ TEST_CASE("Object: Uint32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint32 == u32_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3557,7 +3234,9 @@ TEST_CASE("Object: Uint32")
 		object = {u32_max};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3567,6 +3246,8 @@ TEST_CASE("Object: Uint32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint32 == u32_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3590,7 +3271,9 @@ TEST_CASE("Object: Uint64")
 		object = {u64_min};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3604,6 +3287,8 @@ TEST_CASE("Object: Uint64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint64 == u64_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3619,7 +3304,9 @@ TEST_CASE("Object: Uint64")
 		object = {u64_max};
 		CHECK(object.is<uint64_t>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3633,6 +3320,8 @@ TEST_CASE("Object: Uint64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.uint64 == u64_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<uint64_t>());
@@ -3656,7 +3345,9 @@ TEST_CASE("Object: Float32")
 		object = {f32_zero};
 		CHECK(object.is<float>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3666,6 +3357,8 @@ TEST_CASE("Object: Float32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float32 == f32_zero);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<float>());
@@ -3681,7 +3374,9 @@ TEST_CASE("Object: Float32")
 		object = {f32_min};
 		CHECK(object.is<float>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3691,6 +3386,8 @@ TEST_CASE("Object: Float32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float32 == f32_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<float>());
@@ -3706,7 +3403,9 @@ TEST_CASE("Object: Float32")
 		object = {f32_max};
 		CHECK(object.is<float>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 5);
 
 		index = 0;
@@ -3716,6 +3415,8 @@ TEST_CASE("Object: Float32")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float32 == f32_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<float>());
@@ -3739,7 +3440,9 @@ TEST_CASE("Object: Float64")
 		object = {f64_zero};
 		CHECK(object.is<double>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3753,6 +3456,8 @@ TEST_CASE("Object: Float64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float64 == f64_zero);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<double>());
@@ -3768,7 +3473,9 @@ TEST_CASE("Object: Float64")
 		object = {f64_min};
 		CHECK(object.is<double>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3782,6 +3489,8 @@ TEST_CASE("Object: Float64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float64 == f64_min);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<double>());
@@ -3797,7 +3506,9 @@ TEST_CASE("Object: Float64")
 		object = {f64_max};
 		CHECK(object.is<double>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 9);
 
 		index = 0;
@@ -3811,6 +3522,8 @@ TEST_CASE("Object: Float64")
 		Convert_Byte1 = data[index++];
 		Convert_Byte0 = data[index++];
 		CHECK(Convert.float64 == f64_max);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<double>());
@@ -3835,13 +3548,17 @@ TEST_CASE("Object: Fixed_Str")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str);
 		str_len = data[index] & Fixed_Str_Value;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3857,13 +3574,17 @@ TEST_CASE("Object: Fixed_Str")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == string.size() + 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str);
 		str_len = data[index] & Fixed_Str_Value;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3879,13 +3600,17 @@ TEST_CASE("Object: Fixed_Str")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == string.size() + 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str);
 		str_len = data[index] & Fixed_Str_Value;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3910,13 +3635,17 @@ TEST_CASE("Object: Str8")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == string.size() + 2);
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Str8);
 		str_len = data[index++];
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3932,13 +3661,17 @@ TEST_CASE("Object: Str8")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (string.size() + 2));
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Str8);
 		str_len = data[index++];
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3963,7 +3696,9 @@ TEST_CASE("Object: Str16")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == string.size() + 3);
 
 		index = 0;
@@ -3972,6 +3707,8 @@ TEST_CASE("Object: Str16")
 		Convert_Byte0 = data[index++];
 		str_len = Convert.uint16;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -3987,7 +3724,9 @@ TEST_CASE("Object: Str16")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (string.size() + 3));
 
 		index = 0;
@@ -3996,6 +3735,8 @@ TEST_CASE("Object: Str16")
 		Convert_Byte0 = data[index++];
 		str_len = Convert.uint16;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -4020,7 +3761,9 @@ TEST_CASE("Object: Str32")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == string.size() + 5);
 
 		index = 0;
@@ -4031,6 +3774,8 @@ TEST_CASE("Object: Str32")
 		Convert_Byte0 = data[index++];
 		str_len = Convert.uint32;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -4050,7 +3795,9 @@ TEST_CASE("Object: Str32")
 		object = {string};
 		CHECK(object.is<std::string>());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (string.size() + 3));
 
 		index = 0;
@@ -4061,6 +3808,8 @@ TEST_CASE("Object: Str32")
 		Convert_Byte0 = data[index++];
 		str_len = Convert.uint32;
 		CHECK(str_len == string.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.is<std::string>());
@@ -4086,13 +3835,17 @@ TEST_CASE("Object: Bin8")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == bin.size() + 2);
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Bin8);
 		bin_len = data[index++];
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4113,13 +3866,17 @@ TEST_CASE("Object: Bin8")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == bin.size() + 2);
 
 		index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Bin8);
 		bin_len = data[index++];
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4149,7 +3906,9 @@ TEST_CASE("Object: Bin16")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == bin.size() + 3);
 
 		index = 0;
@@ -4158,6 +3917,8 @@ TEST_CASE("Object: Bin16")
 		Convert_Byte0 = data[index++];
 		bin_len = Convert.uint16;
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4178,7 +3939,9 @@ TEST_CASE("Object: Bin16")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == bin.size() + 3);
 
 		index = 0;
@@ -4187,6 +3950,8 @@ TEST_CASE("Object: Bin16")
 		Convert_Byte0 = data[index++];
 		bin_len = Convert.uint16;
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4216,7 +3981,9 @@ TEST_CASE("Object: Bin32")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == bin.size() + 5);
 
 		index = 0;
@@ -4227,6 +3994,8 @@ TEST_CASE("Object: Bin32")
 		Convert_Byte0 = data[index++];
 		bin_len = Convert.uint32;
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4251,7 +4020,9 @@ TEST_CASE("Object: Bin32")
 		object = {bin};
 		CHECK(object.isBinary());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (bin.size() + 5));
 
 		index = 0;
@@ -4262,6 +4033,8 @@ TEST_CASE("Object: Bin32")
 		Convert_Byte0 = data[index++];
 		bin_len = Convert.uint32;
 		CHECK(bin_len == bin.size());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isBinary());
@@ -4291,13 +4064,17 @@ TEST_CASE("Object: Fixed_Array")
 		CHECK(object.isArray());
 		CHECK(object.asArray().size() == 0);
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == 1);
 
 		index = 0;
 		CHECK((data[index] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
 		array_len = data[index] & Fixed_Array_Value;
 		CHECK(array_len == 0);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4319,13 +4096,17 @@ TEST_CASE("Object: Fixed_Array")
 		array_len = object.asArray().size();
 		CHECK(array_len == 15);
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (array_len + 1));
 
 		index = 0;
 		CHECK((data[index] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
 		array_len = data[index] & Fixed_Array_Value;
 		CHECK(array_len == 15);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4361,7 +4142,9 @@ TEST_CASE("Object: Array16")
 		array_len = object.asArray().size();
 		CHECK(array_len == 16);
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (array_len + 3));
 
 		index = 0;
@@ -4370,6 +4153,8 @@ TEST_CASE("Object: Array16")
 		Convert_Byte0 = data[index++];
 		array_len = Convert.uint16;
 		CHECK(array_len == 16);
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4397,7 +4182,9 @@ TEST_CASE("Object: Array16")
 		array_len = object.asArray().size();
 		CHECK(array_len == std::numeric_limits<uint16_t>::max());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (array_len + 3));
 
 		index = 0;
@@ -4406,6 +4193,8 @@ TEST_CASE("Object: Array16")
 		Convert_Byte0 = data[index++];
 		array_len = Convert.uint16;
 		CHECK(array_len == std::numeric_limits<uint16_t>::max());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4442,7 +4231,9 @@ TEST_CASE("Object: Array32")
 		array_len = object.asArray().size();
 		CHECK(array_len == (std::numeric_limits<uint16_t>::max() + 1));
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (array_len + 5));
 
 		index = 0;
@@ -4453,6 +4244,8 @@ TEST_CASE("Object: Array32")
 		Convert_Byte0 = data[index++];
 		array_len = Convert.uint32;
 		CHECK(array_len == (std::numeric_limits<uint16_t>::max() + 1));
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4484,7 +4277,9 @@ TEST_CASE("Object: Array32")
 		array_len = object.asArray().size();
 		CHECK(array_len == std::numeric_limits<uint32_t>::max());
 
-		data = object.serialize();
+		// Check serialized data
+
+		data = serialize(object);
 		CHECK(data.size() == (array_len + 5));
 
 		index = 0;
@@ -4495,6 +4290,8 @@ TEST_CASE("Object: Array32")
 		Convert_Byte0 = data[index++];
 		array_len = Convert.uint32;
 		CHECK(array_len == std::numeric_limits<uint32_t>::max());
+
+		// Check deserialized data
 
 		object = deserialize(data);
 		CHECK(object.isArray());
@@ -4512,361 +4309,8 @@ TEST_CASE("Object: Array32")
 #endif // }}}
 
 
-// }}} MessagePack::Object
-// {{{ Utilities
-
 /**
- * \brief Deserialize MessagePack data.
- *
- * The packed vector of \p data will be converted into an object that can be 
- * queried and used.
- *
- * \parcode
- * std::vector<uint8_t> command_result = get_reply(command_id);
- *
- * zakero::messagepack::Object object;
- * object = zakero::messagepack::deserialize(command_result);
- * if(object.isArray() == false)
- * {
- * 	writeError(ERROR_INVALID_COMMAND_RESULT);
- * 	return;
- * }
- *
- * zakero::messagepack::Array& array = object.asArray();
- *
- * constexpr size_t error_index = 1;
- * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
- * {
- * 	writeError(array(error_code_index).int64_);
- * }
- * \endparcode
- *
- * \todo Add an index parameter so that last parsed data location will be 
- * available.
- *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
- *
- * \todo Can the contents of the for-loop be rewritten as a switch-statement?
- */
-Object deserialize(const std::vector<uint8_t>& data ///< The packed data
-	) noexcept
-{
-	size_t index = 0;
-
-	return deserialize(data, index);
-}
-
-
-Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
-	, size_t&                              index ///< The starting index
-	) noexcept
-{
-	const uint8_t byte = data[index++];
-
-	if(byte == (uint8_t)Format::Nill)
-	{
-		return Object{};
-	}
-
-	if(byte == (uint8_t)Format::False)
-	{
-		return Object{false};
-	}
-
-	if(byte == (uint8_t)Format::True)
-	{
-		return Object{true};
-	}
-
-	if((byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
-	{
-		const int64_t value = byte & (uint8_t)Fixed_Int_Pos_Value;
-
-		return Object{value};
-	}
-
-	if((byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
-	{
-		const int64_t value = (int8_t)(byte & Fixed_Int_Neg_Value) - 32;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Int8)
-	{
-		const int64_t value = (int8_t)data[index++];
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Int16)
-	{
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const int64_t value = Convert.int16;
-
-		return Object{value};
-	}
-
-	if(byte == (uint8_t)Format::Int32)
-	{
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const int64_t value = Convert.int32;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Int64)
-	{
-		Convert_Byte7 = data[index++];
-		Convert_Byte6 = data[index++];
-		Convert_Byte5 = data[index++];
-		Convert_Byte4 = data[index++];
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const int64_t value = Convert.int64;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Uint8)
-	{
-		const uint64_t value = data[index++];
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Uint16)
-	{
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const uint64_t value = Convert.uint16;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Uint32)
-	{
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const uint64_t value = Convert.uint32;
-
-		return Object{value};
-	}
-
-	if(byte == (uint8_t)Format::Uint64)
-	{
-		Convert_Byte7 = data[index++];
-		Convert_Byte6 = data[index++];
-		Convert_Byte5 = data[index++];
-		Convert_Byte4 = data[index++];
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const uint64_t value = Convert.uint64;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Float32)
-	{
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const float value = Convert.float32;
-
-		return Object{value};
-	}
-	
-	if(byte == (uint8_t)Format::Float64)
-	{
-		Convert_Byte7 = data[index++];
-		Convert_Byte6 = data[index++];
-		Convert_Byte5 = data[index++];
-		Convert_Byte4 = data[index++];
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-
-		const double value = Convert.float64;
-
-		return Object{value};
-	}
-	
-	if((byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
-	{
-		const size_t length = byte & Fixed_Str_Value;
-
-		if(length == 0)
-		{
-			return Object{""};
-		}
-		else
-		{
-			std::string_view str((char*)&data[index], length);
-
-			index += length;
-
-			return Object{std::string(str)};
-		}
-	}
-	
-	if(byte == (uint8_t)Format::Str8)
-	{
-		const size_t length = data[index++];
-
-		std::string_view str((char*)&data[index], length);
-
-		index += length;
-
-		return Object{std::string(str)};
-	}
-	
-	if(byte == (uint8_t)Format::Str16)
-	{
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t length = Convert.uint16;
-
-		const std::string_view str((char*)&data[index], length);
-
-		index += length;
-
-		return Object{std::string(str)};
-	}
-	
-	if(byte == (uint8_t)Format::Str32)
-	{
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t length = Convert.uint32;
-
-		const std::string_view str((char*)&data[index], length);
-
-		index += length;
-
-		return Object{std::string(str)};
-	}
-	
-	if(byte == (uint8_t)Format::Bin8)
-	{
-		const size_t length = data[index++];
-
-		std::vector<uint8_t> vector(length);
-		memcpy((void*)vector.data(), (void*)&data[index], length);
-
-		index += length;
-
-		return Object{std::move(vector)};
-	}
-	
-	if(byte == (uint8_t)Format::Bin16)
-	{
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t length = Convert.uint16;
-
-		std::vector<uint8_t> vector(length);
-		memcpy((void*)vector.data(), (void*)&data[index], length);
-
-		index += length;
-
-		return Object{std::move(vector)};
-	}
-	
-	if(byte == (uint8_t)Format::Bin32)
-	{
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t length = Convert.uint32;
-
-		std::vector<uint8_t> vector(length);
-		memcpy((void*)vector.data(), (void*)&data[index], length);
-
-		index += length;
-
-		return Object{std::move(vector)};
-	}
-
-	if((byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
-	{
-		Object object = {Array{}};
-
-		const size_t count = byte & (uint8_t)Fixed_Array_Value;
-
-		for(size_t i = 0; i < count; i++)
-		{
-			object.asArray().append(deserialize(data, index));
-		}
-
-		return object;
-	}
-	
-	if(byte == (uint8_t)Format::Array16)
-	{
-		Object object = {Array{}};
-
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t count = Convert.uint16;
-
-		for(size_t i = 0; i < count; i++)
-		{
-			object.asArray().append(deserialize(data, index));
-		}
-
-		return object;
-	}
-	
-	if(byte == (uint8_t)Format::Array32)
-	{
-		Object object = {Array{}};
-
-		Convert_Byte3 = data[index++];
-		Convert_Byte2 = data[index++];
-		Convert_Byte1 = data[index++];
-		Convert_Byte0 = data[index++];
-		const size_t count = Convert.uint32;
-
-		for(size_t i = 0; i < count; i++)
-		{
-			object.asArray().append(deserialize(data, index));
-		}
-
-		return object;
-	}
-
-	return {};
-}
-
-
-/**
- * \brief Convert to string.
+ * \brief Convert to a JSON formatted string.
  *
  * \return A string.
  */
@@ -4894,7 +4338,7 @@ std::string to_string(const messagepack::Array& array ///< The Array to convert.
 
 
 /**
- * \brief Convert to string.
+ * \brief Convert to a JSON formatted string.
  *
  * \return A string.
  */
@@ -4997,16 +4441,15 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 }
 
 // }}}
-} // namespace zakero::messagepack
-} // namespace zakero
+} // zakero::messagepack
 
 // {{{ Operators
 
 /**
  * \brief OStream operator.
  *
- * The \p point object will be written to the request \p stream as a JSON 
- * formatted string.
+ * The \p array will be converted into a JSON formatted string and writen to 
+ * the \p stream.
  *
  * \return The \p stream object.
  */
@@ -5023,8 +4466,8 @@ std::ostream& operator<<(std::ostream&      stream ///< The stream to use.
 /**
  * \brief OStream operator.
  *
- * The \p point object will be written to the request \p stream as a JSON 
- * formatted string.
+ * The \p object will be converted into a JSON formatted string and writen to 
+ * the \p stream.
  *
  * \return The \p stream object.
  */
@@ -5036,7 +4479,6 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use.
 	
 	return stream;
 }
-
 
 // }}}
 

@@ -14,9 +14,9 @@
  *
  * \brief Zakero MessagePack
  *
-|                           |                              |                              |                              |                             |                             |                                 |
-|---------------------------|------------------------------|------------------------------|------------------------------|-----------------------------|-----------------------------|---------------------------------|
-| \api{zakero::MessagePack} | \refdeps{zakero_messagepack} | \reftldr{zakero_messagepack} | \refwhat{zakero_messagepack} | \refwhy{zakero_messagepack} | \refhow{zakero_messagepack} | \refversion{zakero_messagepack} |
+|     |                              |                              |                              |                             |                             |                                 |
+|-----|------------------------------|------------------------------|------------------------------|-----------------------------|-----------------------------|---------------------------------|
+| API | \refdeps{zakero_messagepack} | \reftldr{zakero_messagepack} | \refwhat{zakero_messagepack} | \refwhy{zakero_messagepack} | \refhow{zakero_messagepack} | \refversion{zakero_messagepack} |
  * 
  * The _Zakero_MessagePack_ will serialize and deserialize data using the 
  * [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) 
@@ -63,10 +63,10 @@
  * - Easy to add data
  * - Access to existing data
  * - Modify existing data
+ * - Uses native C++ types
  *
  * __Draw Backs__
  * - Memory Usage: Serialization makes a copy of the contents
- * - No C++ iterators, must use traditional C-Style loops
  *
  * Instead of attempting to interface with other libraries or provide a dynamic 
  * interface, basic C++ types are used. It is expected that this approach will 
@@ -104,44 +104,49 @@
  *
  * __Step 2__
  *
- * After creating an instance of [MessagePack](\ref zakero::MessagePack), it 
- * needs to be populated with data. There are two options to do this:
+ * Create MessagePack [Objects](\ref zakero::messagepack::Object) to store 
+ * data.  Use containers to store more objects. Then serialize the data.  
+ * MessagePack [Objects](\ref zakero::messagepack::Object)s can also be created 
+ * by deserializing data.
  *
  * _Add data manually_
  * ~~~
- * zakero::MessagePack message_pack;
+ * zakero::messagepack::Array array;
  *
- * size_t text;
- * message_pack.append(uint64_t(42));
- * message_pack.append(true);
- * message_pack.append("Hello, World!", &text);
+ * zakero::messagepack::Object the_answer = Object{uint64_t(42)};
+ * array.append(the_answer);
+ * array.append(Object{true});
+ * array.append({std::string("Hello, World!")});
  * ~~~
  *
  * _Deserialize data_
  * ~~~
  * std::vector<uint8_t> data = load_data();
  *
- * zakero::MessagePack message_pack;
- * message_pack.deserialize(data);
+ * zakero::messagepack::Object object = zakero::messagepack::deserialize(data);
  * ~~~
  *
  * The data in the MessagePack can be modified:
  * ~~~
- * message_pack.object(text).string = "Good Bye!";
+ * if(object.isArray())
+ * {
+ * 	zakero::messagepack::Array& array = object.asArray();
+ * 	array.object(2) = {std::string("Good Bye!")};
+ * }
  * ~~~
  *
  * Then the MessagePack can be (re)serialized:
  * ~~~
- * data = MessagePack::serialize(message_pack.);
- *
- * save_data(data);
+ * data = zakero::messagepack::serialize(object);
  * ~~~
  * \endparhow
  *
  *
  * \parversion{zakero_messagepack}
  * __v0.3.0__
+ * - Added support for Ext
  * - Added support for Maps
+ * - Added support for the Timestamp extension
  * - Complete rewrite
  *
  * __v0.2.0__
@@ -158,6 +163,8 @@
  *
  * \author Andrew "Zakero" Moore
  * - Original Author
+ *
+ * \todo Add error code support.
  */
 
 
@@ -279,7 +286,7 @@ namespace zakero::messagepack
 			              inline void          clear() noexcept { object_key.clear(); object_value.clear(); };
 			[[nodiscard]] inline size_t        size() const noexcept { return object_key.size(); };
 
-			std::vector<Object> object_key = {};
+			std::vector<Object> object_key   = {};
 			std::vector<Object> object_value = {};
 		};
 
@@ -1060,6 +1067,32 @@ namespace
 // {{{ Array
 
 /**
+ * \struct Array
+ *
+ * \brief An array of Objects.
+ *
+ * The role of this structure is to store a collection of Objects in a 
+ * resizable array. The underling `object_vector` can be accessed directly or 
+ * use the helper methods to increase code readability.
+ *
+ * Objects can be tested to find out if they are Arrays by using 
+ * Object::isArray() and converted into an Array with Object::asArray().  An 
+ * Array can not be converted into an Object. However, an Object can be 
+ * constructed using an Array and the utility methods can operate on Arrays as 
+ * if they were Objects.
+ */
+
+
+/**
+ * \var zakero::messagepack::Array::object_vector
+ *
+ * \brief Store the Object data.
+ *
+ * The `object_vector` is used to store all the Qbjects in the Array.
+ */
+
+
+/**
  * \brief Append a boolean value.
  *
  * The \p value will be appended to the contents of the Array.  
@@ -1672,7 +1705,7 @@ TEST_CASE("array/append/binary (move)")
 /**
  * \brief Append an Array.
  *
- * The \p value will be appended to the contents of this Array.
+ * The \p array will be appended to the contents of this Array.
  *
  * \parcode
  * zakero::messagepack::Array sub_array;
@@ -1685,7 +1718,7 @@ TEST_CASE("array/append/binary (move)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(const Array& array
+size_t Array::append(const Array& array ///< The Array to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -1772,7 +1805,7 @@ TEST_CASE("array/append/array (copy)")
 /**
  * \brief Append an Array.
  *
- * The \p value will be appended to the contents of this Array.
+ * The \p array will be appended to the contents of this Array.
  *
  * \parcode
  * zakero::messagepack::Array sub_array;
@@ -1785,7 +1818,7 @@ TEST_CASE("array/append/array (copy)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(Array& array
+size_t Array::append(Array& array ///< The Array to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -1885,7 +1918,7 @@ TEST_CASE("array/append/array (move)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(const Ext& ext
+size_t Array::append(const Ext& ext ///< The Ext to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -1979,7 +2012,7 @@ TEST_CASE("array/append/ext (copy)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(Ext& ext
+size_t Array::append(Ext& ext ///< The Ext to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -2070,7 +2103,7 @@ TEST_CASE("array/append/ext (move)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(const Map& map
+size_t Array::append(const Map& map ///< The Map to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -2155,7 +2188,7 @@ TEST_CASE("array/append/map (copy)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(Map& map
+size_t Array::append(Map& map ///< The Map to add
 	) noexcept
 {
 	size_t index = object_vector.size();
@@ -2238,7 +2271,7 @@ TEST_CASE("array/append/map (move)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(const Object& object
+size_t Array::append(const Object& object ///< The object to add
 	) noexcept
 {
 	const size_t index = object_vector.size();
@@ -2310,7 +2343,7 @@ TEST_CASE("array/append/object (copy)")
  *
  * \return The index location of where the \p value was stored.
  */
-size_t Array::append(Object& object
+size_t Array::append(Object& object ///< The object to add
 	) noexcept
 {
 	const size_t index = object_vector.size();
@@ -2428,7 +2461,7 @@ TEST_CASE("array/append/null")
 
 
 /**
- * \fn zakero::messagepack::Array::object(const size_t) const
+ * \fn zakero::messagepack::Array::object(const size_t)
  *
  * \brief Access a data object.
  *
@@ -2507,6 +2540,8 @@ TEST_CASE("array/append/null")
  * \fn zakero::messagepack::Array::clear()
  *
  * \brief Remove all data from the Array.
+ *
+ * Remove all data from the Array.
  */
 
 
@@ -2525,28 +2560,101 @@ TEST_CASE("array/append/null")
 // No tests needed, a pass-thru to the std::vector<Object>.
 
 // }}} Array
+// {{{ Ext
+
+/**
+ * \struct Ext
+ *
+ * \brief Extension Data.
+ *
+ * The MessagePack specification defines a structure to hold new data-types and 
+ * this structure implements that feature. To add a new data-type, set the 
+ * Ext::type to a positive value and then fill the Ext::data with the 
+ * information to be stored.
+ *
+ * \note Negative Ext::type value are reserved for use by the MessagePack 
+ * specification.
+ *
+ * As an example, to add a GIF data-type, define the type value then fill the 
+ * Ext::data with the GIF.
+ * 
+ * \parcode
+ * #define TYPE_GIF    2
+ * #define INDEX_NAME  0
+ * #define INDEX_FILE  1
+ * #define INDEX_IMAGE 2
+ *
+ * zakero::messagepack::Array array = {};
+ * array.append({std::string_view("Super-Sonic Scooter")});
+ * array.append({std::string_view("super_sonic_scooter.gif")});
+ *
+ * zakero::messagepack::Ext gif = {};
+ * gif.type = TYPE_GIF;
+ * gif.data = loadGif("super_sonic_scooter.gif");
+ * array.append(gif);
+ *
+ * auto data = zakero::messagepack::serialize(array);
+ *
+ * // ...somewhere later...
+ *
+ * zakero::messagepack::Object object = zakero::messagepack::deserialize(data);
+ * zakero::messagepack::Array image = object.asArray();
+ *
+ * std::string image_name = image.object(INDEX_NAME).asString();
+ * std::string image_file = image.object(INDEX_FILE).asString();
+ *
+ * zakero::messagepack::Ext raw_data = image.object(INDEX_IMAGE).asExt();
+ * Image image;
+ * if(raw_data.type == TYPE_GIF)
+ * {
+ * 	image = parseGif(raw_data.data);
+ * }
+ * \endparcode
+ */
+
+/**
+ * \var Ext::data
+ *
+ * \brief Extension binary data.
+ */
+
+/**
+ * \var Ext::type
+ *
+ * \brief A unique identifier for the extension.
+ */
+
+// }}} Ext
 // {{{ Map
 
 /**
  * \struct Map
  *
- * \brief A Data Object.
+ * \brief A Key/Value collection of Objects.
  *
- * This structure contains the basic data-types supported by MessagePack.
+ * Using the Map structure allows any MessagePack Object to be used as a "key" 
+ * as well as a "value" in a map. The underling `object_key` and `object_value` 
+ * can be accessed directly. However for the Map, it is recommended to only use 
+ * the helper methods.
+ *
+ * Objects can be tested to find out if they are Map by using Object::isMap() 
+ * and converted into a Map with Object::asMap(). A Map can not be converted 
+ * into an Object. However, an Object can be constructed using a Map and the 
+ * utility methods can operate on Maps as if they were Objects.
  */
 
 /**
  * \brief Set a key/value pair.
  *
- * The provide \p key / \p value pair will be added ot the Map. If the \p key 
+ * The provided \p key / \p value pair will be added to the Map. If the \p key 
  * already exists, its value will be replaced with \p value.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set({std::string("Error Code")}   , {uint64_t(42)});
  * map.set({std::string("Error Message")}, {std::string("All the errors!")});
- * \endexamplecode
+ * \endparcode
  *
  * \return The index of the \p key / \p value pair.
  */
@@ -2642,15 +2750,15 @@ TEST_CASE("map/set (copy)")
 /**
  * \brief Set a key/value pair.
  *
- * The provide \p key / \p value pair will be added ot the Map. If the \p key 
+ * The provided \p key / \p value pair will be added to the Map. If the \p key 
  * already exists, its value will be replaced with \p value.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set({std::string("Error Code")}   , {uint64_t(42)});
  * map.set({std::string("Error Message")}, {std::string("All the errors!")});
- * \endexamplecode
+ * \endparcode
  *
  * \return The index of the \p key / \p value pair.
  *
@@ -2744,9 +2852,9 @@ TEST_CASE("map/set")
  * \brief Erase a key/value pair.
  *
  * If the specified \p key exists, the \p key and matching value will be 
- * removed frome the Map.
+ * removed frame the Map.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * // What is true?
@@ -2754,7 +2862,7 @@ TEST_CASE("map/set")
  *
  * // Truth can not be defined...
  * map.erase({true});
- * \endexamplecode
+ * \endparcode
  */
 void Map::erase(const Object& key ///< The key
 	) noexcept
@@ -2827,7 +2935,7 @@ TEST_CASE("map/erase")
  * Search the Map and return \true if the \p key exists. If the \p key was not 
  * found, return \false.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set(Object{}, Object{});
@@ -2835,9 +2943,12 @@ TEST_CASE("map/erase")
  * {
  * 	// In the Key of Null
  * }
- * \endexamplecode
+ * \endparcode
+ *
+ * \retval true  The key exists.
+ * \retval false The key does not exist.
  */
-bool Map::keyExists(const Object& key
+bool Map::keyExists(const Object& key ///< The key Object
 	) const noexcept
 {
 	for(const auto& key_ : object_key)
@@ -2883,17 +2994,17 @@ TEST_CASE("map/keyexists")
  * is to avoid constantly searching the Map. Also, using the index is the only 
  * way of changing the \p key.
  *
- * \note If any key\value pair is inserted or removed, all indexes after 
+ * \note If any key/value pair is inserted or removed, all indexes after 
  * changed location are no longer valid.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set(Object{}, Object{});
  * size_t index = map.keyIndex(Object{});
  * map.keyAt(index)   = Object{true);
  * map.valueAt(index) = Object{std::string("true"));
- * \endexamplecode
+ * \endparcode
  *
  * \return The index
  */
@@ -2948,7 +3059,7 @@ TEST_CASE("map/keyindex")
  * The value associated with the provided \p key will be returned. If the \p 
  * key does not exist, then a reference to the \p key will be returned.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
@@ -2960,7 +3071,7 @@ TEST_CASE("map/keyindex")
  * {
  * 	// key not found
  * }
- * \endexamplecode
+ * \endparcode
  *
  * \return The value.
  */
@@ -3050,21 +3161,24 @@ TEST_CASE("map/valueof (const)")
  * \brief Get the value of a key.
  *
  * The value associated with the provided \p key will be returned. If the \p 
- * key does not exist, then a reference to the \p key will be returned.
+ * key does not exist, then a reference to the \p key will be returned.  
+ * Checking if the key exists (keyExists()) is more reliable than using this 
+ * error handling.
  *
- * \examplecode
+ * \parcode
  * zakero::messagepack::Map map;
  *
  * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
+ * zakero::messagepack::Object& thing = map.valueOf({uint64_t(42)});
  *
  * zakero::messagepack::Object key = Object{true};
- * zakero::messagepack::Object& object = map.valueOf({true});
+ * zakero::messagepack::Object& object = map.valueOf(key);
  *
  * if(&object == &key)
  * {
  * 	// key not found
  * }
- * \endexamplecode
+ * \endparcode
  *
  * \return The value.
  */
@@ -3153,6 +3267,76 @@ TEST_CASE("map/valueof")
 }
 #endif // }}}
 
+
+/**
+ * \fn zakero::messagepack::Map::clear()
+ *
+ * \brief Remove the contents of the Map.
+ *
+ * All of the key/value pairs will be removed.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Map::keyAt(const size_t)
+ *
+ * \brief Access a _key_ Object.
+ *
+ * The _key_ at the requested index location will be returned.
+ *
+ * \return An Object
+ *
+ * \param index The index of the key.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Map::keyAt(const size_t) const
+ *
+ * \brief Access a _key_ Object.
+ *
+ * The _key_ at the requested index location will be returned.
+ *
+ * \return An Object
+ *
+ * \param index The index of the key.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Map::size() const
+ *
+ * \brief Get the size of the Map.
+ *
+ * \return The number of key/value pairs.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Map::valueAt(const size_t)
+ *
+ * \brief Get a _value_ from the Map.
+ *
+ * The Object at the specified index will be returned.
+ *
+ * \return The Object.
+ *
+ * \param index The index location.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Map::valueAt(const size_t) const
+ *
+ * \brief Get a _value_ from the Map.
+ *
+ * The Object at the specified index will be returned.
+ *
+ * \return The Object.
+ *
+ * \param index The index location.
+ */
+
 // }}} Map
 // {{{ Object
 
@@ -3161,7 +3345,286 @@ TEST_CASE("map/valueof")
  *
  * \brief A Data Object.
  *
- * This structure contains the basic data-types supported by MessagePack.
+ * The role of this object is to store all the data-types in the MessagePack 
+ * specification. This is accomplish by using the `std::variant` and a 
+ * collection of helper methods to reduce the verbosity of templates.
+ *
+ * \note The `std::monostate` is used to represent `null`.
+ *
+ * Once an Object has been set to a type, it is an error to cast the object to 
+ * any other type.
+ *
+ * \parcode
+ * zakero::messagepack::Object object;
+ *
+ * object = {true}; // Object is now a boolean
+ * int64_t value = object.as<int64_t>(); // Error: Object is not a int64_t
+ *
+ * // Reusing the same object...
+ * object = {int64_t(42)}; // Object is now a int64_t
+ * value = object.as<int64_t>(); // Ok: Object is a int64_t
+ * \endparcode
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::as()
+ *
+ * \brief Convert to type `T`.
+ *
+ * The Object will be converted so that it will be treated __as__ the requested 
+ * \p T type.
+ *
+ * \parcode
+ * zakero::messagepack::Object object = {true};
+ *
+ * bool b = object.as<bool>();
+ * \endparcode
+ *
+ * \return The request data-type.
+ *
+ * \tparam T The data-type to convert to.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::as() const
+ *
+ * \brief Convert to type `T`.
+ *
+ * The Object will be converted so that it will be treated __as__ the requested 
+ * \p T type.
+ *
+ * \parcode
+ * zakero::messagepack::Object object = {true};
+ *
+ * bool b = object.as<bool>();
+ * \endparcode
+ *
+ * \return The request data-type.
+ *
+ * \tparam T The data-type to convert to.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asArray()
+ *
+ * \brief Convert to an Array.
+ *
+ * The same as: `object.as<zakero::messagepack::Array>()`
+ *
+ * \return A reference to an Array.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asArray() const
+ *
+ * \brief Convert to an Array.
+ *
+ * The same as: `object.as<zakero::messagepack::Array>()`
+ *
+ * \return A reference to an Array.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asBinary()
+ *
+ * \brief Convert to a std::vector<uint8_t>.
+ *
+ * The same as: `object.as<std::vector<uint8_t>>()`
+ *
+ * \return A reference to a std::vector<uint8_t>.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asBinary() const
+ *
+ * \brief Convert to a std::vector<uint8_t>.
+ *
+ * The same as: `object.as<std::vector<uint8_t>>()`
+ *
+ * \return A reference to a std::vector<uint8_t>.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asExt()
+ *
+ * \brief Convert to an Ext.
+ *
+ * The same as: `object.as<zakero::messagepack::Ext>()`
+ *
+ * \return A reference to an Ext.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asExt() const
+ *
+ * \brief Convert to an Ext.
+ *
+ * The same as: `object.as<zakero::messagepack::Ext>()`
+ *
+ * \return A reference to an Ext.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asMap()
+ *
+ * \brief Convert to a Map.
+ *
+ * The same as: `object.as<zakero::messagepack::Map>()`
+ *
+ * \return A reference to a Map.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asMap() const
+ *
+ * \brief Convert to a Map.
+ *
+ * The same as: `object.as<zakero::messagepack::Map>()`
+ *
+ * \return A reference to a Map.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::asString() const
+ *
+ * \brief Convert to a std::string.
+ *
+ * The same as: `object.as<std::string>()`
+ *
+ * \return A reference to a std::string.
+ *
+ * \see as()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::is() const
+ *
+ * \brief Is Object of type `T`.
+ *
+ * The Object will be checked to see if it is of type `T`.
+ *
+ * \parcode
+ * zakero::messagepack::Object object = {int64_t(123)};
+ *
+ * bool is_int = object.is<int64_t>();
+ * \endparcode
+ *
+ * \retval true  The Object is of type `T`
+ * \retval false The Object is not of type `T`
+ *
+ * \tparam T The data-type to check.
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isArray()
+ *
+ * \brief Is Object an Array?
+ *
+ * The same as: `object.is<zakero::messagepack::Array>()`
+ *
+ * \retval true  The Object is an Array
+ * \retval false The Object is not an Array
+ *
+ * \see is()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isBinary()
+ *
+ * \brief Is Object binary data?
+ *
+ * The same as: `object.is<std::vector<uint8_t>>()`
+ *
+ * \retval true  The Object is a std::vector<uint8_t>
+ * \retval false The Object is not a std::vector<uint8_t>
+ *
+ * \see is()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isExt()
+ *
+ * \brief Is Object an Ext?
+ *
+ * The same as: `object.is<zakero::messagepack::Ext>()`
+ *
+ * \retval true  The Object is an Ext
+ * \retval false The Object is not an Ext
+ *
+ * \see is()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isMap()
+ *
+ * \brief Is Object a Map?
+ *
+ * The same as: `object.is<zakero::messagepack::Map>()`
+ *
+ * \retval true  The Object is a Map
+ * \retval false The Object is not a Map
+ *
+ * \see is()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isNull()
+ *
+ * \brief Does the Object represent a `null`?
+ *
+ * The same as: `object.is<std::monostate>()`
+ *
+ * \retval true  The Object is a std::monostate
+ * \retval false The Object is not a std::monostate
+ *
+ * \see is()
+ */
+
+
+/**
+ * \fn zakero::messagepack::Object::isString()
+ *
+ * \brief Is Object a std::string?
+ *
+ * The same as: `object.is<std::string>()`
+ *
+ * \retval true  The Object is a std::string
+ * \retval false The Object is not a std::string
+ *
+ * \see is()
  */
 
 // }}} Object
@@ -3174,7 +3637,7 @@ TEST_CASE("map/valueof")
  * Use this method to determine if the \p object is a MessagePack Timestamp 
  * Extension.
  *
- * \examplecode
+ * \parcode
  * std::vector<uint8_t> data = getSerializedData();
  * zakero::messagepack::Object obj = zakero::messagepack::deserialize(data);
  *
@@ -3182,7 +3645,7 @@ TEST_CASE("map/valueof")
  * {
  * 	return ERROR_INVALID_TIMESTAMP;
  * }
- * \endexamplecode
+ * \endparcode
  *
  * \retval true  The \p object is a Timestamp extension.
  * \retval false The \p object is not a Timestamp extension.
@@ -3266,7 +3729,7 @@ TEST_CASE("extension/timestamp/check")
  * the provided \p object is not a valid Timestamp extension then an empty 
  * `struct timespec` will be returned.
  *
- * \examplecode
+ * \parcode
  * std::vector<uint8_t> data = getSerializedData();
  * zakero::messagepack::Object obj = zakero::messagepack::deserialize(data);
  * struct timespec ts = zakero::messagepack::extensionTimestampConvert(obj);
@@ -3274,7 +3737,7 @@ TEST_CASE("extension/timestamp/check")
  * char buf[128];
  * std::strftime(buf, sizeof(buf), "%D %T", std::gmtime(&ts.tv_sec));
  * std::printf("Time: %s.%09ld UTC\n", buf, ts.tv_nsec);
- * \endexamplecode
+ * \endparcode
  *
  * \return A `struct timespec`.
  */
@@ -3378,7 +3841,7 @@ struct timespec extensionTimestampConvert(const Object& object ///< The Ext data
  * Conversion from a `struct timespec` into the MessagePack Timestamp extension 
  * is handled by this method.
  *
- * \examplecode
+ * \parcode
  * std::timespec ts;
  * std::timespec_get(&ts, TIME_UTC);
  *
@@ -3386,7 +3849,7 @@ struct timespec extensionTimestampConvert(const Object& object ///< The Ext data
  * 	zakero::messagepack::extensionTimestampConvert(ts);
  *
  * std::vector<uint8_t> data = zakero::messagepack::serialize(object);
- * \endexamplecode
+ * \endparcode
  *
  * \return A MessagePack Object.
  */
@@ -7293,8 +7756,17 @@ std::ostream& operator<<(std::ostream&       stream ///< The stream to use.
 	return stream;
 }
 
-bool operator==(const zakero::messagepack::Object& lhs
-	, const zakero::messagepack::Object&       rhs
+/**
+ * \brief Compare two Objects for equality.
+ *
+ * For two Objects to be the _same_, their variant types must be the same 
+ * __and__ the contents of the Objects must match.
+ *
+ * \retval true  The Objects are the same.
+ * \retval false The Objects are not the same.
+ */
+bool operator==(const zakero::messagepack::Object& lhs ///< The Object
+	, const zakero::messagepack::Object&       rhs ///< The Object
 	) noexcept
 {
 	if(&lhs == &rhs)

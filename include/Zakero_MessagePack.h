@@ -167,6 +167,7 @@
 
 // C++
 #include <cstring>
+#include <ctime>
 #include <limits>
 #include <string>
 #include <variant>
@@ -322,6 +323,13 @@ namespace zakero::messagepack
 		};
 
 		// }}} Object
+		// {{{ Extensions
+
+		[[nodiscard]] bool            extensionTimestampCheck(const Object&) noexcept;
+		[[nodiscard]] struct timespec extensionTimestampConvert(const Object&) noexcept;
+		[[nodiscard]] Object          extensionTimestampConvert(const struct timespec&) noexcept;
+
+		// }}} Extensions
 		// {{{ Utilities
 
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&) noexcept;
@@ -335,7 +343,7 @@ namespace zakero::messagepack
 		[[nodiscard]] std::string          to_string(const messagepack::Map&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Object&) noexcept;
 
-		// }}}
+		// }}} Utilities
 } // zakero::messagepack
 
 // {{{ Operators
@@ -3157,6 +3165,706 @@ TEST_CASE("map/valueof")
  */
 
 // }}} Object
+// {{{ Extensions
+// {{{ Extensions: Timestamp
+
+/**
+ * \brief Timestamp Extension Check.
+ *
+ * Use this method to determine if the \p object is a MessagePack Timestamp 
+ * Extension.
+ *
+ * \examplecode
+ * std::vector<uint8_t> data = getSerializedData();
+ * zakero::messagepack::Object obj = zakero::messagepack::deserialize(data);
+ *
+ * if(zakero::messagepack::extensionTimestampCheck(obj) == false)
+ * {
+ * 	return ERROR_INVALID_TIMESTAMP;
+ * }
+ * \endexamplecode
+ *
+ * \retval true  The \p object is a Timestamp extension.
+ * \retval false The \p object is not a Timestamp extension.
+ */
+bool extensionTimestampCheck(const Object& object ///< The Ext to check.
+	) noexcept
+{
+	if(object.isExt() == true)
+	{
+		const Ext& ext = object.asExt();
+
+		if(ext.type == -1)
+		{
+			if(ext.data.size() == 4
+				|| ext.data.size() == 8
+				|| ext.data.size() == 12
+				)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("extension/timestamp/check")
+{
+	Object object = {Ext{}};
+	Ext& ext      = object.asExt();
+
+	CHECK(extensionTimestampCheck(object) == false);
+
+	// --- Bad Ext.type value --- //
+
+	ext.data = std::vector<uint8_t>();
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(1, 0);
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(4, 0);
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(8, 0);
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(12, 0);
+	CHECK(extensionTimestampCheck(object) == false);
+
+	// --- Good Ext.type value --- //
+
+	ext.type = -1;
+	ext.data = std::vector<uint8_t>();
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>();
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(1, 0);
+	CHECK(extensionTimestampCheck(object) == false);
+
+	ext.data = std::vector<uint8_t>(4, 0);
+	CHECK(extensionTimestampCheck(object) == true);
+
+	ext.data = std::vector<uint8_t>(8, 0);
+	CHECK(extensionTimestampCheck(object) == true);
+
+	ext.data = std::vector<uint8_t>(12, 0);
+	CHECK(extensionTimestampCheck(object) == true);
+}
+#endif // }}}
+
+
+/**
+ * \brief Convert MessagePack Timestamp extension into a `struct timespec`.
+ *
+ * Conversion from Object to `struct timespec` is performed by this method. If 
+ * the provided \p object is not a valid Timestamp extension then an empty 
+ * `struct timespec` will be returned.
+ *
+ * \examplecode
+ * std::vector<uint8_t> data = getSerializedData();
+ * zakero::messagepack::Object obj = zakero::messagepack::deserialize(data);
+ * struct timespec ts = zakero::messagepack::extensionTimestampConvert(obj);
+ *
+ * char buf[128];
+ * std::strftime(buf, sizeof(buf), "%D %T", std::gmtime(&ts.tv_sec));
+ * std::printf("Time: %s.%09ld UTC\n", buf, ts.tv_nsec);
+ * \endexamplecode
+ *
+ * \return A `struct timespec`.
+ */
+struct timespec extensionTimestampConvert(const Object& object ///< The Ext data.
+	) noexcept
+{
+	if(object.isExt() == false)
+	{
+		return {};
+	}
+
+	const Ext& ext = object.asExt();
+
+	if(ext.type != -1)
+	{
+		return {};
+	}
+
+	switch(ext.data.size())
+	{
+		case 4:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte3 = ext.data[0];
+			Convert_Byte2 = ext.data[1];
+			Convert_Byte1 = ext.data[2];
+			Convert_Byte0 = ext.data[3];
+
+			timespec ts =
+			{	.tv_sec  = Convert.uint32
+			,	.tv_nsec = 0
+			};
+
+			return ts;
+		}
+
+		case 8:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte3 = ext.data[0];
+			Convert_Byte2 = ext.data[1];
+			Convert_Byte1 = ext.data[2];
+			Convert_Byte0 = ext.data[3];
+			const uint32_t nsec = Convert.uint32 >> 2;
+
+			Convert.uint64 = 0;
+			Convert_Byte4 = ext.data[3];
+			Convert_Byte3 = ext.data[4];
+			Convert_Byte2 = ext.data[5];
+			Convert_Byte1 = ext.data[6];
+			Convert_Byte0 = ext.data[7];
+			const int64_t sec = Convert.int64 & 0x0000'0003'ffff'ffff;
+
+			timespec ts =
+			{	.tv_sec  = sec
+			,	.tv_nsec = nsec
+			};
+
+			return ts;
+		}
+
+		case 12:
+		{
+			Convert.uint64 = 0;
+			Convert_Byte3 = ext.data[0];
+			Convert_Byte2 = ext.data[1];
+			Convert_Byte1 = ext.data[2];
+			Convert_Byte0 = ext.data[3];
+			const uint32_t nsec = Convert.uint32;
+
+			Convert.uint64 = 0;
+			Convert_Byte7 = ext.data[ 4];
+			Convert_Byte6 = ext.data[ 5];
+			Convert_Byte5 = ext.data[ 6];
+			Convert_Byte4 = ext.data[ 7];
+			Convert_Byte3 = ext.data[ 8];
+			Convert_Byte2 = ext.data[ 9];
+			Convert_Byte1 = ext.data[10];
+			Convert_Byte0 = ext.data[11];
+			const int64_t sec = Convert.int64;
+
+			timespec ts =
+			{	.tv_sec  = sec
+			,	.tv_nsec = nsec
+			};
+
+			return ts;
+		}
+	}
+
+	return {};
+}
+
+
+// Test is below
+
+
+/**
+ * \brief Convert a `struct timespec` into a MessagePack Timestamp extension.
+ *
+ * Conversion from a `struct timespec` into the MessagePack Timestamp extension 
+ * is handled by this method.
+ *
+ * \examplecode
+ * std::timespec ts;
+ * std::timespec_get(&ts, TIME_UTC);
+ *
+ * zakero::messagepack::Object object =
+ * 	zakero::messagepack::extensionTimestampConvert(ts);
+ *
+ * std::vector<uint8_t> data = zakero::messagepack::serialize(object);
+ * \endexamplecode
+ *
+ * \return A MessagePack Object.
+ */
+Object extensionTimestampConvert(const struct timespec& ts ///< The time data
+	) noexcept
+{
+	Object object = {Ext{}};
+	Ext&   ext    = object.asExt();
+
+	if((ts.tv_sec >> 34) == 0)
+	{
+		Convert.uint64 = (ts.tv_nsec << 34) | ts.tv_sec;
+		if((Convert.uint64 & 0xffff'ffff'0000'0000) == 0)
+		{
+			ext.type = -1;
+			ext.data.resize(4);
+
+			size_t index = 0;
+			ext.data[index++] = Convert_Byte3;
+			ext.data[index++] = Convert_Byte2;
+			ext.data[index++] = Convert_Byte1;
+			ext.data[index++] = Convert_Byte0;
+
+			return object;
+		}
+
+		ext.type = -1;
+		ext.data.resize(8);
+
+		size_t index = 0;
+		ext.data[index++] = Convert_Byte7;
+		ext.data[index++] = Convert_Byte6;
+		ext.data[index++] = Convert_Byte5;
+		ext.data[index++] = Convert_Byte4;
+		ext.data[index++] = Convert_Byte3;
+		ext.data[index++] = Convert_Byte2;
+		ext.data[index++] = Convert_Byte1;
+		ext.data[index++] = Convert_Byte0;
+
+		return object;
+	}
+
+	ext.type = -1;
+	ext.data.resize(12);
+
+	size_t index = 0;
+	Convert.uint64 = ts.tv_nsec;
+	ext.data[index++] = Convert_Byte3;
+	ext.data[index++] = Convert_Byte2;
+	ext.data[index++] = Convert_Byte1;
+	ext.data[index++] = Convert_Byte0;
+
+	Convert.uint64 = ts.tv_sec;
+	ext.data[index++] = Convert_Byte7;
+	ext.data[index++] = Convert_Byte6;
+	ext.data[index++] = Convert_Byte5;
+	ext.data[index++] = Convert_Byte4;
+	ext.data[index++] = Convert_Byte3;
+	ext.data[index++] = Convert_Byte2;
+	ext.data[index++] = Convert_Byte1;
+	ext.data[index++] = Convert_Byte0;
+
+	return object;
+}
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("extension/timestamp/convert/32bit")
+{
+	SUBCASE("min")
+	{
+		const uint64_t sec  = 0;
+		const uint32_t nsec = 0;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 4);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 6);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext4);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0);
+		CHECK(data[index++] == 0);
+		CHECK(data[index++] == 0);
+		CHECK(data[index++] == 0);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 4);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("max")
+	{
+		const uint64_t sec  = 0x0000'0000'ffff'ffff;
+		const uint32_t nsec = 0;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 4);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 6);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext4);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 4);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("pattern")
+	{
+		const uint64_t sec  = 0x12345678;
+		const uint32_t nsec = 0;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 4);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 6);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext4);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0x12);
+		CHECK(data[index++] == 0x34);
+		CHECK(data[index++] == 0x56);
+		CHECK(data[index++] == 0x78);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 4);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+}
+
+TEST_CASE("extension/timestamp/convert/64bit")
+{
+	SUBCASE("min")
+	{
+		const uint64_t sec  = 0x0000'0002'0000'0000;
+		const uint32_t nsec = 0;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 8);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 10);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext8);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x02);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 8);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("max")
+	{
+		const uint64_t sec  = 0x0000'0003'ffff'ffff;
+		const uint32_t nsec = 0x3fff'ffff;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 8);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 10);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext8);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 8);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("pattern")
+	{
+		const uint64_t sec  = 0x0000'0001'2345'6789;
+		const uint32_t nsec = 0x0fed'cba9;
+		// 0x0fed'cba9
+		// 0b0000'1111'1110'1101'1100'1011'1010'1001
+		//                                      << 2
+		// 0b0011'1111'1011'0111'0010'1110'1010'0100
+		// 0x3fb7'2ea4
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 8);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 10);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Fixed_Ext8);
+		CHECK(data[index++] == (uint8_t)-1);
+		CHECK(data[index++] == 0x3f);
+		CHECK(data[index++] == 0xb7);
+		CHECK(data[index++] == 0x2e);
+		CHECK(data[index++] == 0xa5); // 0xa4 | 0x01
+		CHECK(data[index++] == 0x23);
+		CHECK(data[index++] == 0x45);
+		CHECK(data[index++] == 0x67);
+		CHECK(data[index++] == 0x89);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 8);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+}
+
+TEST_CASE("extension/timestamp/convert/96bit")
+{
+	SUBCASE("min")
+	{
+		const int64_t  sec  = 0x0000'0004'0000'0000;
+		const uint64_t nsec = 0x0000'0000;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 12);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 15);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == 12);
+		CHECK(data[index++] == (uint8_t)-1);
+		// nsec
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		// sec
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x04);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+		CHECK(data[index++] == 0x00);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 12);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("max")
+	{
+		const int64_t  sec  = 0x7fff'ffff'ffff'ffff;
+		const uint64_t nsec = 0xffff'ffff;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 12);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 15);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == 12);
+		CHECK(data[index++] == (uint8_t)-1);
+		// nsec
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		// sec
+		CHECK(data[index++] == 0x7f);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+		CHECK(data[index++] == 0xff);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 12);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+
+	SUBCASE("pattern")
+	{
+		const int64_t  sec  = 0x1234'5678'9abc'def0;
+		const uint64_t nsec = 0xfedc'ba98;
+
+		struct timespec time =
+		{	.tv_sec  = sec
+		,	.tv_nsec = nsec
+		};
+
+		Object object = extensionTimestampConvert(time);
+		{
+			Ext& ext = object.asExt();
+			CHECK(ext.type        == -1);
+			CHECK(ext.data.size() == 12);
+		}
+
+		std::vector<uint8_t> data = serialize(object);
+		CHECK(data.size() == 15);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == 12);
+		CHECK(data[index++] == (uint8_t)-1);
+		// nsec
+		CHECK(data[index++] == 0xfe);
+		CHECK(data[index++] == 0xdc);
+		CHECK(data[index++] == 0xba);
+		CHECK(data[index++] == 0x98);
+		// sec
+		CHECK(data[index++] == 0x12);
+		CHECK(data[index++] == 0x34);
+		CHECK(data[index++] == 0x56);
+		CHECK(data[index++] == 0x78);
+		CHECK(data[index++] == 0x9a);
+		CHECK(data[index++] == 0xbc);
+		CHECK(data[index++] == 0xde);
+		CHECK(data[index++] == 0xf0);
+
+		object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		Ext& ext = object.asExt();
+		CHECK(ext.type        == -1);
+		CHECK(ext.data.size() == 12);
+
+		time = extensionTimestampConvert(object);
+		CHECK(time.tv_sec  == sec);
+		CHECK(time.tv_nsec == nsec);
+	}
+}
+#endif // }}}
+// }}} Extensions: Timestamp
+// }}} Extensions
 // {{{ Utilities
 // {{{ Utilities::deserialize
 

@@ -215,6 +215,7 @@ namespace zakero::messagepack
 {
 		// {{{ Array
 
+		struct Ext;
 		struct Object;
 
 		struct Array
@@ -229,6 +230,8 @@ namespace zakero::messagepack
 				      size_t               append(std::vector<uint8_t>&) noexcept;
 				      size_t               append(const Array&) noexcept;
 				      size_t               append(Array&) noexcept;
+				      size_t               append(const Ext&) noexcept;
+				      size_t               append(Ext&) noexcept;
 				      size_t               append(const Object&) noexcept;
 				      size_t               append(Object&) noexcept;
 				      size_t               appendNull() noexcept;
@@ -985,12 +988,9 @@ namespace
 		}
 		else
 		{
-			vector.reserve(vector.size() + data_size);
-
-			for(size_t i = 0; i < data_size; i++)
-			{
-				vector.push_back(ext.data[i]);
-			}
+			size_t index = vector.size();
+			vector.resize(vector.size() + data_size);
+			memcpy((void*)(vector.data() + index), (void*)ext.data.data(), data_size);
 		}
 	}
 
@@ -1853,6 +1853,192 @@ TEST_CASE("array/append/array (move)")
 	CHECK(test.object(index).asArray().object(0).as<std::string>() == "Hello");
 	CHECK(test.object(index).asArray().object(1).is<std::string>());
 	CHECK(test.object(index).asArray().object(1).as<std::string>() == "World");
+}
+#endif // }}}
+
+
+/**
+ * \brief Append an extension.
+ *
+ * The \p value will be appended to the contents of this Array.
+ *
+ * \parcode
+ * zakero::messagepack::Ext ext;
+ * ext.type = 42;
+ * ext.data = std::vector<uint8_t>(42, '*');
+ *
+ * zakero::messagepack::Array array;
+ * array.append(ext);
+ * \endparcode
+ *
+ * \return The index location of where the \p value was stored.
+ */
+size_t Array::append(const Ext& ext
+	) noexcept
+{
+	size_t index = object_vector.size();
+	object_vector.emplace_back(ext);
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("array/append/ext (copy)")
+{
+	const uint8_t chr_16 = '-';
+	const uint8_t chr_32 = '|';
+
+	Ext ext_0;
+	ext_0.type = 0;
+	ext_0.data = {};
+
+	const Ext ext_16 =
+	{	.data = std::vector<uint8_t>(16, chr_16)
+	,	.type = 16
+	};
+
+	const Ext ext_32 =
+	{	.data = std::vector<uint8_t>(32, chr_32)
+	,	.type = 32
+	};
+
+	size_t count = 0;
+	Array array;
+	array.append(ext_0);  count++;
+	array.append(ext_16); count++;
+	array.append(ext_32); count++;
+
+	CHECK(array.size() == count);
+	CHECK(ext_16.data.size() == 16);
+	CHECK(ext_32.data.size() == 32);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = serialize(array);
+
+	// Check deserialized data
+
+	Object object = deserialize(data);
+
+	CHECK(object.isArray());
+	Array& test = object.asArray();
+	CHECK(test.size() == count);
+
+	size_t index = 0;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 0);
+	CHECK(test.object(index).asExt().data.size() == 0);
+
+	index++;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 16);
+	CHECK(test.object(index).asExt().data.size() == 16);
+	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
+	{
+		CHECK(test.object(index).asExt().data[i] == chr_16);
+	}
+
+	index++;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 32);
+	CHECK(test.object(index).asExt().data.size() == 32);
+	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
+	{
+		CHECK(test.object(index).asExt().data[i] == chr_32);
+	}
+}
+#endif // }}}
+
+
+/**
+ * \brief Append an extension.
+ *
+ * The \p value will be appended to the contents of this Array.
+ *
+ * \parcode
+ * zakero::messagepack::Ext ext;
+ * ext.type = 42;
+ * ext.data = std::vector<uint8_t>(42, '*');
+ *
+ * zakero::messagepack::Array array;
+ * array.append(ext);
+ * \endparcode
+ *
+ * \return The index location of where the \p value was stored.
+ */
+size_t Array::append(Ext& ext
+	) noexcept
+{
+	size_t index = object_vector.size();
+	object_vector.emplace_back(std::move(ext));
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("array/append/ext (move)")
+{
+	const uint8_t chr_16 = '-';
+	const uint8_t chr_32 = '|';
+
+	Ext ext_0;
+	ext_0.type = 0;
+	ext_0.data = {};
+
+	Ext ext_16;
+	ext_16.type = 16;
+	ext_16.data = std::vector<uint8_t>(16, chr_16);
+
+	Ext ext_32;
+	ext_32.type = 32;
+	ext_32.data = std::vector<uint8_t>(32, chr_32);
+
+	size_t count = 0;
+	Array array;
+	array.append(ext_0);  count++;
+	array.append(ext_16); count++;
+	array.append(ext_32); count++;
+
+	CHECK(array.size() == count);
+	CHECK(ext_16.data.size() == 0);
+	CHECK(ext_32.data.size() == 0);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = serialize(array);
+
+	// Check deserialized data
+
+	Object object = deserialize(data);
+
+	CHECK(object.isArray());
+	Array& test = object.asArray();
+	CHECK(test.size() == count);
+
+	size_t index = 0;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 0);
+	CHECK(test.object(index).asExt().data.size() == 0);
+
+	index++;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 16);
+	CHECK(test.object(index).asExt().data.size() == 16);
+	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
+	{
+		CHECK(test.object(index).asExt().data[i] == chr_16);
+	}
+
+	index++;
+	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).asExt().type == 32);
+	CHECK(test.object(index).asExt().data.size() == 32);
+	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
+	{
+		CHECK(test.object(index).asExt().data[i] == chr_32);
+	}
 }
 #endif // }}}
 

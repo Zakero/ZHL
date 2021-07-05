@@ -243,6 +243,15 @@ namespace zakero::messagepack
 		};
 
 		// }}} Array
+		// {{{ Ext
+
+		struct Ext
+		{
+			std::vector<uint8_t> data = {};
+			int8_t               type = 0;
+		};
+
+		// }}} Ext
 		// {{{ Map
 
 		struct Map
@@ -280,6 +289,7 @@ namespace zakero::messagepack
 				, std::string
 				, std::vector<uint8_t>
 				, zakero::messagepack::Array
+				, zakero::messagepack::Ext
 				, zakero::messagepack::Map
 				> value;
 
@@ -287,6 +297,8 @@ namespace zakero::messagepack
 			template<typename T> [[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); };
 			                     [[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
 			                     [[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
+			                     [[nodiscard]] messagepack::Ext&           asExt() noexcept { return std::get<messagepack::Ext>(value); };
+			                     [[nodiscard]] const messagepack::Ext&     asExt() const noexcept { return std::get<messagepack::Ext>(value); };
 			                     [[nodiscard]] messagepack::Map&           asMap() noexcept { return std::get<messagepack::Map>(value); };
 			                     [[nodiscard]] const messagepack::Map&     asMap() const noexcept { return std::get<messagepack::Map>(value); };
 			                     [[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept { return std::get<std::vector<uint8_t>>(value); };
@@ -296,6 +308,7 @@ namespace zakero::messagepack
 			template<typename T> [[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); };
 			                     [[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
 			                     [[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
+			                     [[nodiscard]] constexpr bool              isExt() const noexcept { return std::holds_alternative<messagepack::Ext>(value); };
 			                     [[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
 			                     [[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
 			                     [[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
@@ -307,9 +320,12 @@ namespace zakero::messagepack
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&) noexcept;
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
-		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Ext&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Array&) noexcept;
+		[[nodiscard]] std::string          to_string(const messagepack::Ext&) noexcept;
+		[[nodiscard]] std::string          to_string(const messagepack::Map&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Object&) noexcept;
 
 		// }}}
@@ -318,6 +334,7 @@ namespace zakero::messagepack
 // {{{ Operators
 
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Array&) noexcept;
+std::ostream& operator<<(std::ostream&, const zakero::messagepack::Ext&) noexcept;
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Map&) noexcept;
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noexcept;
 
@@ -376,9 +393,9 @@ bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepac
 	X(Bin8          , 0xc4      , 0b11111111  , "bin 8"           ) \
 	X(Bin16         , 0xc5      , 0b11111111  , "bin 16"          ) \
 	X(Bin32         , 0xc6      , 0b11111111  , "bin 32"          ) \
-	X(ext8          , 0xc7      , 0b00000000  , "ext 8"           ) \
-	X(ext16         , 0xc8      , 0b00000000  , "ext 16"          ) \
-	X(ext32         , 0xc9      , 0b00000000  , "ext 32"          ) \
+	X(Ext8          , 0xc7      , 0b11111111  , "ext 8"           ) \
+	X(Ext16         , 0xc8      , 0b11111111  , "ext 16"          ) \
+	X(Ext32         , 0xc9      , 0b11111111  , "ext 32"          ) \
 	X(Float32       , 0xca      , 0b11111111  , "float 32"        ) \
 	X(Float64       , 0xcb      , 0b11111111  , "float 64"        ) \
 	X(Uint8         , 0xcc      , 0b11111111  , "uint 8"          ) \
@@ -389,11 +406,11 @@ bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepac
 	X(Int16         , 0xd1      , 0b11111111  , "int 16"          ) \
 	X(Int32         , 0xd2      , 0b11111111  , "int 32"          ) \
 	X(Int64         , 0xd3      , 0b11111111  , "int 64"          ) \
-	X(fixext1       , 0xd4      , 0b00000000  , "fixext 1"        ) \
-	X(fixext2       , 0xd5      , 0b00000000  , "fixext 2"        ) \
-	X(fixext4       , 0xd6      , 0b00000000  , "fixext 4"        ) \
-	X(fixext8       , 0xd7      , 0b00000000  , "fixext 8"        ) \
-	X(fixext16      , 0xd8      , 0b00000000  , "fixext 16"       ) \
+	X(Fixed_Ext1    , 0xd4      , 0b11111111  , "fixext 1"        ) \
+	X(Fixed_Ext2    , 0xd5      , 0b11111111  , "fixext 2"        ) \
+	X(Fixed_Ext4    , 0xd6      , 0b11111111  , "fixext 4"        ) \
+	X(Fixed_Ext8    , 0xd7      , 0b11111111  , "fixext 8"        ) \
+	X(Fixed_Ext16   , 0xd8      , 0b11111111  , "fixext 16"       ) \
 	X(Str8          , 0xd9      , 0b11111111  , "str 8"           ) \
 	X(Str16         , 0xda      , 0b11111111  , "str 16"          ) \
 	X(Str32         , 0xdb      , 0b11111111  , "str 32"          ) \
@@ -479,13 +496,14 @@ namespace
 		uint64_t uint64;
 		uint32_t uint32;
 		uint16_t uint16;
+		uint8_t  uint8;
 		int64_t  int64;
 		int32_t  int32;
 		int16_t  int16;
+		int8_t   int8;
 		float    float32;
 		double   float64;
-		uint8_t  uint8[8];
-		int8_t   int8[8];
+		uint8_t  uint8_[8];
 	} Convert;
 
 
@@ -494,23 +512,23 @@ namespace
 	 * \{
 	 */
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-	uint8_t& Convert_Byte0 = Convert.uint8[7];
-	uint8_t& Convert_Byte1 = Convert.uint8[6];
-	uint8_t& Convert_Byte2 = Convert.uint8[5];
-	uint8_t& Convert_Byte3 = Convert.uint8[4];
-	uint8_t& Convert_Byte4 = Convert.uint8[3];
-	uint8_t& Convert_Byte5 = Convert.uint8[2];
-	uint8_t& Convert_Byte6 = Convert.uint8[1];
-	uint8_t& Convert_Byte7 = Convert.uint8[0];
+	uint8_t& Convert_Byte0 = Convert.uint8_[7];
+	uint8_t& Convert_Byte1 = Convert.uint8_[6];
+	uint8_t& Convert_Byte2 = Convert.uint8_[5];
+	uint8_t& Convert_Byte3 = Convert.uint8_[4];
+	uint8_t& Convert_Byte4 = Convert.uint8_[3];
+	uint8_t& Convert_Byte5 = Convert.uint8_[2];
+	uint8_t& Convert_Byte6 = Convert.uint8_[1];
+	uint8_t& Convert_Byte7 = Convert.uint8_[0];
 #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-	uint8_t& Convert_Byte0 = Convert.uint8[0];
-	uint8_t& Convert_Byte1 = Convert.uint8[1];
-	uint8_t& Convert_Byte2 = Convert.uint8[2];
-	uint8_t& Convert_Byte3 = Convert.uint8[3];
-	uint8_t& Convert_Byte4 = Convert.uint8[4];
-	uint8_t& Convert_Byte5 = Convert.uint8[5];
-	uint8_t& Convert_Byte6 = Convert.uint8[6];
-	uint8_t& Convert_Byte7 = Convert.uint8[7];
+	uint8_t& Convert_Byte0 = Convert.uint8_[0];
+	uint8_t& Convert_Byte1 = Convert.uint8_[1];
+	uint8_t& Convert_Byte2 = Convert.uint8_[2];
+	uint8_t& Convert_Byte3 = Convert.uint8_[3];
+	uint8_t& Convert_Byte4 = Convert.uint8_[4];
+	uint8_t& Convert_Byte5 = Convert.uint8_[5];
+	uint8_t& Convert_Byte6 = Convert.uint8_[6];
+	uint8_t& Convert_Byte7 = Convert.uint8_[7];
 #endif
 	/**
 	 * \}
@@ -518,6 +536,7 @@ namespace
 
 
 	void serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
+	void serialize_(const messagepack::Ext&, std::vector<uint8_t>&) noexcept;
 	void serialize_(const messagepack::Map&, std::vector<uint8_t>&) noexcept;
 
 	void serialize_(const messagepack::Object& object
@@ -840,6 +859,18 @@ namespace
 
 			serialize_(array, vector);
 		}
+		else if(object.isExt())
+		{
+			const messagepack::Ext& ext = object.asExt();
+
+			serialize_(ext, vector);
+		}
+		else if(object.isMap())
+		{
+			const messagepack::Map& map = object.asMap();
+
+			serialize_(map, vector);
+		}
 	}
 
 
@@ -887,6 +918,79 @@ namespace
 		for(const messagepack::Object& object : array.object_vector)
 		{
 			serialize_(object, vector);
+		}
+	}
+
+
+	void serialize_(const messagepack::Ext& ext
+		, std::vector<uint8_t>&         vector
+		) noexcept
+	{
+		const size_t data_size = ext.data.size();
+
+		if(data_size == 1)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Ext1);
+		}
+		else if(data_size == 2)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Ext2);
+		}
+		else if(data_size == 4)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Ext4);
+		}
+		else if(data_size == 8)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Ext8);
+		}
+		else if(data_size == 16)
+		{
+			vector.push_back((uint8_t)Format::Fixed_Ext16);
+		}
+		else if(data_size == 0
+			|| data_size <= std::numeric_limits<uint8_t>::max()
+			)
+		{
+			vector.push_back((uint8_t)Format::Ext8);
+			vector.push_back((uint8_t)data_size);
+		}
+		else if(data_size <= std::numeric_limits<uint16_t>::max())
+		{
+			vector.push_back((uint8_t)Format::Ext16);
+
+			Convert.uint64 = data_size;
+			vector.push_back(Convert_Byte1);
+			vector.push_back(Convert_Byte0);
+		}
+		else if(data_size <= std::numeric_limits<uint32_t>::max())
+		{
+			vector.push_back((uint8_t)Format::Ext32);
+
+			Convert.uint64 = data_size;
+			vector.push_back(Convert_Byte3);
+			vector.push_back(Convert_Byte2);
+			vector.push_back(Convert_Byte1);
+			vector.push_back(Convert_Byte0);
+		}
+
+		Convert.uint64 = 0;
+		Convert.int8   = ext.type;
+		vector.push_back(Convert.uint8);
+
+		if(data_size == 0)
+		{
+			vector.reserve(vector.size() + 1);
+			vector.push_back(0);
+		}
+		else
+		{
+			vector.reserve(vector.size() + data_size);
+
+			for(size_t i = 0; i < data_size; i++)
+			{
+				vector.push_back(ext.data[i]);
+			}
 		}
 	}
 
@@ -2694,6 +2798,7 @@ TEST_CASE("map/valueof")
 
 // }}} Object
 // {{{ Utilities
+// {{{ Utilities::deserialize
 
 /**
  * \brief Deserialize MessagePack data.
@@ -3030,6 +3135,159 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			return object;
 		}
 
+		case Format::Fixed_Ext1:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.push_back(data[index++]);
+
+			return object;
+		}
+
+		case Format::Fixed_Ext2:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.push_back(data[index++]);
+			ext.data.push_back(data[index++]);
+
+			return object;
+		}
+
+		case Format::Fixed_Ext4:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.push_back(data[index++]);
+			ext.data.push_back(data[index++]);
+			ext.data.push_back(data[index++]);
+			ext.data.push_back(data[index++]);
+
+			return object;
+		}
+
+		case Format::Fixed_Ext8:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			const size_t data_size = 8;
+			ext.data.reserve(data_size);
+
+			for(size_t i = 0; i < data_size; i++)
+			{
+				ext.data.push_back(data[index++]);
+			}
+
+			return object;
+		}
+
+		case Format::Fixed_Ext16:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			const size_t data_size = 16;
+			ext.data.reserve(data_size);
+
+			for(size_t i = 0; i < data_size; i++)
+			{
+				ext.data.push_back(data[index++]);
+			}
+
+			return object;
+		}
+
+		case Format::Ext8:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			const size_t data_size = data[index++];
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.resize(data_size);
+			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
+
+			// If data_size == zero, skip the place-holder byte.
+			// If data_size >  zero, move to next byte.
+			index += data_size + 1;
+
+			return object;
+		}
+
+		case Format::Ext16:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t data_size = Convert.uint16;
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.resize(data_size);
+			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
+
+			index += data_size + 1;
+
+			return object;
+		}
+
+		case Format::Ext32:
+		{
+			Object object = {Ext{}};
+			Ext& ext = object.asExt();
+
+			Convert.uint64 = 0;
+			Convert_Byte3 = data[index++];
+			Convert_Byte2 = data[index++];
+			Convert_Byte1 = data[index++];
+			Convert_Byte0 = data[index++];
+			const size_t data_size = Convert.uint32;
+
+			Convert.uint64 = 0;
+			Convert.uint8  = data[index++];
+			ext.type = Convert.int8;
+
+			ext.data.resize(data_size);
+			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
+
+			index += data_size + 1;
+
+			return object;
+		}
+
 		case Format::Fixed_Int_Pos:
 		case Format::Fixed_Int_Neg:
 		case Format::Fixed_Array:
@@ -3038,14 +3296,6 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			// Handled outside of this swith() statement
 			break;
 
-		case Format::ext8:
-		case Format::ext16:
-		case Format::ext32:
-		case Format::fixext1:
-		case Format::fixext2:
-		case Format::fixext4:
-		case Format::fixext8:
-		case Format::fixext16:
 		case Format::never_used:
 			break;
 	}
@@ -3116,6 +3366,8 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	return {};
 }
 
+// }}} Utilities::deserialize
+// {{{ Utilities::serialize
 
 /**
  * \brief Serialize Array data.
@@ -3144,6 +3396,384 @@ std::vector<uint8_t> serialize(const Array& array
 
 	return vector;
 }
+
+
+/**
+ * \brief Serialize Ext data.
+ *
+ * The contents of the Ext will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Ext ext;
+ * ext.type = 42;
+ * ext.data = std::vector<uint8_t>(16, '_');
+ *
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(ext);
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Ext& ext
+	) noexcept
+{
+	std::vector<uint8_t> vector;
+
+	serialize_(ext, vector);
+
+	return vector;
+}
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("serialize/ext (fixed_ext1)")
+{
+	Ext ext;
+	std::vector<uint8_t> data;
+	const size_t data_len = 1;
+	const int8_t type = 42;
+
+	ext.type = type;
+	ext.data = std::vector<uint8_t>(data_len, '_');
+
+	data = serialize(ext);
+	CHECK(data.size() == 3);
+	size_t index = 0;
+	CHECK(data[index++] == (uint8_t)Format::Fixed_Ext1);
+	CHECK(data[index++] == type);
+	CHECK(data[index++] == '_');
+
+	Object object = deserialize(data);
+	CHECK(object.isExt() == true);
+
+	CHECK(object.asExt().type        == type);
+	CHECK(object.asExt().data.size() == 1);
+	CHECK(object.asExt().data[0] == '_');
+}
+
+TEST_CASE("serialize/ext (fixed_ext2)")
+{
+	Ext ext;
+	std::vector<uint8_t> data;
+	const size_t data_len = 2;
+	const int8_t type = 42;
+
+	ext.type = type;
+	ext.data = std::vector<uint8_t>(data_len, '_');
+
+	data = serialize(ext);
+	CHECK(data.size() == 4);
+	size_t index = 0;
+	CHECK(data[index++] == (uint8_t)Format::Fixed_Ext2);
+	CHECK(data[index++] == type);
+
+	Object object = deserialize(data);
+	CHECK(object.isExt() == true);
+
+	CHECK(object.asExt().type        == type);
+	CHECK(object.asExt().data.size() == data_len);
+
+	for(size_t i = 0; i < data_len; i++)
+	{
+		CHECK(object.asExt().data[i] == '_');
+	}
+}
+
+TEST_CASE("serialize/ext (fixed_ext4)")
+{
+	Ext ext;
+	std::vector<uint8_t> data;
+	const size_t data_len = 4;
+	const int8_t type = 42;
+
+	ext.type = type;
+	ext.data = std::vector<uint8_t>(data_len, '_');
+
+	data = serialize(ext);
+	CHECK(data.size() == 6);
+	size_t index = 0;
+	CHECK(data[index++] == (uint8_t)Format::Fixed_Ext4);
+	CHECK(data[index++] == type);
+
+	Object object = deserialize(data);
+	CHECK(object.isExt() == true);
+
+	CHECK(object.asExt().type        == type);
+	CHECK(object.asExt().data.size() == data_len);
+
+	for(size_t i = 0; i < data_len; i++)
+	{
+		CHECK(object.asExt().data[i] == '_');
+	}
+}
+
+TEST_CASE("serialize/ext (fixed_ext8)")
+{
+	Ext ext;
+	std::vector<uint8_t> data;
+	const size_t data_len = 8;
+	const int8_t type = 42;
+
+	ext.type = type;
+	ext.data = std::vector<uint8_t>(data_len, '_');
+
+	data = serialize(ext);
+	CHECK(data.size() == 10);
+	size_t index = 0;
+	CHECK(data[index++] == (uint8_t)Format::Fixed_Ext8);
+	CHECK(data[index++] == type);
+
+	Object object = deserialize(data);
+	CHECK(object.isExt() == true);
+
+	CHECK(object.asExt().type        == type);
+	CHECK(object.asExt().data.size() == data_len);
+
+	for(size_t i = 0; i < data_len; i++)
+	{
+		CHECK(object.asExt().data[i] == '_');
+	}
+}
+
+TEST_CASE("serialize/ext (fixed_ext16)")
+{
+	Ext ext;
+	std::vector<uint8_t> data;
+	const size_t data_len = 16;
+	const int8_t type = 42;
+
+	ext.type = type;
+	ext.data = std::vector<uint8_t>(data_len, '_');
+
+	data = serialize(ext);
+	CHECK(data.size() == 18);
+	size_t index = 0;
+	CHECK(data[index++] == (uint8_t)Format::Fixed_Ext16);
+	CHECK(data[index++] == type);
+
+	Object object = deserialize(data);
+	CHECK(object.isExt() == true);
+
+	CHECK(object.asExt().type        == type);
+	CHECK(object.asExt().data.size() == data_len);
+
+	for(size_t i = 0; i < data_len; i++)
+	{
+		CHECK(object.asExt().data[i] == '_');
+	}
+}
+
+TEST_CASE("serialize/ext (ext8)")
+{
+	std::vector<uint8_t> data;
+	const int8_t type = 42;
+
+	Ext ext;
+	ext.type = type;
+
+	SUBCASE("length=0")
+	{
+		const size_t data_len = 0;
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == 4);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+
+	SUBCASE("length=5")
+	{
+		const size_t data_len = 5;
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == 8);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+
+	SUBCASE("length=max")
+	{
+		const size_t data_len = std::numeric_limits<uint8_t>::max();
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == 258);
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext8);
+		CHECK(data[index++] == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+}
+
+TEST_CASE("serialize/ext (ext16)")
+{
+	std::vector<uint8_t> data;
+	const int8_t type = 42;
+
+	Ext ext;
+	ext.type = type;
+
+	SUBCASE("length=min")
+	{
+		const size_t data_len = std::numeric_limits<uint8_t>::max() + (size_t)1;
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == (data_len + 4));
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext16);
+		Convert.uint64 = 0;
+		Convert_Byte1 = data[index++];
+		Convert_Byte0 = data[index++];
+		CHECK(Convert.uint16 == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+
+	SUBCASE("length=max")
+	{
+		const size_t data_len = std::numeric_limits<uint16_t>::max();
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == (data_len + 4));
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext16);
+		Convert.uint64 = 0;
+		Convert_Byte1 = data[index++];
+		Convert_Byte0 = data[index++];
+		CHECK(Convert.uint16 == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+}
+
+TEST_CASE("serialize/ext (ext32)")
+{
+	std::vector<uint8_t> data;
+	const int8_t type = 42;
+
+	Ext ext;
+	ext.type = type;
+
+	SUBCASE("length=min")
+	{
+		const size_t data_len = std::numeric_limits<uint16_t>::max() + (size_t)1;
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == (data_len + 6));
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext32);
+		Convert.uint64 = 0;
+		Convert_Byte3 = data[index++];
+		Convert_Byte2 = data[index++];
+		Convert_Byte1 = data[index++];
+		Convert_Byte0 = data[index++];
+		CHECK(Convert.uint32 == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+
+#if 0 // Uses too much RAM and takes too long.
+	SUBCASE("length=max")
+	{
+		const size_t data_len = std::numeric_limits<uint32_t>::max();
+		ext.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(ext);
+		CHECK(data.size() == (data_len + 6));
+		size_t index = 0;
+		CHECK(data[index++] == (uint8_t)Format::Ext32);
+		Convert.uint64 = 0;
+		Convert_Byte3 = data[index++];
+		Convert_Byte2 = data[index++];
+		Convert_Byte1 = data[index++];
+		Convert_Byte0 = data[index++];
+		CHECK(Convert.uint32 == data_len);
+		CHECK(data[index++] == type);
+
+		Object object = deserialize(data);
+		CHECK(object.isExt() == true);
+
+		CHECK(object.asExt().type        == type);
+		CHECK(object.asExt().data.size() == data_len);
+
+		for(size_t i = 0; i < data_len; i++)
+		{
+			CHECK(object.asExt().data[i] == '_');
+		}
+	}
+#endif
+}
+#endif // }}}
 
 
 /**
@@ -5326,6 +5956,8 @@ TEST_CASE("serialize/object/array32")
 
 #endif // }}}
 
+// }}} Utilities::serialize
+// {{{ Utilities::to_string
 
 /**
  * \brief Convert to a JSON formatted string.
@@ -5350,6 +5982,38 @@ std::string to_string(const messagepack::Array& array ///< The Array to convert.
 	}
 
 	s += "]";
+
+	return s;
+}
+
+
+/**
+ * \brief Convert to a JSON formatted string.
+ *
+ * \return A string.
+ */
+std::string to_string(const messagepack::Ext& ext ///< The Ext to convert.
+	) noexcept
+{
+	std::string s = "";
+
+	s += "( 'type': " + std::to_string(ext.type);
+	s += ", 'data': [";
+
+	std::string prefix = " ";
+
+	for(size_t i = 0; i < ext.data.size(); i++)
+	{
+		s += prefix + std::to_string(ext.data[i]);
+
+		if(i == 0)
+		{
+			prefix = ", ";
+		}
+	}
+
+	s += " ]";
+	s += " )";
 
 	return s;
 }
@@ -5463,31 +6127,29 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 	}
 	else if(object.isArray())
 	{
-		s += "'type': 'zakero::messagepack::Array', 'value': ["
+		s += "'type': 'zakero::messagepack::Array', 'value': "
+			+ zakero::messagepack::to_string(object.asArray())
 			;
-
-		std::string prefix = " ";
-
-		const zakero::messagepack::Array& array = object.asArray();
-		for(size_t i = 0; i < array.size(); i++)
-		{
-			s += prefix + zakero::messagepack::to_string(array.object(i));
-
-			if(i == 0)
-			{
-				prefix = ", ";
-			}
-		}
-
-		s += " ]";
+	}
+	else if(object.isExt())
+	{
+		s += "'type': 'zakero::messagepack::Ext', 'value': "
+			+ zakero::messagepack::to_string(object.asExt())
+			;
+	}
+	else if(object.isMap())
+	{
+		s += "'type': 'zakero::messagepack::Ext', 'value': "
+			+ zakero::messagepack::to_string(object.asMap())
+			;
 	}
 
 	s += " }";
 
 	return s;
 }
-
-// }}}
+// }}} Utilities::to_string
+// }}} Utilities
 } // zakero::messagepack
 
 // {{{ Operators
@@ -5505,6 +6167,24 @@ std::ostream& operator<<(std::ostream&      stream ///< The stream to use.
 	) noexcept
 {
 	stream << zakero::messagepack::to_string(array);
+	
+	return stream;
+}
+
+
+/**
+ * \brief OStream operator.
+ *
+ * The \p ext will be converted into a JSON formatted string and writen to the 
+ * \p stream.
+ *
+ * \return The \p stream object.
+ */
+std::ostream& operator<<(std::ostream&    stream ///< The stream to use.
+	, const zakero::messagepack::Ext& ext ///< The data to write.
+	) noexcept
+{
+	stream << zakero::messagepack::to_string(ext);
 	
 	return stream;
 }

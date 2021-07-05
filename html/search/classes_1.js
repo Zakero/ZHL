@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['key_227',['Key',['../classzakero_1_1Xenium.html#structzakero_1_1Xenium_1_1Key',1,'zakero::Xenium::Key'],['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1Key',1,'zakero::Yetani::Key']]],
-  ['keymodifier_228',['KeyModifier',['../classzakero_1_1Xenium.html#structzakero_1_1Xenium_1_1KeyModifier',1,'zakero::Xenium::KeyModifier'],['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1KeyModifier',1,'zakero::Yetani::KeyModifier']]]
+  ['cursorconfig_252',['CursorConfig',['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1CursorConfig',1,'zakero::Yetani']]]
 ];

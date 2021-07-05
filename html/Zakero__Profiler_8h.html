@@ -190,7 +190,7 @@ Macros</h2></td></tr>
 <div class="line">,    { <span class="stringliteral">&quot;version&quot;</span>,     <span class="stringliteral">&quot;1.0.0&quot;</span>                      }</div>
 <div class="line">,    { <span class="stringliteral">&quot;intent&quot;</span>,      <span class="stringliteral">&quot;=Locate Allocation Delays=&quot;</span> }</div>
 <div class="line">});</div>
-<div class="ttc" id="aZakero__Profiler_8h_html_a51877f9a11a69e3f70f68afac35ee200"><div class="ttname"><a href="Zakero__Profiler_8h.html#a51877f9a11a69e3f70f68afac35ee200">ZAKERO_PROFILER_INIT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT(output_, meta_data_...)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:328</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_a51877f9a11a69e3f70f68afac35ee200"><div class="ttname"><a href="Zakero__Profiler_8h.html#a51877f9a11a69e3f70f68afac35ee200">ZAKERO_PROFILER_INIT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INIT(output_, meta_data_...)</div><div class="ttdoc">Initialize the profiler.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:336</div></div>
 </div><!-- fragment --><p class="interdd"><b>Step 3</b></p>
 <p class="interdd">All the prep work is done, now it is time to generate some profiling data. <br  />
  To do this use one of these macros:</p><ul>
@@ -212,7 +212,7 @@ Macros</h2></td></tr>
 <div class="line">             do_more_stuff();</div>
 <div class="line">     }</div>
 <div class="line">}</div>
-<div class="ttc" id="aZakero__Profiler_8h_html_a9597d71257ceeb288a4891b6ed9ac4c4"><div class="ttname"><a href="Zakero__Profiler_8h.html#a9597d71257ceeb288a4891b6ed9ac4c4">ZAKERO_PROFILER_DURATION</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:500</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_a9597d71257ceeb288a4891b6ed9ac4c4"><div class="ttname"><a href="Zakero__Profiler_8h.html#a9597d71257ceeb288a4891b6ed9ac4c4">ZAKERO_PROFILER_DURATION</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DURATION(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:508</div></div>
 </div><!-- fragment --><p class="interdd"><b>Step 4</b></p>
 <p class="interdd">The program ran and you have profile data. It's time to look at it. Fire up one of the following browsers and...</p>
 <p class="interdd"><em>Google Chrome</em></p>
@@ -299,8 +299,8 @@ Macros</h2></td></tr>
 <div class="line">{</div>
 <div class="line">        <a class="code" href="Zakero__Profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6">ZAKERO_PROFILER_DEACTIVATE</a></div>
 <div class="line">}</div>
-<div class="ttc" id="aZakero__Profiler_8h_html_a3ac092a8bdae7abde5d56533a2962b1f"><div class="ttname"><a href="Zakero__Profiler_8h.html#a3ac092a8bdae7abde5d56533a2962b1f">ZAKERO_PROFILER_ACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_ACTIVATE</div><div class="ttdoc">Activate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:376</div></div>
-<div class="ttc" id="aZakero__Profiler_8h_html_ac845a1a392f5844e9a3b48d51e000ad6"><div class="ttname"><a href="Zakero__Profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6">ZAKERO_PROFILER_DEACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DEACTIVATE</div><div class="ttdoc">Deactivate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:386</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_a3ac092a8bdae7abde5d56533a2962b1f"><div class="ttname"><a href="Zakero__Profiler_8h.html#a3ac092a8bdae7abde5d56533a2962b1f">ZAKERO_PROFILER_ACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_ACTIVATE</div><div class="ttdoc">Activate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:384</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_ac845a1a392f5844e9a3b48d51e000ad6"><div class="ttname"><a href="Zakero__Profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6">ZAKERO_PROFILER_DEACTIVATE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_DEACTIVATE</div><div class="ttdoc">Deactivate Profiling.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:394</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="Zakero__Profiler_8h.html#ac845a1a392f5844e9a3b48d51e000ad6" title="Deactivate Profiling.">ZAKERO_PROFILER_DEACTIVATE</a> </dd></dl>
 
@@ -366,8 +366,8 @@ Macros</h2></td></tr>
 <div class="line">        }</div>
 <div class="line">    }</div>
 <div class="line">}</div>
-<div class="ttc" id="aZakero__Profiler_8h_html_a1dc2db4c820be730a8c165e7a1814442"><div class="ttname"><a href="Zakero__Profiler_8h.html#a1dc2db4c820be730a8c165e7a1814442">ZAKERO_PROFILER_COMPLETE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:441</div></div>
-<div class="ttc" id="aZakero__Profiler_8h_html_ad14a2c6240d30661abc26dce25b78de6"><div class="ttname"><a href="Zakero__Profiler_8h.html#ad14a2c6240d30661abc26dce25b78de6">ZAKERO_PROFILER_INSTANT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:528</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_a1dc2db4c820be730a8c165e7a1814442"><div class="ttname"><a href="Zakero__Profiler_8h.html#a1dc2db4c820be730a8c165e7a1814442">ZAKERO_PROFILER_COMPLETE</a></div><div class="ttdeci">#define ZAKERO_PROFILER_COMPLETE(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:449</div></div>
+<div class="ttc" id="aZakero__Profiler_8h_html_ad14a2c6240d30661abc26dce25b78de6"><div class="ttname"><a href="Zakero__Profiler_8h.html#ad14a2c6240d30661abc26dce25b78de6">ZAKERO_PROFILER_INSTANT</a></div><div class="ttdeci">#define ZAKERO_PROFILER_INSTANT(category_, name_, meta_data_...)</div><div class="ttdoc">Generate profiler data.</div><div class="ttdef"><b>Definition:</b> Zakero_Profiler.h:536</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">

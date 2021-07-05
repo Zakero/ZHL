@@ -271,6 +271,8 @@ TAB_SIZE               = 8
 
 ALIASES                = "null=`nullptr`" \
                          "nullptr=`nullptr`" \
+                         "true=`true`" \
+                         "false=`false`" \
 			 \
                          "parcode=\par \"Example\"\parblock\code" \
                          "endparcode=\endcode\endparblock" \

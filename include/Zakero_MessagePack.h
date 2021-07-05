@@ -213,10 +213,12 @@
 
 namespace zakero::messagepack
 {
-		// {{{ Array
-
+		struct Array;
 		struct Ext;
+		struct Map;
 		struct Object;
+
+		// {{{ Array
 
 		struct Array
 		{
@@ -232,6 +234,8 @@ namespace zakero::messagepack
 				      size_t               append(Array&) noexcept;
 				      size_t               append(const Ext&) noexcept;
 				      size_t               append(Ext&) noexcept;
+				      size_t               append(const Map&) noexcept;
+				      size_t               append(Map&) noexcept;
 				      size_t               append(const Object&) noexcept;
 				      size_t               append(Object&) noexcept;
 				      size_t               appendNull() noexcept;
@@ -2039,6 +2043,176 @@ TEST_CASE("array/append/ext (move)")
 	{
 		CHECK(test.object(index).asExt().data[i] == chr_32);
 	}
+}
+#endif // }}}
+
+
+/**
+ * \brief Append a Map.
+ *
+ * The \p value will be appended to the contents of this Array.
+ *
+ * \parcode
+ * zakero::messagepack::Map map;
+ * map.set(Object{42}, Object{std::string("foo")});
+ *
+ * zakero::messagepack::Array array;
+ * array.append(map);
+ * \endparcode
+ *
+ * \return The index location of where the \p value was stored.
+ */
+size_t Array::append(const Map& map
+	) noexcept
+{
+	size_t index = object_vector.size();
+	object_vector.emplace_back(map);
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("array/append/map (copy)")
+{
+	const Object key_1 = Object{true};
+	const Object key_2 = Object{int64_t(0)};
+
+	const std::string str("Hello, World!");
+	const std::vector<uint8_t> bin(21, '@');
+
+	const Object val_1 = Object{str};
+	const Object val_2 = Object{bin};
+
+	Map map_1;
+	map_1.set(key_1, val_1);
+	map_1.set(key_2, val_2);
+
+	Map map_2;
+	map_2.set(val_1, key_1);
+	map_2.set(val_2, key_2);
+
+	size_t count = 0;
+	Array array;
+	array.append((const Map)map_1); count++;
+	array.append((const Map)map_2); count++;
+
+	CHECK(array.size() == count);
+	CHECK(map_1.size() == 2);
+	CHECK(map_2.size() == 2);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = serialize(array);
+
+	// Check deserialized data
+
+	Object object = deserialize(data);
+
+	CHECK(object.isArray());
+	Array& test = object.asArray();
+	CHECK(test.size() == count);
+
+	size_t index = 0;
+	CHECK(test.object(index).isMap());
+	CHECK(test.object(index).asMap().size() == 2);
+	CHECK(test.object(index).asMap().keyExists(key_1) == true);
+	CHECK(test.object(index).asMap().valueOf(key_1) == val_1);
+	CHECK(test.object(index).asMap().keyExists(key_2) == true);
+	CHECK(test.object(index).asMap().valueOf(key_2) == val_2);
+
+	index++;
+	CHECK(test.object(index).isMap());
+	CHECK(test.object(index).asMap().size() == 2);
+	CHECK(test.object(index).asMap().keyExists(val_1) == true);
+	CHECK(test.object(index).asMap().valueOf(val_1) == key_1);
+	CHECK(test.object(index).asMap().keyExists(val_2) == true);
+	CHECK(test.object(index).asMap().valueOf(val_2) == key_2);
+}
+#endif // }}}
+
+
+/**
+ * \brief Append a Map.
+ *
+ * The \p value will be appended to the contents of this Array.
+ *
+ * \parcode
+ * zakero::messagepack::Map map;
+ * map.set(Object{42}, Object{std::string("foo")});
+ *
+ * zakero::messagepack::Array array;
+ * array.append(map);
+ * \endparcode
+ *
+ * \return The index location of where the \p value was stored.
+ */
+size_t Array::append(Map& map
+	) noexcept
+{
+	size_t index = object_vector.size();
+	object_vector.emplace_back(std::move(map));
+
+	return index;
+}
+
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("array/append/map (move)")
+{
+	const Object key_1 = Object{true};
+	const Object key_2 = Object{int64_t(0)};
+
+	const std::string str("Hello, World!");
+	const std::vector<uint8_t> bin(21, '@');
+
+	const Object val_1 = Object{str};
+	const Object val_2 = Object{bin};
+
+	Map map_1;
+	map_1.set(key_1, val_1);
+	map_1.set(key_2, val_2);
+
+	Map map_2;
+	map_2.set(val_1, key_1);
+	map_2.set(val_2, key_2);
+
+	size_t count = 0;
+	Array array;
+	array.append(map_1); count++;
+	array.append(map_2); count++;
+
+	CHECK(array.size() == count);
+	CHECK(map_1.size() == 0);
+	CHECK(map_2.size() == 0);
+
+	// Check serialized data
+
+	std::vector<uint8_t> data = serialize(array);
+
+	// Check deserialized data
+
+	Object object = deserialize(data);
+
+	CHECK(object.isArray());
+	Array& test = object.asArray();
+	CHECK(test.size() == count);
+
+	size_t index = 0;
+	CHECK(test.object(index).isMap());
+	CHECK(test.object(index).asMap().size() == 2);
+	CHECK(test.object(index).asMap().keyExists(key_1) == true);
+	CHECK(test.object(index).asMap().valueOf(key_1) == val_1);
+	CHECK(test.object(index).asMap().keyExists(key_2) == true);
+	CHECK(test.object(index).asMap().valueOf(key_2) == val_2);
+
+	index++;
+	CHECK(test.object(index).isMap());
+	CHECK(test.object(index).asMap().size() == 2);
+	CHECK(test.object(index).asMap().keyExists(val_1) == true);
+	CHECK(test.object(index).asMap().valueOf(val_1) == key_1);
+	CHECK(test.object(index).asMap().keyExists(val_2) == true);
+	CHECK(test.object(index).asMap().valueOf(val_2) == key_2);
 }
 #endif // }}}
 

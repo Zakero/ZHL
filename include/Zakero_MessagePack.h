@@ -143,6 +143,9 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.3.1__
+ * - Fixed issues found by CLang++
+ *
  * __v0.3.0__
  * - Added support for Ext
  * - Added support for Maps
@@ -4434,7 +4437,7 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
-			return Object{Convert.int16};
+			return Object{int64_t(Convert.int16)};
 
 		case Format::Int32:
 			Convert.uint64 = 0;
@@ -4442,7 +4445,7 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte2 = data[index++];
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
-			return Object{Convert.int32};
+			return Object{int64_t(Convert.int32)};
 	
 		case Format::Int64:
 			Convert_Byte7 = data[index++];

@@ -167,6 +167,7 @@
  * \author Andrew "Zakero" Moore
  * - Original Author
  *
+ *
  * \todo Add error code support.
  */
 
@@ -180,6 +181,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -212,8 +214,10 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_MESSAGEPACK__ERROR_DATA \
-	X(Error_None    ,  0 , "No Error"                                                        ) \
-	X(Error_Unknown ,  1 , "An unknown error has occurred"                                   ) \
+	X(Error_None            ,  0 , "No Error"                               ) \
+	X(Error_Unknown         ,  1 , "An unknown error has occurred"          ) \
+	X(Error_Bad_Format_Type ,  2 , "An invalid Format Type was encountered" ) \
+	X(Error_Incomplete      ,  3 , "The data to deserialize is incomplete"  ) \
 
 // }}}
 
@@ -224,6 +228,23 @@
 
 namespace zakero::messagepack
 {
+	class ErrorCategory_
+		: public std::error_category
+	{
+		public:
+			constexpr ErrorCategory_() noexcept {};
+
+			[[nodiscard]] const char* name() const noexcept final override;
+			[[nodiscard]] std::string message(int condition) const noexcept final override;
+	};
+
+	extern ErrorCategory_ ErrorCategory;
+
+#define X(name_, val_, mesg_) \
+	const std::error_code name_(val_, ErrorCategory);
+	ZAKERO_MESSAGEPACK__ERROR_DATA
+#undef X
+
 		struct Array;
 		struct Ext;
 		struct Map;
@@ -343,7 +364,9 @@ namespace zakero::messagepack
 		// {{{ Utilities
 
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, std::error_code&) noexcept;
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Ext&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&) noexcept;
@@ -1065,6 +1088,64 @@ namespace
 		}
 	}
 }
+
+// }}}
+// {{{ Error
+
+/**
+ * \class ErrorCategary_
+ *
+ * \brief Error categories.
+ *
+ * This class holds all the error categories for the error codes. The data in 
+ * this class is built from the ZAKERO_MESSAGEPACK__ERROR_DATA macro.
+ */
+
+
+/**
+ * \fn ErrorCategory_::ErrorCategory_()
+ *
+ * \brief Constructor
+ */
+
+
+/**
+ * \brief The name of the error category.
+ * 
+ * \return A C-Style string.
+ */
+const char* ErrorCategory_::name() const noexcept
+{
+	return "zakero::messagepack";
+}
+
+
+/**
+ * \brief A description message.
+ *
+ * \return The message.
+ */
+std::string ErrorCategory_::message(int condition ///< The error code.
+	) const noexcept
+{
+	switch(condition)
+	{
+#define X(name_, val_, mesg_) \
+		case val_: return mesg_;
+		ZAKERO_MESSAGEPACK__ERROR_DATA
+#undef X
+	}
+
+	return "Unknown error condition";
+}
+
+
+/**
+ * \brief A single instance.
+ *
+ * This one instance will be used by all error codes.
+ */
+ErrorCategory_ ErrorCategory;
 
 // }}}
 // {{{ Array
@@ -4369,9 +4450,57 @@ TEST_CASE("extension/timestamp/convert/96bit")
 Object deserialize(const std::vector<uint8_t>& data ///< The packed data
 	) noexcept
 {
+	size_t          index = 0;
+	std::error_code error = {};
+
+	return deserialize(data, index, error);
+}
+
+
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * size_t index;
+ * object = zakero::messagepack::deserialize(command_result, index);
+ * if(object.isArray() == false)
+ * {
+ *	writeError(ERROR_INVALID_COMMAND_RESULT);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
+ *
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t error_index = 1;
+ * constexpr size_t error_code_index = 2;
+ * if(array(error_index).boolean == true)
+ * {
+ * 	writeError(array(error_code_index).int64_);
+ * }
+ * \endparcode
+ *
+ * \todo Add error codes.
+ *       - Error_None
+ *       - Error_Bad_Format_Type
+ *       - Error_Incomplete
+ */
+Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
+	, std::error_code&                     error ///< The error code
+	) noexcept
+{
 	size_t index = 0;
 
-	return deserialize(data, index);
+	return deserialize(data, index, error);
 }
 
 
@@ -4416,6 +4545,19 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
 	) noexcept
 {
+	std::error_code error = {};
+
+	return deserialize(data, index, error);
+}
+
+
+Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
+	, size_t&                              index ///< The starting index
+	, std::error_code&                     error ///< The error code
+	) noexcept
+{
+	error = Error_None;
+
 	const uint8_t byte = data[index++];
 
 	switch((Format)byte)
@@ -4831,7 +4973,14 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			break;
 
 		case Format::never_used:
-			break;
+		{
+			fprintf(stderr
+				, "%s: Detected invalid format: Never_Used(0x%02x)\n"
+				, __FUNCTION__
+				, byte
+				);
+			return {};
+		}
 	}
 
 	if((byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)

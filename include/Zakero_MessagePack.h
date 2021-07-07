@@ -1109,7 +1109,7 @@ size_t Array::append(const bool value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1181,7 +1181,7 @@ size_t Array::append(const int64_t value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1276,7 +1276,7 @@ size_t Array::append(const uint64_t value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1371,7 +1371,7 @@ size_t Array::append(const float value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1430,7 +1430,7 @@ size_t Array::append(const double value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1489,7 +1489,7 @@ size_t Array::append(const std::string_view value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(std::string(value));
+	object_vector.emplace_back(Object{std::string(value)});
 
 	return index;
 }
@@ -1567,7 +1567,7 @@ size_t Array::append(const std::vector<uint8_t>& value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(value);
+	object_vector.emplace_back(Object{value});
 
 	return index;
 }
@@ -1639,7 +1639,7 @@ size_t Array::append(std::vector<uint8_t>& value ///< The value to add
 {
 	const size_t index = object_vector.size();
 
-	object_vector.emplace_back(std::move(value));
+	object_vector.emplace_back(Object{std::move(value)});
 
 	return index;
 }
@@ -1722,7 +1722,7 @@ size_t Array::append(const Array& array ///< The Array to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(Array{});
+	object_vector.emplace_back(Object{Array{}});
 
 	Array& sub_array = object_vector[index].asArray();
 	sub_array.object_vector = array.object_vector;
@@ -1822,7 +1822,7 @@ size_t Array::append(Array& array ///< The Array to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(Array{});
+	object_vector.emplace_back(Object{Array{}});
 
 	Array& sub_array = object_vector[index].asArray();
 	sub_array.object_vector = std::move(array.object_vector);
@@ -1922,7 +1922,7 @@ size_t Array::append(const Ext& ext ///< The Ext to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(ext);
+	object_vector.emplace_back(Object{ext});
 
 	return index;
 }
@@ -2016,7 +2016,7 @@ size_t Array::append(Ext& ext ///< The Ext to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(std::move(ext));
+	object_vector.push_back(Object{std::move(ext)});
 
 	return index;
 }
@@ -2107,7 +2107,7 @@ size_t Array::append(const Map& map ///< The Map to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(map);
+	object_vector.emplace_back(Object{map});
 
 	return index;
 }
@@ -2192,7 +2192,7 @@ size_t Array::append(Map& map ///< The Map to add
 	) noexcept
 {
 	size_t index = object_vector.size();
-	object_vector.emplace_back(std::move(map));
+	object_vector.push_back(Object{std::move(map)});
 
 	return index;
 }

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['yetani_272',['Yetani',['../classzakero_1_1Yetani.html',1,'zakero']]]
+  ['yetani_275',['Yetani',['../classzakero_1_1Yetani.html',1,'zakero']]]
 ];

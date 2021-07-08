@@ -65,7 +65,8 @@ $(function() {
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#define-members">Macros</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle">
 <div class="title">Zakero_MessagePack.h File Reference</div>  </div>
 </div><!--header-->
@@ -78,14 +79,15 @@ Include dependency graph for Zakero_MessagePack.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="Zakero__MessagePack_8h__incl.png" border="0" usemap="#aZakero__MessagePack_8h" alt=""/></div>
 <map name="aZakero__MessagePack_8h" id="aZakero__MessagePack_8h">
-<area shape="rect" title="Zakero MessagePack." alt="" coords="195,5,357,32"/>
+<area shape="rect" title="Zakero MessagePack." alt="" coords="245,5,408,32"/>
 <area shape="rect" title=" " alt="" coords="5,80,67,107"/>
 <area shape="rect" title=" " alt="" coords="91,80,146,107"/>
 <area shape="rect" title=" " alt="" coords="171,80,224,107"/>
 <area shape="rect" title=" " alt="" coords="249,80,303,107"/>
-<area shape="rect" title=" " alt="" coords="327,80,387,107"/>
-<area shape="rect" title=" " alt="" coords="411,80,469,107"/>
-<area shape="rect" title=" " alt="" coords="493,80,577,107"/>
+<area shape="rect" title=" " alt="" coords="328,80,427,107"/>
+<area shape="rect" title=" " alt="" coords="451,80,511,107"/>
+<area shape="rect" title=" " alt="" coords="535,80,593,107"/>
+<area shape="rect" title=" " alt="" coords="617,80,701,107"/>
 </map>
 </div>
 </div>
@@ -120,6 +122,12 @@ Functions</h2></td></tr>
 <tr class="memitem:aa0a2e8623a34da1ca8c1fb3755011c79"><td class="memItemLeft" align="right" valign="top">Object&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#aa0a2e8623a34da1ca8c1fb3755011c79">zakero::messagepack::deserialize</a> (const std::vector&lt; uint8_t &gt; &amp;data, size_t &amp;index) noexcept</td></tr>
 <tr class="memdesc:aa0a2e8623a34da1ca8c1fb3755011c79"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deserialize MessagePack data.  <a href="Zakero__MessagePack_8h.html#aa0a2e8623a34da1ca8c1fb3755011c79">More...</a><br /></td></tr>
 <tr class="separator:aa0a2e8623a34da1ca8c1fb3755011c79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4de2ff177cd477dd5288c26132124be7"><td class="memItemLeft" align="right" valign="top">Object&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a4de2ff177cd477dd5288c26132124be7">zakero::messagepack::deserialize</a> (const std::vector&lt; uint8_t &gt; &amp;data, size_t &amp;index, std::error_code &amp;error) noexcept</td></tr>
+<tr class="memdesc:a4de2ff177cd477dd5288c26132124be7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deserialize MessagePack data.  <a href="Zakero__MessagePack_8h.html#a4de2ff177cd477dd5288c26132124be7">More...</a><br /></td></tr>
+<tr class="separator:a4de2ff177cd477dd5288c26132124be7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9cdea4a372e10a0f4137f1431ccd32cd"><td class="memItemLeft" align="right" valign="top">Object&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a9cdea4a372e10a0f4137f1431ccd32cd">zakero::messagepack::deserialize</a> (const std::vector&lt; uint8_t &gt; &amp;data, std::error_code &amp;error) noexcept</td></tr>
+<tr class="memdesc:a9cdea4a372e10a0f4137f1431ccd32cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deserialize MessagePack data.  <a href="Zakero__MessagePack_8h.html#a9cdea4a372e10a0f4137f1431ccd32cd">More...</a><br /></td></tr>
+<tr class="separator:a9cdea4a372e10a0f4137f1431ccd32cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55398d8106423f4813ddff34d236be3b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a55398d8106423f4813ddff34d236be3b">zakero::messagepack::extensionTimestampCheck</a> (const Object &amp;object) noexcept</td></tr>
 <tr class="memdesc:a55398d8106423f4813ddff34d236be3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Timestamp Extension Check.  <a href="Zakero__MessagePack_8h.html#a55398d8106423f4813ddff34d236be3b">More...</a><br /></td></tr>
 <tr class="separator:a55398d8106423f4813ddff34d236be3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -169,16 +177,37 @@ Functions</h2></td></tr>
 <tr class="memdesc:a8fb785a3b243452ea7c98e1717149733"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert to a JSON formatted string.  <a href="Zakero__MessagePack_8h.html#a8fb785a3b243452ea7c98e1717149733">More...</a><br /></td></tr>
 <tr class="separator:a8fb785a3b243452ea7c98e1717149733"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a121d0de3b610cce1ad322a4311090512"><td class="memItemLeft" align="right" valign="top">ErrorCategory_&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a121d0de3b610cce1ad322a4311090512">zakero::messagepack::ErrorCategory</a></td></tr>
+<tr class="memdesc:a121d0de3b610cce1ad322a4311090512"><td class="mdescLeft">&#160;</td><td class="mdescRight">A single instance.  <a href="Zakero__MessagePack_8h.html#a121d0de3b610cce1ad322a4311090512">More...</a><br /></td></tr>
+<tr class="separator:a121d0de3b610cce1ad322a4311090512"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader">Format Value Masks</h2></td></tr>
-<tr class="memitem:ac6ecbeef38082c33731c971a393cefe1"><td class="memItemLeft" align="right" valign="top"><a id="ac6ecbeef38082c33731c971a393cefe1"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>X</b>(type_,  id_,  mask_,  text_)</td></tr>
-<tr class="separator:ac6ecbeef38082c33731c971a393cefe1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac6ecbeef38082c33731c971a393cefe1"><td class="memItemLeft" align="right" valign="top"><a id="ac6ecbeef38082c33731c971a393cefe1"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>X</b>(type_,  id_,  mask_,  text_)</td></tr>
-<tr class="separator:ac6ecbeef38082c33731c971a393cefe1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac6ecbeef38082c33731c971a393cefe1"><td class="memItemLeft" align="right" valign="top"><a id="ac6ecbeef38082c33731c971a393cefe1"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>X</b>(type_,  id_,  mask_,  text_)</td></tr>
-<tr class="separator:ac6ecbeef38082c33731c971a393cefe1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="memItemLeft" align="right" valign="top"><a id="a2b24c524f6fd651f2287f90c1d83fe4e"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2b24c524f6fd651f2287f90c1d83fe4e">X</a>(name_,  val_,  mesg_)</td></tr>
+<tr class="memdesc:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="memItemLeft" align="right" valign="top"><a id="a2b24c524f6fd651f2287f90c1d83fe4e"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2b24c524f6fd651f2287f90c1d83fe4e">X</a>(name_,  val_,  mesg_)</td></tr>
+<tr class="memdesc:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2b24c524f6fd651f2287f90c1d83fe4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memItemLeft" align="right" valign="top"><a id="a2ae247f21ad8a3c4c0d52debd6233944"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2ae247f21ad8a3c4c0d52debd6233944">X</a>(type_,  id_,  mask_,  size_,  text_)</td></tr>
+<tr class="memdesc:a2ae247f21ad8a3c4c0d52debd6233944"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memItemLeft" align="right" valign="top"><a id="a2ae247f21ad8a3c4c0d52debd6233944"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2ae247f21ad8a3c4c0d52debd6233944">X</a>(type_,  id_,  mask_,  size_,  text_)</td></tr>
+<tr class="memdesc:a2ae247f21ad8a3c4c0d52debd6233944"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memItemLeft" align="right" valign="top"><a id="a2ae247f21ad8a3c4c0d52debd6233944"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2ae247f21ad8a3c4c0d52debd6233944">X</a>(type_,  id_,  mask_,  size_,  text_)</td></tr>
+<tr class="memdesc:a2ae247f21ad8a3c4c0d52debd6233944"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memItemLeft" align="right" valign="top"><a id="a2ae247f21ad8a3c4c0d52debd6233944"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Zakero__MessagePack_8h.html#a2ae247f21ad8a3c4c0d52debd6233944">X</a>(type_,  id_,  mask_,  size_,  text_)</td></tr>
+<tr class="memdesc:a2ae247f21ad8a3c4c0d52debd6233944"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert macro data into code. <br /></td></tr>
+<tr class="separator:a2ae247f21ad8a3c4c0d52debd6233944"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><table class="markdownTable">
@@ -235,23 +264,31 @@ Functions</h2></td></tr>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(the_answer);</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(Object{<span class="keyword">true</span>});</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>({std::string(<span class="stringliteral">&quot;Hello, World!&quot;</span>)});</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a></div><div class="ttdoc">An array of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:232</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a2fe36ea849cdc7d79b9e714359f95aaa"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">zakero::messagepack::Array::append</a></div><div class="ttdeci">size_t append(const bool) noexcept</div><div class="ttdoc">Append a boolean value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:1107</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Object_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a></div><div class="ttdoc">A Data Object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:297</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a></div><div class="ttdoc">An array of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:267</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a2fe36ea849cdc7d79b9e714359f95aaa"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">zakero::messagepack::Array::append</a></div><div class="ttdeci">size_t append(const bool) noexcept</div><div class="ttdoc">Append a boolean value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:1221</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Object_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a></div><div class="ttdoc">A Data Object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:332</div></div>
 </div><!-- fragment --><p class="interdd"><em>Deserialize data</em> </p><div class="fragment"><div class="line">std::vector&lt;uint8_t&gt; data = load_data();</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a> <span class="keywordtype">object</span> = <a class="code" href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a>(data);</div>
-<div class="ttc" id="aZakero__MessagePack_8h_html_a469fdee121975543ef584a630324e950"><div class="ttname"><a href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a></div><div class="ttdeci">Object deserialize(const std::vector&lt; uint8_t &gt; &amp;) noexcept</div><div class="ttdoc">Deserialize MessagePack data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:4366</div></div>
+<div class="ttc" id="aZakero__MessagePack_8h_html_a469fdee121975543ef584a630324e950"><div class="ttname"><a href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a></div><div class="ttdeci">Object deserialize(const std::vector&lt; uint8_t &gt; &amp;) noexcept</div><div class="ttdoc">Deserialize MessagePack data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:4479</div></div>
 </div><!-- fragment --><p class="interdd">The data in the MessagePack can be modified: </p><div class="fragment"><div class="line"><span class="keywordflow">if</span>(<span class="keywordtype">object</span>.isArray())</div>
 <div class="line">{</div>
 <div class="line">     <a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a>&amp; array = <span class="keywordtype">object</span>.asArray();</div>
 <div class="line">     array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a01e06a57ea62cf2516d6de343abb02a4">object</a>(2) = {std::string(<span class="stringliteral">&quot;Good Bye!&quot;</span>)};</div>
 <div class="line">}</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a01e06a57ea62cf2516d6de343abb02a4"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a01e06a57ea62cf2516d6de343abb02a4">zakero::messagepack::Array::object</a></div><div class="ttdeci">Object &amp; object(const size_t index) noexcept</div><div class="ttdoc">Access a data object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:251</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a01e06a57ea62cf2516d6de343abb02a4"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a01e06a57ea62cf2516d6de343abb02a4">zakero::messagepack::Array::object</a></div><div class="ttdeci">Object &amp; object(const size_t index) noexcept</div><div class="ttdoc">Access a data object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:286</div></div>
 </div><!-- fragment --><p class="enddd">Then the MessagePack can be (re)serialized: </p><div class="fragment"><div class="line">data = <a class="code" href="Zakero__MessagePack_8h.html#af9279e09dcf1d0a4f971a0c23eb2bbc0">zakero::messagepack::serialize</a>(<span class="keywordtype">object</span>);</div>
-<div class="ttc" id="aZakero__MessagePack_8h_html_af9279e09dcf1d0a4f971a0c23eb2bbc0"><div class="ttname"><a href="Zakero__MessagePack_8h.html#af9279e09dcf1d0a4f971a0c23eb2bbc0">zakero::messagepack::serialize</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; serialize(const messagepack::Array &amp;) noexcept</div><div class="ttdoc">Serialize Array data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:4921</div></div>
+<div class="ttc" id="aZakero__MessagePack_8h_html_af9279e09dcf1d0a4f971a0c23eb2bbc0"><div class="ttname"><a href="Zakero__MessagePack_8h.html#af9279e09dcf1d0a4f971a0c23eb2bbc0">zakero::messagepack::serialize</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; serialize(const messagepack::Array &amp;) noexcept</div><div class="ttdoc">Serialize Array data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:5749</div></div>
 </div><!-- fragment --> </dd></dl>
-<p><a class="anchor" id="zakero_messagepack_vers"></a></p><dl class="section user"><dt>Version</dt><dd><p class="startdd"><b>v0.3.0</b></p><ul>
+<p><a class="anchor" id="zakero_messagepack_vers"></a></p><dl class="section user"><dt>Version</dt><dd><p class="startdd"><b>v0.9.0</b></p><ul>
+<li>Beta Release</li>
+<li>Added error checks to the deserializer</li>
+</ul>
+<p class="interdd"><b>v0.3.1</b></p><ul>
+<li>Fixed issues found by CLang++</li>
+</ul>
+<p class="interdd"><b>v0.3.0</b></p><ul>
+<li>Alpha Release</li>
 <li>Added support for Ext</li>
 <li>Added support for Maps</li>
 <li>Added support for the Timestamp extension</li>
@@ -289,7 +326,7 @@ Functions</h2></td></tr>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a469fdee121975543ef584a630324e950"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a469fdee121975543ef584a630324e950">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a469fdee121975543ef584a630324e950">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[1/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -319,24 +356,20 @@ Functions</h2></td></tr>
 <div class="line"><span class="keywordflow">if</span>(<span class="keywordtype">object</span>.isArray() == <span class="keyword">false</span>)</div>
 <div class="line">{</div>
 <div class="line">        writeError(ERROR_INVALID_COMMAND_RESULT);</div>
+<div class="line"> </div>
 <div class="line">        <span class="keywordflow">return</span>;</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a>&amp; array = <span class="keywordtype">object</span>.asArray();</div>
 <div class="line"> </div>
-<div class="line">constexpr <span class="keywordtype">size_t</span> error_index = 1;</div>
-<div class="line">constexpr <span class="keywordtype">size_t</span> error_code_index = 2;</div>
-<div class="line"><span class="keywordflow">if</span>(array(error_index).<span class="keywordtype">boolean</span> == <span class="keyword">true</span>)</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> success_index = 1;</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_code_index = 2;</div>
+<div class="line"><span class="keywordflow">if</span>(array(success_index).<span class="keywordtype">boolean</span> == <span class="keyword">true</span>)</div>
 <div class="line">{</div>
-<div class="line">        writeError(array(error_code_index).int64_);</div>
+<div class="line">        writeError(array(result_code_index).int64_);</div>
 <div class="line">}</div>
 </div><!-- fragment --></dd></dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Add error codes.<ul>
-<li>Error_None</li>
-<li>Error_Bad_Format_Type</li>
-<li>Error_Incomplete </li>
-</ul>
-</dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The Object </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">data</td><td>The packed data </td></tr>
@@ -347,7 +380,7 @@ Functions</h2></td></tr>
 </div>
 </div>
 <a id="aa0a2e8623a34da1ca8c1fb3755011c79"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0a2e8623a34da1ca8c1fb3755011c79">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0a2e8623a34da1ca8c1fb3755011c79">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[2/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -383,37 +416,175 @@ Functions</h2></td></tr>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;uint8_t&gt; command_result = get_reply(command_id);</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a> object;</div>
-<div class="line"><span class="keywordtype">size_t</span> index;</div>
+<div class="line"><span class="keywordtype">size_t</span>                      index;</div>
 <div class="line"><span class="keywordtype">object</span> = <a class="code" href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a>(command_result, index);</div>
 <div class="line"><span class="keywordflow">if</span>(<span class="keywordtype">object</span>.isArray() == <span class="keyword">false</span>)</div>
 <div class="line">{</div>
 <div class="line">     writeError(ERROR_INVALID_COMMAND_RESULT);</div>
-<div class="line"> </div>
-<div class="line">        <span class="comment">// index points to the end of the &quot;object&quot;</span></div>
-<div class="line">        crashAnalysis(&amp;command_result[index]);</div>
 <div class="line"> </div>
 <div class="line">        <span class="keywordflow">return</span>;</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a>&amp; array = <span class="keywordtype">object</span>.asArray();</div>
 <div class="line"> </div>
-<div class="line">constexpr <span class="keywordtype">size_t</span> error_index = 1;</div>
-<div class="line">constexpr <span class="keywordtype">size_t</span> error_code_index = 2;</div>
-<div class="line"><span class="keywordflow">if</span>(array(error_index).<span class="keywordtype">boolean</span> == <span class="keyword">true</span>)</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_index = 1;</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_code_index = 2;</div>
+<div class="line"><span class="keywordflow">if</span>(array(result_index).<span class="keywordtype">boolean</span> == <span class="keyword">true</span>)</div>
 <div class="line">{</div>
-<div class="line">        writeError(array(error_code_index).int64_);</div>
+<div class="line">        writeError(array(result_code_index).int64_);</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// index points to the end of the &quot;object&quot;</span></div>
+<div class="line">        crashAnalysis(&amp;command_result[index]);</div>
 <div class="line">}</div>
 </div><!-- fragment --></dd></dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Add error codes.<ul>
-<li>Error_None</li>
-<li>Error_Bad_Format_Type</li>
-<li>Error_Incomplete </li>
-</ul>
-</dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The Object </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">data</td><td>The packed data </td></tr>
     <tr><td class="paramname">index</td><td>The starting index </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a4de2ff177cd477dd5288c26132124be7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4de2ff177cd477dd5288c26132124be7">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Object zakero::messagepack::deserialize </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint8_t &gt; &amp;&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t &amp;&#160;</td>
+          <td class="paramname"><em>index</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::error_code &amp;&#160;</td>
+          <td class="paramname"><em>error</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>The packed vector of <code>data</code> will be converted into an object that can be queried and used.</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;uint8_t&gt; command_result = get_reply(command_id);</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a> object;</div>
+<div class="line"><span class="keywordtype">size_t</span>                      index;</div>
+<div class="line">std::error_code             error;</div>
+<div class="line"><span class="keywordtype">object</span> = <a class="code" href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a>(command_result, index, error);</div>
+<div class="line"><span class="keywordflow">if</span>(error)</div>
+<div class="line">{</div>
+<div class="line">     writeError(ERROR_INVALID_COMMAND_RESULT);</div>
+<div class="line"> </div>
+<div class="line">        <span class="keywordflow">return</span>;</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a>&amp; array = <span class="keywordtype">object</span>.asArray();</div>
+<div class="line"> </div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_index = 1;</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_code_index = 2;</div>
+<div class="line"><span class="keywordflow">if</span>(array(result_index).<span class="keywordtype">boolean</span> == <span class="keyword">false</span>)</div>
+<div class="line">{</div>
+<div class="line">        writeError(array(result_code_index).int64_);</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// index points to the end of the &quot;object&quot;</span></div>
+<div class="line">        crashAnalysis(&amp;command_result[index]);</div>
+<div class="line">}</div>
+</div><!-- fragment --></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The Object </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>The packed data </td></tr>
+    <tr><td class="paramname">index</td><td>The starting index </td></tr>
+    <tr><td class="paramname">error</td><td>The error code </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a9cdea4a372e10a0f4137f1431ccd32cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9cdea4a372e10a0f4137f1431ccd32cd">&#9670;&nbsp;</a></span>deserialize() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Object zakero::messagepack::deserialize </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; uint8_t &gt; &amp;&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::error_code &amp;&#160;</td>
+          <td class="paramname"><em>error</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>The packed vector of <code>data</code> will be converted into an object that can be queried and used.</p>
+<dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line">std::vector&lt;uint8_t&gt; command_result = get_reply(command_id);</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a> object;</div>
+<div class="line">std::error_code             error;</div>
+<div class="line"><span class="keywordtype">object</span> = <a class="code" href="Zakero__MessagePack_8h.html#a469fdee121975543ef584a630324e950">zakero::messagepack::deserialize</a>(command_result, error);</div>
+<div class="line"><span class="keywordflow">if</span>(error)</div>
+<div class="line">{</div>
+<div class="line">     writeError(ERROR_INVALID_COMMAND_RESULT);</div>
+<div class="line"> </div>
+<div class="line">        <span class="keywordflow">return</span>;</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a>&amp; array = <span class="keywordtype">object</span>.asArray();</div>
+<div class="line"> </div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_index = 1;</div>
+<div class="line">constexpr <span class="keywordtype">size_t</span> result_code_index = 2;</div>
+<div class="line"><span class="keywordflow">if</span>(array(result_index).<span class="keywordtype">boolean</span> == <span class="keyword">true</span>)</div>
+<div class="line">{</div>
+<div class="line">        writeError(array(result_code_index).int64_);</div>
+<div class="line">}</div>
+</div><!-- fragment --></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The Object </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>The packed data </td></tr>
+    <tr><td class="paramname">error</td><td>The error code </td></tr>
   </table>
   </dd>
 </dl>
@@ -499,7 +670,7 @@ Functions</h2></td></tr>
 <div class="line"><span class="keywordtype">char</span> buf[128];</div>
 <div class="line">std::strftime(buf, <span class="keyword">sizeof</span>(buf), <span class="stringliteral">&quot;%D %T&quot;</span>, std::gmtime(&amp;ts.tv_sec));</div>
 <div class="line">std::printf(<span class="stringliteral">&quot;Time: %s.%09ld UTC\n&quot;</span>, buf, ts.tv_nsec);</div>
-<div class="ttc" id="aZakero__MessagePack_8h_html_ae0bd8add53c28acf3debda252fbff85e"><div class="ttname"><a href="Zakero__MessagePack_8h.html#ae0bd8add53c28acf3debda252fbff85e">zakero::messagepack::extensionTimestampConvert</a></div><div class="ttdeci">struct timespec extensionTimestampConvert(const Object &amp;) noexcept</div><div class="ttdoc">Convert MessagePack Timestamp extension into a struct timespec.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:3744</div></div>
+<div class="ttc" id="aZakero__MessagePack_8h_html_ae0bd8add53c28acf3debda252fbff85e"><div class="ttname"><a href="Zakero__MessagePack_8h.html#ae0bd8add53c28acf3debda252fbff85e">zakero::messagepack::extensionTimestampConvert</a></div><div class="ttdeci">struct timespec extensionTimestampConvert(const Object &amp;) noexcept</div><div class="ttdoc">Convert MessagePack Timestamp extension into a struct timespec.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:3859</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>A <code>struct timespec</code>. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -818,6 +989,12 @@ Functions</h2></td></tr>
 <div class="line">reply(host_ip, result);</div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The packed data. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">array</td><td>The Array to serialize </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -850,11 +1027,17 @@ Functions</h2></td></tr>
 <div class="line">ext.<a class="code" href="structzakero_1_1messagepack_1_1Ext.html#a19c37a7ecdc3abbf2c8710058329a910">data</a> = std::vector&lt;uint8_t&gt;(16, <span class="charliteral">&#39;_&#39;</span>);</div>
 <div class="line"> </div>
 <div class="line">std::vector&lt;uint8_t&gt; result = <a class="code" href="Zakero__MessagePack_8h.html#af9279e09dcf1d0a4f971a0c23eb2bbc0">zakero::messagepack::serialize</a>(ext);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html">zakero::messagepack::Ext</a></div><div class="ttdoc">Extension Data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:264</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_a19c37a7ecdc3abbf2c8710058329a910"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#a19c37a7ecdc3abbf2c8710058329a910">zakero::messagepack::Ext::data</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; data</div><div class="ttdoc">Extension binary data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:265</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_aefcfd23033c4325da30be0f00f3db4c1"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#aefcfd23033c4325da30be0f00f3db4c1">zakero::messagepack::Ext::type</a></div><div class="ttdeci">int8_t type</div><div class="ttdoc">A unique identifier for the extension.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:266</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html">zakero::messagepack::Ext</a></div><div class="ttdoc">Extension Data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:299</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_a19c37a7ecdc3abbf2c8710058329a910"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#a19c37a7ecdc3abbf2c8710058329a910">zakero::messagepack::Ext::data</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; data</div><div class="ttdoc">Extension binary data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:300</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_aefcfd23033c4325da30be0f00f3db4c1"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#aefcfd23033c4325da30be0f00f3db4c1">zakero::messagepack::Ext::type</a></div><div class="ttdeci">int8_t type</div><div class="ttdoc">A unique identifier for the extension.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:301</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The packed data. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ext</td><td>The Ext to serialize </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -888,10 +1071,16 @@ Functions</h2></td></tr>
 <div class="line">std::vector&lt;uint8_t&gt; result = <a class="code" href="Zakero__MessagePack_8h.html#af9279e09dcf1d0a4f971a0c23eb2bbc0">zakero::messagepack::serialize</a>(map);</div>
 <div class="line"> </div>
 <div class="line">reply(host_ip, result);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a></div><div class="ttdoc">A Key/Value collection of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:273</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html_a35dc3a704506c7140ccb56797a90e950"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html#a35dc3a704506c7140ccb56797a90e950">zakero::messagepack::Map::set</a></div><div class="ttdeci">size_t set(Object &amp;, Object &amp;) noexcept</div><div class="ttdoc">Set a key/value pair.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:2768</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a></div><div class="ttdoc">A Key/Value collection of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:308</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html_a35dc3a704506c7140ccb56797a90e950"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html#a35dc3a704506c7140ccb56797a90e950">zakero::messagepack::Map::set</a></div><div class="ttdeci">size_t set(Object &amp;, Object &amp;) noexcept</div><div class="ttdoc">Set a key/value pair.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:2883</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The packed data. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">map</td><td>The Map to serialize </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -926,6 +1115,12 @@ Functions</h2></td></tr>
 <div class="line">reply(host_ip, result);</div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The packed data. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">object</td><td>The Object to serialize </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -1058,6 +1253,22 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="a121d0de3b610cce1ad322a4311090512"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a121d0de3b610cce1ad322a4311090512">&#9670;&nbsp;</a></span>ErrorCategory</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">ErrorCategory_ zakero::messagepack::ErrorCategory</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>This one instance will be used by all error codes. </p>
 
 </div>
 </div>

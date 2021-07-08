@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['cursorconfig_252',['CursorConfig',['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1CursorConfig',1,'zakero::Yetani']]]
+  ['cursorconfig_254',['CursorConfig',['../classzakero_1_1Yetani.html#structzakero_1_1Yetani_1_1CursorConfig',1,'zakero::Yetani']]]
 ];

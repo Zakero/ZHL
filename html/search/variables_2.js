@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['flags_391',['flags',['../classzakero_1_1Yetani.html#a4ecfe61026e0e3788c6093a2fabee0ba',1,'zakero::Yetani::Output']]],
-  ['format_392',['format',['../classzakero_1_1Yetani.html#a824c2efa9c835cf0fb268f9b79a376ba',1,'zakero::Yetani::CursorConfig']]]
+  ['errorcategory_394',['ErrorCategory',['../Zakero__MessagePack_8h.html#a121d0de3b610cce1ad322a4311090512',1,'zakero::messagepack']]]
 ];

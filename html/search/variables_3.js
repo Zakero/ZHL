@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['group_393',['group',['../classzakero_1_1Xenium.html#aef32fd8a4ba6e933d499133a88c158f8',1,'zakero::Xenium::KeyModifier::group()'],['../classzakero_1_1Yetani.html#aa886e811f5d7ea12dac0b5964cbc160f',1,'zakero::Yetani::KeyModifier::group()']]]
+  ['flags_395',['flags',['../classzakero_1_1Yetani.html#a4ecfe61026e0e3788c6093a2fabee0ba',1,'zakero::Yetani::Output']]],
+  ['format_396',['format',['../classzakero_1_1Yetani.html#a824c2efa9c835cf0fb268f9b79a376ba',1,'zakero::Yetani::CursorConfig']]]
 ];

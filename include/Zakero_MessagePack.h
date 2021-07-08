@@ -172,8 +172,6 @@
  * \author Andrew "Zakero" Moore
  * - Original Author
  *
- *
- * \todo Add error code support.
  */
 
 

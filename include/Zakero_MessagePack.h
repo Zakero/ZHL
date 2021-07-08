@@ -483,6 +483,11 @@ bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepac
 // }}}
 // {{{ Documentation
 
+/**
+ * \def X
+ *
+ * \brief Convert macro data into code.
+ */
 
 // }}}
 
@@ -4455,23 +4460,21 @@ TEST_CASE("extension/timestamp/convert/96bit")
  * if(object.isArray() == false)
  * {
  * 	writeError(ERROR_INVALID_COMMAND_RESULT);
+ *
  * 	return;
  * }
  *
  * zakero::messagepack::Array& array = object.asArray();
  *
- * constexpr size_t error_index = 1;
- * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * constexpr size_t success_index = 1;
+ * constexpr size_t result_code_index = 2;
+ * if(array(success_index).boolean == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(result_code_index).int64_);
  * }
  * \endparcode
  *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
+ * \return The Object
  */
 Object deserialize(const std::vector<uint8_t>& data ///< The packed data
 	) noexcept
@@ -4493,32 +4496,26 @@ Object deserialize(const std::vector<uint8_t>& data ///< The packed data
  * std::vector<uint8_t> command_result = get_reply(command_id);
  *
  * zakero::messagepack::Object object;
- * size_t index;
- * object = zakero::messagepack::deserialize(command_result, index);
- * if(object.isArray() == false)
+ * std::error_code             error;
+ * object = zakero::messagepack::deserialize(command_result, error);
+ * if(error)
  * {
  *	writeError(ERROR_INVALID_COMMAND_RESULT);
- *
- * 	// index points to the end of the "object"
- * 	crashAnalysis(&command_result[index]);
  *
  * 	return;
  * }
  *
  * zakero::messagepack::Array& array = object.asArray();
  *
- * constexpr size_t error_index = 1;
- * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * constexpr size_t result_index = 1;
+ * constexpr size_t result_code_index = 2;
+ * if(array(result_index).boolean == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(result_code_index).int64_);
  * }
  * \endparcode
  *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
+ * \return The Object
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, std::error_code&                     error ///< The error code
@@ -4540,32 +4537,29 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
  * std::vector<uint8_t> command_result = get_reply(command_id);
  *
  * zakero::messagepack::Object object;
- * size_t index;
+ * size_t                      index;
  * object = zakero::messagepack::deserialize(command_result, index);
  * if(object.isArray() == false)
  * {
  *	writeError(ERROR_INVALID_COMMAND_RESULT);
- *
- * 	// index points to the end of the "object"
- * 	crashAnalysis(&command_result[index]);
  *
  * 	return;
  * }
  *
  * zakero::messagepack::Array& array = object.asArray();
  *
- * constexpr size_t error_index = 1;
- * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * constexpr size_t result_index = 1;
+ * constexpr size_t result_code_index = 2;
+ * if(array(result_index).boolean == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(result_code_index).int64_);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
  * }
  * \endparcode
  *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
+ * \return The Object
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
@@ -4577,6 +4571,41 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 }
 
 
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * size_t                      index;
+ * std::error_code             error;
+ * object = zakero::messagepack::deserialize(command_result, index, error);
+ * if(error)
+ * {
+ *	writeError(ERROR_INVALID_COMMAND_RESULT);
+ *
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t result_index = 1;
+ * constexpr size_t result_code_index = 2;
+ * if(array(result_index).boolean == false)
+ * {
+ * 	writeError(array(result_code_index).int64_);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
+ * }
+ * \endparcode
+ *
+ * \return The Object
+ */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
 	, std::error_code&                     error ///< The error code
@@ -5717,7 +5746,7 @@ TEST_CASE("deserialize/error")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Array& array
+std::vector<uint8_t> serialize(const Array& array ///< The Array to serialize
 	) noexcept
 {
 	std::vector<uint8_t> vector;
@@ -5743,7 +5772,7 @@ std::vector<uint8_t> serialize(const Array& array
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Ext& ext
+std::vector<uint8_t> serialize(const Ext& ext ///< The Ext to serialize
 	) noexcept
 {
 	std::vector<uint8_t> vector;
@@ -6122,7 +6151,7 @@ TEST_CASE("serialize/ext (ext32)")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Map& map
+std::vector<uint8_t> serialize(const Map& map ///< The Map to serialize
 	) noexcept
 {
 	std::vector<uint8_t> vector;
@@ -6368,7 +6397,7 @@ TEST_CASE("serialize/map (map32)")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Object& object
+std::vector<uint8_t> serialize(const Object& object ///< The Object to serialize
 	) noexcept
 {
 	std::vector<uint8_t> vector;

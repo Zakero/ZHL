@@ -143,10 +143,15 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.0__
+ * - Beta Release
+ * - Added error checks to the deserializer
+ *
  * __v0.3.1__
  * - Fixed issues found by CLang++
  *
  * __v0.3.0__
+ * - Alpha Release
  * - Added support for Ext
  * - Added support for Maps
  * - Added support for the Timestamp extension
@@ -167,6 +172,7 @@
  * \author Andrew "Zakero" Moore
  * - Original Author
  *
+ *
  * \todo Add error code support.
  */
 
@@ -180,6 +186,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -198,7 +205,7 @@
 /**
  * \internal
  *
- * \brief _Error_Table_
+ * \brief Error_Table
  *
  * An X-Macro table of error codes. The columns are:
  * -# __ErrorName__<br>
@@ -212,8 +219,12 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_MESSAGEPACK__ERROR_DATA \
-	X(Error_None    ,  0 , "No Error"                                                        ) \
-	X(Error_Unknown ,  1 , "An unknown error has occurred"                                   ) \
+	X(Error_None                ,  0 , "No Error"                               ) \
+	X(Error_Unknown             ,  1 , "An unknown error has occurred"          ) \
+	X(Error_Invalid_Format_Type ,  2 , "An invalid Format Type was encountered" ) \
+	X(Error_Incomplete          ,  3 , "The data to deserialize is incomplete"  ) \
+	X(Error_No_Data             ,  4 , "No data to deserialize"                 ) \
+	X(Error_Invalid_Index       ,  5 , "Invalid starting index to deserialize"  ) \
 
 // }}}
 
@@ -224,6 +235,27 @@
 
 namespace zakero::messagepack
 {
+	// {{{ Error
+
+	class ErrorCategory_
+		: public std::error_category
+	{
+		public:
+			constexpr ErrorCategory_() noexcept {};
+
+			[[nodiscard]] const char* name() const noexcept final override;
+			[[nodiscard]] std::string message(int condition) const noexcept final override;
+	};
+
+	extern ErrorCategory_ ErrorCategory;
+
+#define X(name_, val_, mesg_) \
+	const std::error_code name_(val_, ErrorCategory);
+	ZAKERO_MESSAGEPACK__ERROR_DATA
+#undef X
+
+	// }}}
+
 		struct Array;
 		struct Ext;
 		struct Map;
@@ -343,7 +375,9 @@ namespace zakero::messagepack
 		// {{{ Utilities
 
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, std::error_code&) noexcept;
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
+		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Ext&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&) noexcept;
@@ -403,47 +437,48 @@ bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepac
  * - The internal format type name
  * - The type id
  * - A type id mask (the complement is used to get the value)
+ * - The minimum size of the format, including the ID byte
  * - The type spec name
  */
 #define ZAKERO_MESSAGEPACK__FORMAT_TYPE \
-	/* Format Name    Format Id   Format Mask   Format Name      */ \
-	X(Fixed_Int_Pos , 0x00      , 0b10000000  , "positive fixint" ) \
-	X(Fixed_Map     , 0x80      , 0b11110000  , "fixmap"          ) \
-	X(Fixed_Array   , 0x90      , 0b11110000  , "fixarray"        ) \
-	X(Fixed_Str     , 0xa0      , 0b11100000  , "fixstr"          ) \
-	X(Nill          , 0xc0      , 0b11111111  , "nill"            ) \
-	X(never_used    , 0xc1      , 0b00000000  , "(never used)"    ) \
-	X(False         , 0xc2      , 0b11111111  , "false"           ) \
-	X(True          , 0xc3      , 0b11111111  , "true"            ) \
-	X(Bin8          , 0xc4      , 0b11111111  , "bin 8"           ) \
-	X(Bin16         , 0xc5      , 0b11111111  , "bin 16"          ) \
-	X(Bin32         , 0xc6      , 0b11111111  , "bin 32"          ) \
-	X(Ext8          , 0xc7      , 0b11111111  , "ext 8"           ) \
-	X(Ext16         , 0xc8      , 0b11111111  , "ext 16"          ) \
-	X(Ext32         , 0xc9      , 0b11111111  , "ext 32"          ) \
-	X(Float32       , 0xca      , 0b11111111  , "float 32"        ) \
-	X(Float64       , 0xcb      , 0b11111111  , "float 64"        ) \
-	X(Uint8         , 0xcc      , 0b11111111  , "uint 8"          ) \
-	X(Uint16        , 0xcd      , 0b11111111  , "uint 16"         ) \
-	X(Uint32        , 0xce      , 0b11111111  , "uint 32"         ) \
-	X(Uint64        , 0xcf      , 0b11111111  , "uint 64"         ) \
-	X(Int8          , 0xd0      , 0b11111111  , "int 8"           ) \
-	X(Int16         , 0xd1      , 0b11111111  , "int 16"          ) \
-	X(Int32         , 0xd2      , 0b11111111  , "int 32"          ) \
-	X(Int64         , 0xd3      , 0b11111111  , "int 64"          ) \
-	X(Fixed_Ext1    , 0xd4      , 0b11111111  , "fixext 1"        ) \
-	X(Fixed_Ext2    , 0xd5      , 0b11111111  , "fixext 2"        ) \
-	X(Fixed_Ext4    , 0xd6      , 0b11111111  , "fixext 4"        ) \
-	X(Fixed_Ext8    , 0xd7      , 0b11111111  , "fixext 8"        ) \
-	X(Fixed_Ext16   , 0xd8      , 0b11111111  , "fixext 16"       ) \
-	X(Str8          , 0xd9      , 0b11111111  , "str 8"           ) \
-	X(Str16         , 0xda      , 0b11111111  , "str 16"          ) \
-	X(Str32         , 0xdb      , 0b11111111  , "str 32"          ) \
-	X(Array16       , 0xdc      , 0b11111111  , "array 16"        ) \
-	X(Array32       , 0xdd      , 0b11111111  , "array 32"        ) \
-	X(Map16         , 0xde      , 0b11111111  , "map 16"          ) \
-	X(Map32         , 0xdf      , 0b11111111  , "map 32"          ) \
-	X(Fixed_Int_Neg , 0xe0      , 0b11100000  , "negative fixint" ) \
+	/* Variable       Id          Mask          Size      Name         */ \
+	X(Fixed_Int_Pos , 0x00      , 0b10000000  , 1      , "positive fixint" ) \
+	X(Fixed_Map     , 0x80      , 0b11110000  , 1      , "fixmap"          ) \
+	X(Fixed_Array   , 0x90      , 0b11110000  , 1      , "fixarray"        ) \
+	X(Fixed_Str     , 0xa0      , 0b11100000  , 1      , "fixstr"          ) \
+	X(Nill          , 0xc0      , 0b11111111  , 1      , "nill"            ) \
+	X(Never_Used    , 0xc1      , 0b11111111  , 1      , "(never used)"    ) \
+	X(False         , 0xc2      , 0b11111111  , 1      , "false"           ) \
+	X(True          , 0xc3      , 0b11111111  , 1      , "true"            ) \
+	X(Bin8          , 0xc4      , 0b11111111  , 2      , "bin 8"           ) \
+	X(Bin16         , 0xc5      , 0b11111111  , 259    , "bin 16"          ) \
+	X(Bin32         , 0xc6      , 0b11111111  , 65541  , "bin 32"          ) \
+	X(Ext8          , 0xc7      , 0b11111111  , 3      , "ext 8"           ) \
+	X(Ext16         , 0xc8      , 0b11111111  , 260    , "ext 16"          ) \
+	X(Ext32         , 0xc9      , 0b11111111  , 65542  , "ext 32"          ) \
+	X(Float32       , 0xca      , 0b11111111  , 5      , "float 32"        ) \
+	X(Float64       , 0xcb      , 0b11111111  , 9      , "float 64"        ) \
+	X(Uint8         , 0xcc      , 0b11111111  , 2      , "uint 8"          ) \
+	X(Uint16        , 0xcd      , 0b11111111  , 3      , "uint 16"         ) \
+	X(Uint32        , 0xce      , 0b11111111  , 5      , "uint 32"         ) \
+	X(Uint64        , 0xcf      , 0b11111111  , 9      , "uint 64"         ) \
+	X(Int8          , 0xd0      , 0b11111111  , 2      , "int 8"           ) \
+	X(Int16         , 0xd1      , 0b11111111  , 3      , "int 16"          ) \
+	X(Int32         , 0xd2      , 0b11111111  , 5      , "int 32"          ) \
+	X(Int64         , 0xd3      , 0b11111111  , 9      , "int 64"          ) \
+	X(Fixed_Ext1    , 0xd4      , 0b11111111  , 3      , "fixext 1"        ) \
+	X(Fixed_Ext2    , 0xd5      , 0b11111111  , 4      , "fixext 2"        ) \
+	X(Fixed_Ext4    , 0xd6      , 0b11111111  , 6      , "fixext 4"        ) \
+	X(Fixed_Ext8    , 0xd7      , 0b11111111  , 10     , "fixext 8"        ) \
+	X(Fixed_Ext16   , 0xd8      , 0b11111111  , 18     , "fixext 16"       ) \
+	X(Str8          , 0xd9      , 0b11111111  , 34     , "str 8"           ) \
+	X(Str16         , 0xda      , 0b11111111  , 259    , "str 16"          ) \
+	X(Str32         , 0xdb      , 0b11111111  , 65541  , "str 32"          ) \
+	X(Array16       , 0xdc      , 0b11111111  , 19     , "array 16"        ) \
+	X(Array32       , 0xdd      , 0b11111111  , 65541  , "array 32"        ) \
+	X(Map16         , 0xde      , 0b11111111  , 35     , "map 16"          ) \
+	X(Map32         , 0xdf      , 0b11111111  , 327429 , "map 32"          ) \
+	X(Fixed_Int_Neg , 0xe0      , 0b11100000  , 1      , "negative fixint" ) \
 
 // }}}
 // {{{ Documentation
@@ -462,7 +497,7 @@ namespace
 	 */
 	enum class Format : uint8_t
 	{
-#define X(type_, id_, mask_, text_) \
+#define X(type_, id_, mask_, size_, text_) \
 		type_ = id_, \
 
 		ZAKERO_MESSAGEPACK__FORMAT_TYPE
@@ -476,7 +511,7 @@ namespace
 	 * Useful for debugging.
 	std::map<uint8_t, std::string> Format_Name =
 	{
-	#define X(format_, id_, mask_, name_) \
+	#define X(type_, id_, mask_, size_, text_) \
 		{ uint8_t(id_ & mask_), std::string(name_) },
 
 		ZAKERO_MESSAGEPACK__FORMAT_TYPE
@@ -489,7 +524,7 @@ namespace
 	 * \name Format ID Masks
 	 * \{
 	 */
-#define X(type_, id_, mask_, text_) \
+#define X(type_, id_, mask_, size_, text_) \
 	constexpr uint8_t type_ ## _Mask  = mask_;  \
 
 	ZAKERO_MESSAGEPACK__FORMAT_TYPE
@@ -503,7 +538,7 @@ namespace
 	 * \name Format Value Masks
 	 * \{
 	 */
-#define X(type_, id_, mask_, text_) \
+#define X(type_, id_, mask_, size_, text_) \
 	constexpr uint8_t type_ ## _Value = (uint8_t)~mask_;\
 
 	ZAKERO_MESSAGEPACK__FORMAT_TYPE
@@ -559,6 +594,24 @@ namespace
 	 * \}
 	 */
 
+	
+	/**
+	 * \brief Get the minimum byte size of the Format ID
+	 *
+	 * \return The size.
+	 */
+	constexpr size_t formatSize(Format id ///< The Format ID
+		) noexcept
+	{
+		switch(id)
+		{
+#define X(type_, id_, mask_, size_, text_) \
+			case Format::type_: return size_;
+			ZAKERO_MESSAGEPACK__FORMAT_TYPE
+#undef X
+			default: return 0;
+		}
+	}
 
 	void serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
 	void serialize_(const messagepack::Ext&, std::vector<uint8_t>&) noexcept;
@@ -1003,12 +1056,7 @@ namespace
 		Convert.int8   = ext.type;
 		vector.push_back(Convert.uint8);
 
-		if(data_size == 0)
-		{
-			vector.reserve(vector.size() + 1);
-			vector.push_back(0);
-		}
-		else
+		if(data_size > 0)
 		{
 			size_t index = vector.size();
 			vector.resize(vector.size() + data_size);
@@ -1065,6 +1113,64 @@ namespace
 		}
 	}
 }
+
+// }}}
+// {{{ Error
+
+/**
+ * \class ErrorCategary_
+ *
+ * \brief Error categories.
+ *
+ * This class holds all the error categories for the error codes. The data in 
+ * this class is built from the ZAKERO_MESSAGEPACK__ERROR_DATA macro.
+ */
+
+
+/**
+ * \fn ErrorCategory_::ErrorCategory_()
+ *
+ * \brief Constructor
+ */
+
+
+/**
+ * \brief The name of the error category.
+ * 
+ * \return A C-Style string.
+ */
+const char* ErrorCategory_::name() const noexcept
+{
+	return "zakero::messagepack";
+}
+
+
+/**
+ * \brief A description message.
+ *
+ * \return The message.
+ */
+std::string ErrorCategory_::message(int condition ///< The error code.
+	) const noexcept
+{
+	switch(condition)
+	{
+#define X(name_, val_, mesg_) \
+		case val_: return mesg_;
+		ZAKERO_MESSAGEPACK__ERROR_DATA
+#undef X
+	}
+
+	return "Unknown error condition";
+}
+
+
+/**
+ * \brief A single instance.
+ *
+ * This one instance will be used by all error codes.
+ */
+ErrorCategory_ ErrorCategory;
 
 // }}}
 // {{{ Array
@@ -1958,6 +2064,7 @@ TEST_CASE("array/append/ext (copy)")
 	array.append(ext_32); count++;
 
 	CHECK(array.size() == count);
+	CHECK(ext_0.data.size()  == 0);
 	CHECK(ext_16.data.size() == 16);
 	CHECK(ext_32.data.size() == 32);
 
@@ -1974,12 +2081,12 @@ TEST_CASE("array/append/ext (copy)")
 	CHECK(test.size() == count);
 
 	size_t index = 0;
-	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).isExt() == true);
 	CHECK(test.object(index).asExt().type == 0);
 	CHECK(test.object(index).asExt().data.size() == 0);
 
 	index++;
-	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).isExt() == true);
 	CHECK(test.object(index).asExt().type == 16);
 	CHECK(test.object(index).asExt().data.size() == 16);
 	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
@@ -1988,7 +2095,7 @@ TEST_CASE("array/append/ext (copy)")
 	}
 
 	index++;
-	CHECK(test.object(index).isExt());
+	CHECK(test.object(index).isExt() == true);
 	CHECK(test.object(index).asExt().type == 32);
 	CHECK(test.object(index).asExt().data.size() == 32);
 	for(size_t i = 0; i < test.object(index).asExt().data.size(); i++)
@@ -4369,9 +4476,57 @@ TEST_CASE("extension/timestamp/convert/96bit")
 Object deserialize(const std::vector<uint8_t>& data ///< The packed data
 	) noexcept
 {
+	size_t          index = 0;
+	std::error_code error = {};
+
+	return deserialize(data, index, error);
+}
+
+
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * size_t index;
+ * object = zakero::messagepack::deserialize(command_result, index);
+ * if(object.isArray() == false)
+ * {
+ *	writeError(ERROR_INVALID_COMMAND_RESULT);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
+ *
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t error_index = 1;
+ * constexpr size_t error_code_index = 2;
+ * if(array(error_index).boolean == true)
+ * {
+ * 	writeError(array(error_code_index).int64_);
+ * }
+ * \endparcode
+ *
+ * \todo Add error codes.
+ *       - Error_None
+ *       - Error_Bad_Format_Type
+ *       - Error_Incomplete
+ */
+Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
+	, std::error_code&                     error ///< The error code
+	) noexcept
+{
 	size_t index = 0;
 
-	return deserialize(data, index);
+	return deserialize(data, index, error);
 }
 
 
@@ -4416,9 +4571,49 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
 	) noexcept
 {
-	const uint8_t byte = data[index++];
+	std::error_code error = {};
 
-	switch((Format)byte)
+	return deserialize(data, index, error);
+}
+
+
+Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
+	, size_t&                              index ///< The starting index
+	, std::error_code&                     error ///< The error code
+	) noexcept
+{
+	error = Error_None;
+
+	if(data.size() == 0)
+	{
+		error = Error_No_Data;
+		return {};
+	}
+
+	if(index >= data.size())
+	{
+		error = Error_Invalid_Index;
+		return {};
+	}
+
+	const uint8_t format_byte = data[index];
+	const Format  format_type = (Format)format_byte;
+
+	if((index + formatSize(format_type)) > data.size())
+	{
+		error = Error_Incomplete;
+		return {};
+	}
+
+	if(format_type == Format::Never_Used)
+	{
+		error = Error_Invalid_Format_Type;
+		return {};
+	}
+
+	index++;
+
+	switch(format_type)
 	{
 		case Format::Nill:
 			return Object{};
@@ -4510,6 +4705,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		{
 			const size_t length = data[index++];
 
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
+
 			std::string_view str((char*)&data[index], length);
 
 			index += length;
@@ -4523,6 +4724,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			const size_t length = Convert.uint64;
+
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
 
 			const std::string_view str((char*)&data[index], length);
 
@@ -4540,6 +4747,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte0 = data[index++];
 			const size_t length = Convert.uint64;
 
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
+
 			const std::string_view str((char*)&data[index], length);
 
 			index += length;
@@ -4550,6 +4763,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		case Format::Bin8:
 		{
 			const size_t length = data[index++];
+
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
 
 			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[index], length);
@@ -4565,6 +4784,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			const size_t length = Convert.uint64;
+
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
 
 			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[index], length);
@@ -4582,6 +4807,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			const size_t length = Convert.uint64;
+
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
 
 			std::vector<uint8_t> vector(length);
 			memcpy((void*)vector.data(), (void*)&data[index], length);
@@ -4602,7 +4833,11 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 			for(size_t i = 0; i < count; i++)
 			{
-				object.asArray().append(deserialize(data, index));
+				object.asArray().append(deserialize(data, index, error));
+				if(error)
+				{
+					return {};
+				}
 			}
 
 			return object;
@@ -4621,7 +4856,11 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 			for(size_t i = 0; i < count; i++)
 			{
-				object.asArray().append(deserialize(data, index));
+				object.asArray().append(deserialize(data, index, error));
+				if(error)
+				{
+					return {};
+				}
 			}
 
 			return object;
@@ -4638,8 +4877,17 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 			for(size_t i = 0; i < count; i++)
 			{
-				Object key = deserialize(data, index);
-				Object val = deserialize(data, index);
+				Object key = deserialize(data, index, error);
+				if(error)
+				{
+					return {};
+				}
+
+				Object val = deserialize(data, index, error);
+				if(error)
+				{
+					return {};
+				}
 
 				object.asMap().set(std::move(key), std::move(val));
 			}
@@ -4660,8 +4908,17 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 			for(size_t i = 0; i < count; i++)
 			{
-				Object key = deserialize(data, index);
-				Object val = deserialize(data, index);
+				Object key = deserialize(data, index, error);
+				if(error)
+				{
+					return {};
+				}
+
+				Object val = deserialize(data, index, error);
+				if(error)
+				{
+					return {};
+				}
 
 				object.asMap().set(std::move(key), std::move(val));
 			}
@@ -4762,16 +5019,22 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 			const size_t data_size = data[index++];
 
+			if((index + data_size) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
+
 			Convert.uint64 = 0;
 			Convert.uint8  = data[index++];
 			ext.type = Convert.int8;
 
-			ext.data.resize(data_size);
-			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
-
-			// If data_size == zero, skip the place-holder byte.
-			// If data_size >  zero, move to next byte.
-			index += data_size + 1;
+			if(data_size > 0)
+			{
+				ext.data.resize(data_size);
+				memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
+				index += data_size;
+			}
 
 			return object;
 		}
@@ -4785,6 +5048,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			const size_t data_size = Convert.uint16;
+
+			if((index + data_size) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
 
 			Convert.uint64 = 0;
 			Convert.uint8  = data[index++];
@@ -4810,6 +5079,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 			Convert_Byte0 = data[index++];
 			const size_t data_size = Convert.uint32;
 
+			if((index + data_size) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
+
 			Convert.uint64 = 0;
 			Convert.uint8  = data[index++];
 			ext.type = Convert.int8;
@@ -4827,30 +5102,28 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		case Format::Fixed_Array:
 		case Format::Fixed_Str:
 		case Format::Fixed_Map:
+		case Format::Never_Used:
 			// Handled outside of this swith() statement
-			break;
-
-		case Format::never_used:
 			break;
 	}
 
-	if((byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
+	if((format_byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
 	{
-		const int64_t value = byte & (uint8_t)Fixed_Int_Pos_Value;
+		const int64_t value = format_byte & (uint8_t)Fixed_Int_Pos_Value;
 
 		return Object{value};
 	}
 
-	if((byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
+	if((format_byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
 	{
-		const int64_t value = (int8_t)(byte & Fixed_Int_Neg_Value) - 32;
+		const int64_t value = (int8_t)(format_byte & Fixed_Int_Neg_Value) - 32;
 
 		return Object{value};
 	}
 	
-	if((byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
+	if((format_byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
 	{
-		const size_t length = byte & Fixed_Str_Value;
+		const size_t length = format_byte & Fixed_Str_Value;
 
 		if(length == 0)
 		{
@@ -4858,6 +5131,12 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		}
 		else
 		{
+			if((index + length) > data.size())
+			{
+				error = Error_Incomplete;
+				return Object{};
+			}
+
 			std::string_view str((char*)&data[index], length);
 
 			index += length;
@@ -4866,30 +5145,44 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		}
 	}
 	
-	if((byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
+	if((format_byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
 	{
 		Object object = {Array{}};
 
-		const size_t count = byte & (uint8_t)Fixed_Array_Value;
+		const size_t count = format_byte & (uint8_t)Fixed_Array_Value;
 
 		for(size_t i = 0; i < count; i++)
 		{
-			object.asArray().append(deserialize(data, index));
+			object.asArray().append(deserialize(data, index, error));
+
+			if(error)
+			{
+				return {};
+			}
 		}
 
 		return object;
 	}
 	
-	if((byte & (uint8_t)Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map)
+	if((format_byte & (uint8_t)Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map)
 	{
 		Object object = {Map{}};
 
-		const size_t count = byte & (uint8_t)Fixed_Map_Value;
+		const size_t count = format_byte & (uint8_t)Fixed_Map_Value;
 
 		for(size_t i = 0; i < count; i++)
 		{
-			Object key = deserialize(data, index);
-			Object val = deserialize(data, index);
+			Object key = deserialize(data, index, error);
+			if(error)
+			{
+				return {};
+			}
+
+			Object val = deserialize(data, index, error);
+			if(error)
+			{
+				return {};
+			}
 
 			object.asMap().set(std::move(key), std::move(val));
 		}
@@ -4899,6 +5192,509 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	
 	return {};
 }
+
+#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("deserialize/error")
+{
+	std::vector<uint8_t> data   = {};
+	std::error_code      error  = {};
+	Object               object = {};
+	size_t               index  = 0;
+
+	SUBCASE("no data")
+	{
+		object = deserialize(data, index, error);
+		CHECK(error           == Error_No_Data);
+		CHECK(index           == 0);
+		CHECK(object.isNull() == true);
+	}
+	
+	SUBCASE("invalid index")
+	{
+		data.push_back(0);
+		index = 10;
+
+		object = deserialize(data, index, error);
+		CHECK(error           == Error_Invalid_Index);
+		CHECK(index           == 10);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Never_Used")
+	{
+		data.push_back((uint8_t)Format::Never_Used);
+
+		object = deserialize(data, index, error);
+		CHECK(error           == Error_Invalid_Format_Type);
+		CHECK(index           == 0);
+		CHECK(object.isNull() == true);
+	}
+	
+	// The following format ID's can not be tested for incomplete data
+	// because the value is encoded in the Format ID itself:
+	// - Nill
+	// - True
+	// - False
+	// - Fixed_Int_Pos
+	// - Fixed_Int_Neg
+
+	SUBCASE("Uint8")
+	{
+		object = Object{(uint64_t)std::numeric_limits<uint8_t>::max()};
+		object = Object{uint64_t(0xff)};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Uint8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Uint16")
+	{
+		object = Object{(uint64_t)std::numeric_limits<uint16_t>::max()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Uint16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Uint32")
+	{
+		object = Object{(uint64_t)std::numeric_limits<uint32_t>::max()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Uint32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Uint64")
+	{
+		object = Object{(uint64_t)std::numeric_limits<uint64_t>::max()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Uint64);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Int8")
+	{
+		object = Object{std::numeric_limits<int8_t>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Int8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Int16")
+	{
+		object = Object{std::numeric_limits<int16_t>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Int16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Int32")
+	{
+		object = Object{std::numeric_limits<int32_t>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Int32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Int64")
+	{
+		object = Object{std::numeric_limits<int64_t>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Int64);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Float32")
+	{
+		object = Object{std::numeric_limits<float>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Float32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Float64")
+	{
+		object = Object{std::numeric_limits<double>::min()};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Float64);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Str")
+	{
+		object = Object{std::string(16, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK((data[0] & Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str);
+		CHECK(error                      == Error_Incomplete);
+		CHECK(index                      == index);
+		CHECK(object.isNull()            == true);
+	}
+
+	SUBCASE("Str8")
+	{
+		object = Object{std::string(32, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Str8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Str16")
+	{
+		object = Object{std::string(std::numeric_limits<uint8_t>::max() + 1, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Str16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Str32")
+	{
+		object = Object{std::string(std::numeric_limits<uint16_t>::max() + 1, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Str32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Bin8")
+	{
+		object = Object{std::vector<uint8_t>(0, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Bin8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Bin16")
+	{
+		object = Object{std::vector<uint8_t>(std::numeric_limits<uint8_t>::max() + 1, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Bin16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Bin32")
+	{
+		object = Object{std::vector<uint8_t>(std::numeric_limits<uint16_t>::max() + 1, 'X')};
+		data = serialize(object);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Bin32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Array")
+	{
+		// Check the Array itself
+		Array array;
+		array.object_vector = std::vector<Object>(8, Object{});
+		data = serialize(array);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK((data[0] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
+		CHECK(error                        == Error_Invalid_Index);
+		CHECK(index                        == index);
+		CHECK(object.isNull()              == true);
+
+		// Check the contents of the Array
+		index = 0;
+		array.object_vector = std::vector<Object>(1, Object{});
+		array.object(0) = Object{std::string("ABC")};
+		data = serialize(array);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK((data[0] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
+		CHECK(error                        == Error_Incomplete);
+		CHECK(index                        == index);
+		CHECK(object.isNull()              == true);
+	}
+
+	SUBCASE("Array16")
+	{
+		Array array;
+		array.object_vector = std::vector<Object>(16, Object{});
+		data = serialize(array);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Array16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Array32")
+	{
+		Array array;
+		array.object_vector = std::vector<Object>(std::numeric_limits<uint16_t>::max() + 1, Object{});
+		data = serialize(array);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Array32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Map")
+	{
+		// Check the Map itself
+		Map map;
+		map.set(Object{}, Object{});
+		data = serialize(map);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
+		CHECK(error                        == Error_Invalid_Index);
+		CHECK(index                        == index);
+		CHECK(object.isNull()              == true);
+
+		// Check the contents of the Map
+		index = 0;
+		map.set(Object{int64_t(0)}, Object{});
+		map.set(Object{int64_t(1)}, Object{std::string("Hello, World")});
+		data = serialize(map);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
+		CHECK(error                      == Error_Incomplete);
+		CHECK(index                      == index);
+		CHECK(object.isNull()            == true);
+	}
+
+	SUBCASE("Map16")
+	{
+		Map map;
+		for(size_t i = 0; i < 16; i++)
+		{
+			map.set(Object{int64_t(i)}, Object{});
+		}
+		data = serialize(map);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Map16);
+		CHECK(data[1]         == (uint8_t)Format::Fixed_Int_Pos);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+#if 0 // Takes too long
+	SUBCASE("Map32")
+	{
+		Map map;
+		for(size_t i = 0; i < (std::numeric_limits<uint16_t>::max() + 1) ; i++)
+		{
+			map.set(Object{int64_t(i)}, Object{});
+		}
+		data = serialize(map);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Map32);
+		CHECK(data[1]         == (uint8_t)Format::Fixed_Int_Pos);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+#endif
+
+	SUBCASE("Fixed_Ext1")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(1, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext1);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Ext2")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(2, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext2);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Ext4")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(4, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext4);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Ext8")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(8, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Fixed_Ext16")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(16, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Ext8")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(0, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Ext8);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Ext16")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(std::numeric_limits<uint8_t>::max() + 1, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Ext16);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+
+	SUBCASE("Ext32")
+	{
+		Ext ext;
+		ext.data = std::vector<uint8_t>(std::numeric_limits<uint16_t>::max() + 1, 'X');
+		data = serialize(ext);
+		data.resize(data.size() - 1);
+
+		object = deserialize(data, index, error);
+		CHECK(data[0]         == (uint8_t)Format::Ext32);
+		CHECK(error           == Error_Incomplete);
+		CHECK(index           == index);
+		CHECK(object.isNull() == true);
+	}
+}
+#endif // }}}
 
 // }}} Utilities::deserialize
 // {{{ Utilities::serialize
@@ -5109,7 +5905,7 @@ TEST_CASE("serialize/ext (ext8)")
 		ext.data = std::vector<uint8_t>(data_len, '_');
 
 		data = serialize(ext);
-		CHECK(data.size() == 4);
+		CHECK(data.size() == 3);
 		size_t index = 0;
 		CHECK(data[index++] == (uint8_t)Format::Ext8);
 		CHECK(data[index++] == data_len);
@@ -7515,7 +8311,7 @@ std::string to_string(const messagepack::Array& array ///< The Array to convert.
 		}
 	}
 
-	s += "]";
+	s += " ]";
 
 	return s;
 }

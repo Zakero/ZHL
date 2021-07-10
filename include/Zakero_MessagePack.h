@@ -396,6 +396,7 @@ std::ostream& operator<<(std::ostream&, const zakero::messagepack::Map&) noexcep
 std::ostream& operator<<(std::ostream&, const zakero::messagepack::Object&) noexcept;
 
 bool operator==(const zakero::messagepack::Object& lhs, const zakero::messagepack::Object& rhs) noexcept;
+bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepack::Object& rhs) noexcept;
 
 // }}}
 // {{{ Implementation
@@ -5154,7 +5155,7 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 
 		if(length == 0)
 		{
-			return Object{""};
+			return Object{std::string("")};
 		}
 		else
 		{
@@ -5320,7 +5321,7 @@ TEST_CASE("deserialize/error")
 
 	SUBCASE("Int8")
 	{
-		object = Object{std::numeric_limits<int8_t>::min()};
+		object = Object{int64_t(std::numeric_limits<int8_t>::min())};
 		data = serialize(object);
 		data.resize(data.size() - 1);
 
@@ -5333,7 +5334,7 @@ TEST_CASE("deserialize/error")
 
 	SUBCASE("Int16")
 	{
-		object = Object{std::numeric_limits<int16_t>::min()};
+		object = Object{int64_t(std::numeric_limits<int16_t>::min())};
 		data = serialize(object);
 		data.resize(data.size() - 1);
 
@@ -5346,7 +5347,7 @@ TEST_CASE("deserialize/error")
 
 	SUBCASE("Int32")
 	{
-		object = Object{std::numeric_limits<int32_t>::min()};
+		object = Object{int64_t(std::numeric_limits<int32_t>::min())};
 		data = serialize(object);
 		data.resize(data.size() - 1);
 
@@ -8664,6 +8665,13 @@ bool operator==(const zakero::messagepack::Object& lhs ///< The Object
 	return false;
 }
 
+
+bool operator!=(const zakero::messagepack::Object& lhs ///< The Object
+	, const zakero::messagepack::Object&       rhs ///< The Object
+	) noexcept
+{
+	return !(lhs == rhs);
+}
 
 // }}}
 

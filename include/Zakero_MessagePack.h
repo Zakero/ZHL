@@ -306,23 +306,23 @@ namespace zakero::messagepack
 
 		struct Map
 		{
-			              size_t               set(Object&, Object&) noexcept;
-			              size_t               set(const Object&, const Object&) noexcept;
-			[[nodiscard]] inline const Object& keyAt(const size_t index) const noexcept { return object_key[index]; };
-			[[nodiscard]] inline Object&       keyAt(const size_t index) noexcept { return object_key[index]; };
-			[[nodiscard]] bool                 keyExists(const Object&) const noexcept;
-			[[nodiscard]] size_t               keyIndex(const Object&) const noexcept;
-			[[nodiscard]] inline const Object& valueAt(const size_t index) const noexcept { return object_value[index]; };
-			[[nodiscard]] inline Object&       valueAt(const size_t index) noexcept { return object_value[index]; };
-			[[nodiscard]] Object&              valueOf(Object&) noexcept;
-			[[nodiscard]] const Object&        valueOf(const Object&) const noexcept;
+			              std::error_code set(Object&, Object&) noexcept;
+			              std::error_code set(const Object&, const Object&) noexcept;
+			[[nodiscard]] bool            keyExists(const Object&) const noexcept;
+			[[nodiscard]] Object&         valueOf(Object&) noexcept;
+			[[nodiscard]] const Object&   valueOf(const Object&) const noexcept;
 
-			              void                 erase(const Object&) noexcept;
-			              inline void          clear() noexcept { object_key.clear(); object_value.clear(); };
-			[[nodiscard]] inline size_t        size() const noexcept { return object_key.size(); };
+			              void            erase(const Object&) noexcept;
+			              inline void     clear() noexcept;
+			[[nodiscard]] inline size_t   size() const noexcept;
 
-			std::vector<Object> object_key   = {};
-			std::vector<Object> object_value = {};
+			std::vector<Object>           null_map   = {};
+			std::map<bool, Object>        bool_map   = {};
+			std::map<int64_t, Object>     int64_map  = {};
+			std::map<uint64_t, Object>    uint64_map = {};
+			std::map<float, Object>       float_map  = {};
+			std::map<double, Object>      double_map = {};
+			std::map<std::string, Object> string_map = {};
 		};
 
 		// }}} Map
@@ -1131,14 +1131,80 @@ namespace
 		 * \todo Add `vector.reserve()` support. May need to 
 		 * add `Object::size()`.
 		 */
-		for(size_t i = 0; i < map.object_key.size(); i++)
+		if(map.null_map.empty() == false)
 		{
-			serialize_(map.object_key[i]  , vector, error);
-			serialize_(map.object_value[i], vector, error);
+			serialize_(Object{}       , vector, error);
+			serialize_(map.null_map[0], vector, error);
 
 			if(error)
 			{
-				break;
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.bool_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.int64_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.uint64_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.float_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.double_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
+			}
+		}
+
+		for(const auto& [key, value] : map.string_map)
+		{
+			serialize_(Object{key}, vector, error);
+			serialize_(value      , vector, error);
+
+			if(error)
+			{
+				return;
 			}
 		}
 	}
@@ -2260,10 +2326,10 @@ TEST_CASE("array/append/map (copy)")
 	const Object key_2 = Object{int64_t(0)};
 
 	const std::string str("Hello, World!");
-	const std::vector<uint8_t> bin(21, '@');
+	const uint64_t    num(21);
 
 	const Object val_1 = Object{str};
-	const Object val_2 = Object{bin};
+	const Object val_2 = Object{num};
 
 	Map map_1;
 	map_1.set(key_1, val_1);
@@ -2278,9 +2344,9 @@ TEST_CASE("array/append/map (copy)")
 	array.append((const Map)map_1); count++;
 	array.append((const Map)map_2); count++;
 
-	CHECK(array.size() == count);
 	CHECK(map_1.size() == 2);
 	CHECK(map_2.size() == 2);
+	CHECK(array.size() == count);
 
 	// Check serialized data
 
@@ -2345,10 +2411,10 @@ TEST_CASE("array/append/map (move)")
 	const Object key_2 = Object{int64_t(0)};
 
 	const std::string str("Hello, World!");
-	const std::vector<uint8_t> bin(21, '@');
+	const uint64_t    num(21);
 
 	const Object val_1 = Object{str};
-	const Object val_2 = Object{bin};
+	const Object val_2 = Object{num};
 
 	Map map_1;
 	map_1.set(key_1, val_1);
@@ -2772,10 +2838,15 @@ TEST_CASE("array/append/null")
  *
  * \brief A Key/Value collection of Objects.
  *
- * Using the Map structure allows any MessagePack Object to be used as a "key" 
- * as well as a "value" in a map. The underling `object_key` and `object_value` 
- * can be accessed directly. However for the Map, it is recommended to only use 
- * the helper methods.
+ * The MessagePack specification allows any Object to be the "key" of a map.  
+ * As interesting as it would be to having a Map as the key to another Map, 
+ * programmatically, it is not practical. This implementation limits the types 
+ * of the "keys" to include all MessagePack types __except__ Array, Binary, 
+ * Ext, and Map.
+ *
+ * The Map uses several std::map's to hold the "values".  While it is possible 
+ * to directly access these std::map's, it is recommended to use Map's methods 
+ * since they ensure the uniqueness of the key and other checks.
  *
  * Objects can be tested to find out if they are Map by using Object::isMap() 
  * and converted into a Map with Object::asMap(). A Map can not be converted 
@@ -2796,28 +2867,48 @@ TEST_CASE("array/append/null")
  * map.set({std::string("Error Message")}, {std::string("All the errors!")});
  * \endparcode
  *
- * \return The index of the \p key / \p value pair.
+ * \return An error code.
  */
-size_t Map::set(const Object& key   ///< The key
-	, const Object&       value ///< The value
+std::error_code Map::set(const Object& key   ///< The key
+	, const Object&                value ///< The value
 	) noexcept
 {
-	for(size_t i = 0; i < object_key.size(); i++)
+	if(keyExists(key))
 	{
-		if(object_key[i] == key)
-		{
-			object_value[i] = value;
-
-			return i;
-		}
+		erase(key);
 	}
 
-	const size_t index = object_key.size();
+	if(key.isNull())
+	{
+		null_map.clear();
+		null_map.push_back(value);
+	}
+	else if(key.is<bool>())
+	{
+		bool_map[key.as<bool>()] = value;
+	}
+	else if(key.is<int64_t>())
+	{
+		int64_map[key.as<int64_t>()] = value;
+	}
+	else if(key.is<uint64_t>())
+	{
+		uint64_map[key.as<uint64_t>()] = value;
+	}
+	else if(key.is<float>())
+	{
+		float_map[key.as<float>()] = value;
+	}
+	else if(key.is<double>())
+	{
+		double_map[key.as<double>()] = value;
+	}
+	else if(key.is<std::string>())
+	{
+		string_map[key.as<std::string>()] = value;
+	}
 
-	object_key.emplace_back(key);
-	object_value.emplace_back(value);
-
-	return index;
+	return Error_Invalid_Format_Type;
 }
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
@@ -2900,31 +2991,51 @@ TEST_CASE("map/set (copy)")
  * map.set({std::string("Error Message")}, {std::string("All the errors!")});
  * \endparcode
  *
- * \return The index of the \p key / \p value pair.
+ * \return An error code.
  *
  * \todo Storing the key/value pairs in vectors is very slow. Look into using 
  * std::hash<std::variant> to create a std::map().
  */
-size_t Map::set(Object& key   ///< The key
-	, Object&       value ///< The value
+std::error_code Map::set(Object& key   ///< The key
+	, Object&                value ///< The value
 	) noexcept
 {
-	for(size_t i = 0; i < object_key.size(); i++)
+	if(keyExists(key))
 	{
-		if(object_key[i] == key)
-		{
-			object_value[i] = std::move(value);
-
-			return i;
-		}
+		erase(key);
 	}
 
-	const size_t index = object_key.size();
+	if(key.isNull())
+	{
+		null_map.clear();
+		null_map.push_back(value);
+	}
+	else if(key.is<bool>())
+	{
+		bool_map[key.as<bool>()] = value;
+	}
+	else if(key.is<int64_t>())
+	{
+		int64_map[key.as<int64_t>()] = value;
+	}
+	else if(key.is<uint64_t>())
+	{
+		uint64_map[key.as<uint64_t>()] = value;
+	}
+	else if(key.is<float>())
+	{
+		float_map[key.as<float>()] = value;
+	}
+	else if(key.is<double>())
+	{
+		double_map[key.as<double>()] = value;
+	}
+	else if(key.is<std::string>())
+	{
+		string_map[key.as<std::string>()] = value;
+	}
 
-	object_key.emplace_back(key);
-	object_value.emplace_back(std::move(value));
-
-	return index;
+	return Error_Invalid_Format_Type;
 }
 
 
@@ -3007,21 +3118,33 @@ TEST_CASE("map/set")
 void Map::erase(const Object& key ///< The key
 	) noexcept
 {
-	auto key_iter = object_key.begin();
-	auto val_iter = object_value.begin();
-
-	while(key_iter != object_key.end())
+	if(key.isNull())
 	{
-		if(*key_iter == key)
-		{
-			object_key.erase(key_iter);
-			object_value.erase(val_iter);
-
-			break;
-		}
-
-		key_iter++;
-		val_iter++;
+		null_map.clear();
+	}
+	else if(key.is<bool>())
+	{
+		bool_map.erase(key.as<bool>());
+	}
+	else if(key.is<int64_t>())
+	{
+		int64_map.erase(key.as<int64_t>());
+	}
+	else if(key.is<uint64_t>())
+	{
+		uint64_map.erase(key.as<uint64_t>());
+	}
+	else if(key.is<float>())
+	{
+		float_map.erase(key.as<float>());
+	}
+	else if(key.is<double>())
+	{
+		double_map.erase(key.as<double>());
+	}
+	else if(key.is<std::string>())
+	{
+		string_map.erase(key.as<std::string>());
 	}
 }
 
@@ -3091,12 +3214,33 @@ TEST_CASE("map/erase")
 bool Map::keyExists(const Object& key ///< The key Object
 	) const noexcept
 {
-	for(const auto& key_ : object_key)
+	if(key.isNull())
 	{
-		if(key_ == key)
-		{
-			return true;
-		}
+		return (null_map.empty() == false);
+	}
+	else if(key.is<bool>())
+	{
+		return bool_map.contains(key.as<bool>());
+	}
+	else if(key.is<int64_t>())
+	{
+		return int64_map.contains(key.as<int64_t>());
+	}
+	else if(key.is<uint64_t>())
+	{
+		return uint64_map.contains(key.as<uint64_t>());
+	}
+	else if(key.is<float>())
+	{
+		return float_map.contains(key.as<float>());
+	}
+	else if(key.is<double>())
+	{
+		return double_map.contains(key.as<double>());
+	}
+	else if(key.is<std::string>())
+	{
+		return string_map.contains(key.as<std::string>());
 	}
 
 	return false;
@@ -3106,9 +3250,9 @@ bool Map::keyExists(const Object& key ///< The key Object
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("map/keyexists")
 {
-	Object key_true = Object{true};
-	Object key_zero = Object{int64_t(0)};
-	Object val_null = Object{};
+	const Object key_true = Object{true};
+	const Object key_zero = Object{int64_t(0)};
+	const Object val_null = Object{};
 
 	Map map;
 
@@ -3123,72 +3267,6 @@ TEST_CASE("map/keyexists")
 	map.set(key_zero, val_null);
 	CHECK(map.keyExists(key_true) == true);
 	CHECK(map.keyExists(key_zero) == true);
-}
-#endif // }}}
-
-
-/**
- * \brief Get the index of a key/value pair.
- *
- * Use this method to get the index of a \p key. The benefits of using an index 
- * is to avoid constantly searching the Map. Also, using the index is the only 
- * way of changing the \p key.
- *
- * \note If any key/value pair is inserted or removed, all indexes after 
- * changed location are no longer valid.
- *
- * \parcode
- * zakero::messagepack::Map map;
- *
- * map.set(Object{}, Object{});
- * size_t index = map.keyIndex(Object{});
- * map.keyAt(index)   = Object{true);
- * map.valueAt(index) = Object{std::string("true"));
- * \endparcode
- *
- * \return The index
- */
-size_t Map::keyIndex(const Object& key ///< The key
-	) const noexcept
-{
-	size_t index = 0;
-
-	for(const auto& key_ : object_key)
-	{
-		if(key_ == key)
-		{
-			return index;
-		}
-
-		index++;
-	}
-
-	return index;
-}
-
-
-#ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("map/keyindex")
-{
-	Object key_nope = Object{};
-	Object key_true = Object{true};
-	Object key_zero = Object{int64_t(0)};
-	Object val_null = Object{};
-
-	Map map;
-
-	CHECK(map.size() == 0);
-	CHECK(map.keyIndex(key_true) >= map.size());
-
-	// Assumes key/values are added sequetially
-
-	map.set(key_true, val_null);
-	CHECK(map.keyIndex(key_true) == 0);
-
-	map.set(key_zero, val_null);
-	CHECK(map.keyIndex(key_zero) == 1);
-
-	CHECK(map.keyIndex(key_nope) >= map.size());
 }
 #endif // }}}
 
@@ -3218,12 +3296,38 @@ TEST_CASE("map/keyindex")
 const Object& Map::valueOf(const Object& key ///< The key
 	) const noexcept
 {
-	for(size_t i = 0; i < object_key.size(); i++)
+	if(keyExists(key) == false)
 	{
-		if(object_key[i] == key)
-		{
-			return object_value[i];
-		}
+		return key;
+	}
+
+	if(key.isNull())
+	{
+		return null_map.at(0);
+	}
+	else if(key.is<bool>())
+	{
+		return bool_map.at(key.as<bool>());
+	}
+	else if(key.is<int64_t>())
+	{
+		return int64_map.at(key.as<int64_t>());
+	}
+	else if(key.is<uint64_t>())
+	{
+		return uint64_map.at(key.as<uint64_t>());
+	}
+	else if(key.is<float>())
+	{
+		return float_map.at(key.as<float>());
+	}
+	else if(key.is<double>())
+	{
+		return double_map.at(key.as<double>());
+	}
+	else if(key.is<std::string>())
+	{
+		return string_map.at(key.as<std::string>());
 	}
 
 	return key;
@@ -3244,7 +3348,6 @@ TEST_CASE("map/valueof (const)")
 		const Object key_float  = {float(0)};
 		const Object key_double = {double(0)};
 		const Object key_string = {std::string("_")};
-		const Object key_binary = {std::vector<uint8_t>(1, 'X')};
 
 		const Object value_0 = {uint64_t(0)};
 		const Object value_1 = {uint64_t(1)};
@@ -3253,29 +3356,14 @@ TEST_CASE("map/valueof (const)")
 		const Object value_4 = {uint64_t(4)};
 		const Object value_5 = {uint64_t(5)};
 		const Object value_6 = {uint64_t(6)};
-		const Object value_7 = {uint64_t(7)};
 
-		map.object_key =
-		{	key_null
-		,	key_bool
-		,	key_int64
-		,	key_uint64
-		,	key_float
-		,	key_double
-		,	key_string
-		,	key_binary
-		};
-
-		map.object_value =
-		{	value_0
-		,	value_1
-		,	value_2
-		,	value_3
-		,	value_4
-		,	value_5
-		,	value_6
-		,	value_7
-		};
+		map.set(key_null,   value_0);
+		map.set(key_bool,   value_1);
+		map.set(key_int64,  value_2);
+		map.set(key_uint64, value_3);
+		map.set(key_float,  value_4);
+		map.set(key_double, value_5);
+		map.set(key_string, value_6);
 
 		CHECK(map.valueOf(key_null)   == value_0);
 		CHECK(map.valueOf(key_bool)   == value_1);
@@ -3284,7 +3372,6 @@ TEST_CASE("map/valueof (const)")
 		CHECK(map.valueOf(key_float)  == value_4);
 		CHECK(map.valueOf(key_double) == value_5);
 		CHECK(map.valueOf(key_string) == value_6);
-		CHECK(map.valueOf(key_binary) == value_7);
 	}
 
 	SUBCASE("Not Exists")
@@ -3325,12 +3412,38 @@ TEST_CASE("map/valueof (const)")
 Object& Map::valueOf(Object& key ///< The key
 	) noexcept
 {
-	for(size_t i = 0; i < object_key.size(); i++)
+	if(keyExists(key) == false)
 	{
-		if(object_key[i] == key)
-		{
-			return object_value[i];
-		}
+		return key;
+	}
+
+	if(key.isNull())
+	{
+		return null_map.at(0);
+	}
+	else if(key.is<bool>())
+	{
+		return bool_map.at(key.as<bool>());
+	}
+	else if(key.is<int64_t>())
+	{
+		return int64_map.at(key.as<int64_t>());
+	}
+	else if(key.is<uint64_t>())
+	{
+		return uint64_map.at(key.as<uint64_t>());
+	}
+	else if(key.is<float>())
+	{
+		return float_map.at(key.as<float>());
+	}
+	else if(key.is<double>())
+	{
+		return double_map.at(key.as<double>());
+	}
+	else if(key.is<std::string>())
+	{
+		return string_map.at(key.as<std::string>());
 	}
 
 	return key;
@@ -3351,7 +3464,6 @@ TEST_CASE("map/valueof")
 		Object key_float  = {float(0)};
 		Object key_double = {double(0)};
 		Object key_string = {std::string("_")};
-		Object key_binary = {std::vector<uint8_t>(1, 'X')};
 
 		Object value_0 = {uint64_t(0)};
 		Object value_1 = {uint64_t(1)};
@@ -3360,29 +3472,14 @@ TEST_CASE("map/valueof")
 		Object value_4 = {uint64_t(4)};
 		Object value_5 = {uint64_t(5)};
 		Object value_6 = {uint64_t(6)};
-		Object value_7 = {uint64_t(7)};
 
-		map.object_key =
-		{	key_null
-		,	key_bool
-		,	key_int64
-		,	key_uint64
-		,	key_float
-		,	key_double
-		,	key_string
-		,	key_binary
-		};
-
-		map.object_value =
-		{	value_0
-		,	value_1
-		,	value_2
-		,	value_3
-		,	value_4
-		,	value_5
-		,	value_6
-		,	value_7
-		};
+		map.set(key_null,   value_0);
+		map.set(key_bool,   value_1);
+		map.set(key_int64,  value_2);
+		map.set(key_uint64, value_3);
+		map.set(key_float,  value_4);
+		map.set(key_double, value_5);
+		map.set(key_string, value_6);
 
 		CHECK(map.valueOf(key_null)   == value_0);
 		CHECK(map.valueOf(key_bool)   == value_1);
@@ -3391,11 +3488,9 @@ TEST_CASE("map/valueof")
 		CHECK(map.valueOf(key_float)  == value_4);
 		CHECK(map.valueOf(key_double) == value_5);
 		CHECK(map.valueOf(key_string) == value_6);
-		CHECK(map.valueOf(key_binary) == value_7);
 
 		map.valueOf(key_null) = {false};
 		CHECK(map.valueOf(key_null) == Object{false});
-
 	}
 
 	SUBCASE("Not Exists")
@@ -3415,67 +3510,37 @@ TEST_CASE("map/valueof")
  *
  * All of the key/value pairs will be removed.
  */
+void Map::clear() noexcept
+{
+	null_map.clear();
+	bool_map.clear();
+	int64_map.clear();
+	uint64_map.clear();
+	float_map.clear();
+	double_map.clear();
+	string_map.clear();
+}
 
 
 /**
- * \fn zakero::messagepack::Map::keyAt(const size_t)
- *
- * \brief Access a _key_ Object.
- *
- * The _key_ at the requested index location will be returned.
- *
- * \return An Object
- *
- * \param index The index of the key.
- */
-
-
-/**
- * \fn zakero::messagepack::Map::keyAt(const size_t) const
- *
- * \brief Access a _key_ Object.
- *
- * The _key_ at the requested index location will be returned.
- *
- * \return An Object
- *
- * \param index The index of the key.
- */
-
-
-/**
- * \fn zakero::messagepack::Map::size() const
- *
  * \brief Get the size of the Map.
  *
  * \return The number of key/value pairs.
  */
+size_t Map::size() const noexcept
+{
+	const size_t size = null_map.size()
+		+ bool_map.size()
+		+ int64_map.size()
+		+ uint64_map.size()
+		+ float_map.size()
+		+ double_map.size()
+		+ string_map.size()
+		;
 
+	return size;
+}
 
-/**
- * \fn zakero::messagepack::Map::valueAt(const size_t)
- *
- * \brief Get a _value_ from the Map.
- *
- * The Object at the specified index will be returned.
- *
- * \return The Object.
- *
- * \param index The index location.
- */
-
-
-/**
- * \fn zakero::messagepack::Map::valueAt(const size_t) const
- *
- * \brief Get a _value_ from the Map.
- *
- * The Object at the specified index will be returned.
- *
- * \return The Object.
- *
- * \param index The index location.
- */
 
 // }}} Map
 // {{{ Object
@@ -8525,12 +8590,78 @@ std::string to_string(const messagepack::Map& map ///< The Map to convert.
 
 	std::string prefix = " ";
 
-	for(size_t i = 0; i < map.size(); i++)
+	if(map.null_map.empty() == false)
 	{
 		s += prefix
-			+ to_string(map.keyAt(i))
+			+ to_string(Object{})
 			+ ": "
-			+ to_string(map.valueAt(i))
+			+ to_string(map.null_map[0])
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.bool_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.int64_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.uint64_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.float_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.double_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
+			;
+
+		prefix = ", ";
+	}
+
+	for(const auto& [key, value] : map.string_map)
+	{
+		s += prefix
+			+ to_string(Object{key})
+			+ ": "
+			+ to_string(value)
 			;
 
 		prefix = ", ";

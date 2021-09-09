@@ -171,9 +171,6 @@
  *
  * \author Andrew "Zakero" Moore
  * - Original Author
- *
- *
- * \todo Add error code support.
  */
 
 
@@ -219,12 +216,15 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_MESSAGEPACK__ERROR_DATA \
-	X(Error_None                ,  0 , "No Error"                               ) \
-	X(Error_Unknown             ,  1 , "An unknown error has occurred"          ) \
-	X(Error_Invalid_Format_Type ,  2 , "An invalid Format Type was encountered" ) \
-	X(Error_Incomplete          ,  3 , "The data to deserialize is incomplete"  ) \
-	X(Error_No_Data             ,  4 , "No data to deserialize"                 ) \
-	X(Error_Invalid_Index       ,  5 , "Invalid starting index to deserialize"  ) \
+	X(Error_None                ,  0 , "No Error"                                ) \
+	X(Error_Unknown             ,  1 , "An unknown error has occurred"           ) \
+	X(Error_Incomplete          ,  2 , "The data to deserialize is incomplete"   ) \
+	X(Error_Invalid_Format_Type ,  3 , "An invalid Format Type was encountered"  ) \
+	X(Error_Invalid_Index       ,  4 , "Invalid starting index to deserialize"   ) \
+	X(Error_No_Data             ,  5 , "No data to deserialize"                  ) \
+	X(Error_Array_Too_Big       ,  6 , "The array is too large to serialize"     ) \
+	X(Error_Ext_Too_Big         ,  7 , "The extension is too large to serialize" ) \
+	X(Error_Map_Too_Big         ,  8 , "The map is too large to serialize"       ) \
 
 // }}}
 
@@ -379,9 +379,13 @@ namespace zakero::messagepack
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&) noexcept;
 		[[nodiscard]] Object               deserialize(const std::vector<uint8_t>&, size_t&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Array&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Ext&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Ext&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Map&, std::error_code&) noexcept;
 		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&) noexcept;
+		[[nodiscard]] std::vector<uint8_t> serialize(const messagepack::Object&, std::error_code&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Array&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Ext&) noexcept;
 		[[nodiscard]] std::string          to_string(const messagepack::Map&) noexcept;
@@ -614,14 +618,17 @@ namespace
 		}
 	}
 
-	void serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
-	void serialize_(const messagepack::Ext&, std::vector<uint8_t>&) noexcept;
-	void serialize_(const messagepack::Map&, std::vector<uint8_t>&) noexcept;
+	void serialize_(const messagepack::Array&, std::vector<uint8_t>&, std::error_code&) noexcept;
+	void serialize_(const messagepack::Ext&, std::vector<uint8_t>&, std::error_code&) noexcept;
+	void serialize_(const messagepack::Map&, std::vector<uint8_t>&, std::error_code&) noexcept;
 
 	void serialize_(const messagepack::Object& object
 		, std::vector<uint8_t>&            vector
+		, std::error_code&                 error
 		) noexcept
 	{
+		error = Error_None;
+
 		if(object.isNull())
 		{
 			vector.push_back((uint8_t)Format::Nill);
@@ -936,25 +943,26 @@ namespace
 		{
 			const messagepack::Array& array = object.asArray();
 
-			serialize_(array, vector);
+			serialize_(array, vector, error);
 		}
 		else if(object.isExt())
 		{
 			const messagepack::Ext& ext = object.asExt();
 
-			serialize_(ext, vector);
+			serialize_(ext, vector, error);
 		}
 		else if(object.isMap())
 		{
 			const messagepack::Map& map = object.asMap();
 
-			serialize_(map, vector);
+			serialize_(map, vector, error);
 		}
 	}
 
 
 	void serialize_(const messagepack::Array& array
 		, std::vector<uint8_t>&           vector
+		, std::error_code&                error
 		) noexcept
 	{
 		const size_t array_size = array.size();
@@ -985,10 +993,11 @@ namespace
 		}
 		else
 		{
-			/**
-			 * \todo ERROR
-			 */
+			error = Error_Array_Too_Big;
+			return;
 		}
+
+		error = Error_None;
 			
 		/**
 		 * \todo Add `vector.reserve()` support. May need to 
@@ -996,13 +1005,19 @@ namespace
 		 */
 		for(const messagepack::Object& object : array.object_vector)
 		{
-			serialize_(object, vector);
+			serialize_(object, vector, error);
+
+			if(error)
+			{
+				break;
+			}
 		}
 	}
 
 
 	void serialize_(const messagepack::Ext& ext
 		, std::vector<uint8_t>&         vector
+		, std::error_code&              error
 		) noexcept
 	{
 		const size_t data_size = ext.data.size();
@@ -1052,7 +1067,14 @@ namespace
 			vector.push_back(Convert_Byte1);
 			vector.push_back(Convert_Byte0);
 		}
+		else
+		{
+			error = Error_Ext_Too_Big;
+			return;
+		}
 
+		error = Error_None;
+			
 		Convert.uint64 = 0;
 		Convert.int8   = ext.type;
 		vector.push_back(Convert.uint8);
@@ -1068,6 +1090,7 @@ namespace
 
 	void serialize_(const messagepack::Map& map
 		, std::vector<uint8_t>&         vector
+		, std::error_code&              error
 		) noexcept
 	{
 		const size_t map_size = map.size();
@@ -1098,10 +1121,11 @@ namespace
 		}
 		else
 		{
-			/**
-			 * \todo ERROR
-			 */
+			error = Error_Map_Too_Big;
+			return;
 		}
+			
+		error = Error_None;
 			
 		/**
 		 * \todo Add `vector.reserve()` support. May need to 
@@ -1109,8 +1133,13 @@ namespace
 		 */
 		for(size_t i = 0; i < map.object_key.size(); i++)
 		{
-			serialize_(map.object_key[i]  , vector);
-			serialize_(map.object_value[i], vector);
+			serialize_(map.object_key[i]  , vector, error);
+			serialize_(map.object_value[i], vector, error);
+
+			if(error)
+			{
+				break;
+			}
 		}
 	}
 }
@@ -4468,11 +4497,6 @@ TEST_CASE("extension/timestamp/convert/96bit")
  * 	writeError(array(error_code_index).int64_);
  * }
  * \endparcode
- *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
  */
 Object deserialize(const std::vector<uint8_t>& data ///< The packed data
 	) noexcept
@@ -4515,11 +4539,6 @@ Object deserialize(const std::vector<uint8_t>& data ///< The packed data
  * 	writeError(array(error_code_index).int64_);
  * }
  * \endparcode
- *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, std::error_code&                     error ///< The error code
@@ -4562,11 +4581,6 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
  * 	writeError(array(error_code_index).int64_);
  * }
  * \endparcode
- *
- * \todo Add error codes.
- *       - Error_None
- *       - Error_Bad_Format_Type
- *       - Error_Incomplete
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
@@ -4578,6 +4592,39 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 }
 
 
+/**
+ * \brief Deserialize MessagePack data.
+ *
+ * The packed vector of \p data will be converted into an object that can be 
+ * queried and used.
+ *
+ * \parcode
+ * std::vector<uint8_t> command_result = get_reply(command_id);
+ *
+ * zakero::messagepack::Object object;
+ * size_t index;
+ * std::error_code error;
+ * object = zakero::messagepack::deserialize(command_result, index, error);
+ * if(object.isArray() == false)
+ * {
+ *	writeError(ERROR_INVALID_COMMAND_RESULT, error);
+ *
+ * 	// index points to the end of the "object"
+ * 	crashAnalysis(&command_result[index]);
+ *
+ * 	return;
+ * }
+ *
+ * zakero::messagepack::Array& array = object.asArray();
+ *
+ * constexpr size_t error_index = 1;
+ * constexpr size_t error_code_index = 2;
+ * if(array(error_index).boolean == true)
+ * {
+ * 	writeError(array(error_code_index).int64_);
+ * }
+ * \endparcode
+ */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
 	, std::error_code&                     error ///< The error code
@@ -5711,19 +5758,56 @@ TEST_CASE("deserialize/error")
  * array.append(true);
  * array.append(error_code);
  *
- * std::vector<uint8_t> result = array.serialize();
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(array);
  *
  * reply(host_ip, result);
  * \endparcode
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Array& array
+std::vector<uint8_t> serialize(const Array& array ///< The Array
+	) noexcept
+{
+	std::error_code error;
+
+	return serialize(array, error);
+}
+
+
+/**
+ * \brief Serialize Array data.
+ *
+ * The contents of the Array will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Array array;
+ * array.append(command_id);
+ * array.append(true);
+ * array.append(error_code);
+ *
+ * std::error_code error;
+ *
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(array, error);
+ *
+ * if(error)
+ * {
+ * 	logError(command_id, error);
+ * }
+ * else
+ * {
+ * 	reply(host_ip, result);
+ * }
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Array& array ///< The Array
+	, std::error_code&                  error ///< The Error
 	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(array, vector);
+	serialize_(array, vector, error);
 
 	return vector;
 }
@@ -5744,12 +5828,38 @@ std::vector<uint8_t> serialize(const Array& array
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Ext& ext
+std::vector<uint8_t> serialize(const Ext& ext ///< The Extension
+	) noexcept
+{
+	std::error_code error;
+
+	return serialize(ext, error);
+}
+
+
+/**
+ * \brief Serialize Ext data.
+ *
+ * The contents of the Ext will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Ext ext;
+ * ext.type = 42;
+ * ext.data = std::vector<uint8_t>(16, '_');
+ *
+ * std::error_code error;
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(ext, error);
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Ext& ext   ///< The Extension
+	, std::error_code&                error ///< The Error
 	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(ext, vector);
+	serialize_(ext, vector, error);
 
 	return vector;
 }
@@ -6123,12 +6233,39 @@ TEST_CASE("serialize/ext (ext32)")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Map& map
+std::vector<uint8_t> serialize(const Map& map ///< The Map
+	) noexcept
+{
+	std::error_code error;
+
+	return serialize(map, error);
+}
+
+
+/**
+ * \brief Serialize Map data.
+ *
+ * The contents of the Map will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Map map;
+ * map.set(Object{uint64_t(42)}, Object{true});
+ *
+ * std::error_code error;
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(map, error);
+ *
+ * reply(host_ip, result);
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Map& map   ///< The Map
+	, std::error_code&                error ///< The Error
 	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(map, vector);
+	serialize_(map, vector, error);
 
 	return vector;
 }
@@ -6369,12 +6506,38 @@ TEST_CASE("serialize/map (map32)")
  *
  * \return The packed data.
  */
-std::vector<uint8_t> serialize(const Object& object
+std::vector<uint8_t> serialize(const Object& object ///< The Object
+	) noexcept
+{
+	std::error_code error;
+
+	return serialize(object, error);
+}
+
+
+/**
+ * \brief Serialize Object data.
+ *
+ * The contents of the Object will be packed into the returned std::vector.
+ *
+ * \parcode
+ * zakero::messagepack::Object object = { true };
+ *
+ * std::error_code error;
+ * std::vector<uint8_t> result = zakero::messagepack::serialize(object, error);
+ *
+ * reply(host_ip, result);
+ * \endparcode
+ *
+ * \return The packed data.
+ */
+std::vector<uint8_t> serialize(const Object& object ///< The Object
+	, std::error_code&                   error  ///< The Error
 	) noexcept
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(object, vector);
+	serialize_(object, vector, error);
 
 	return vector;
 }

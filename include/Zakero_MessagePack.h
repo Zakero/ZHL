@@ -265,28 +265,28 @@ namespace zakero::messagepack
 
 		struct Array
 		{
-				      size_t               append(const bool) noexcept;
-				      size_t               append(const int64_t) noexcept;
-				      size_t               append(const uint64_t) noexcept;
-				      size_t               append(const float) noexcept;
-				      size_t               append(const double) noexcept;
-				      size_t               append(const std::string_view) noexcept;
-				      size_t               append(const std::vector<uint8_t>&) noexcept;
-				      size_t               append(std::vector<uint8_t>&) noexcept;
-				      size_t               append(const Array&) noexcept;
-				      size_t               append(Array&) noexcept;
-				      size_t               append(const Ext&) noexcept;
-				      size_t               append(Ext&) noexcept;
-				      size_t               append(const Map&) noexcept;
-				      size_t               append(Map&) noexcept;
-				      size_t               append(const Object&) noexcept;
-				      size_t               append(Object&) noexcept;
-				      size_t               appendNull() noexcept;
+			[[]]          size_t               append(const bool) noexcept;
+			[[]]          size_t               append(const int64_t) noexcept;
+			[[]]          size_t               append(const uint64_t) noexcept;
+			[[]]          size_t               append(const float) noexcept;
+			[[]]          size_t               append(const double) noexcept;
+			[[]]          size_t               append(const std::string_view) noexcept;
+			[[]]          size_t               append(const std::vector<uint8_t>&) noexcept;
+			[[]]          size_t               append(std::vector<uint8_t>&) noexcept;
+			[[]]          size_t               append(const Array&) noexcept;
+			[[]]          size_t               append(Array&) noexcept;
+			[[]]          size_t               append(const Ext&) noexcept;
+			[[]]          size_t               append(Ext&) noexcept;
+			[[]]          size_t               append(const Map&) noexcept;
+			[[]]          size_t               append(Map&) noexcept;
+			[[]]          size_t               append(const Object&) noexcept;
+			[[]]          size_t               append(Object&) noexcept;
+			[[]]          size_t               appendNull() noexcept;
 
 			[[nodiscard]] inline Object&       object(const size_t index) noexcept { return object_vector[index]; }
 			[[nodiscard]] inline const Object& object(const size_t index) const noexcept { return object_vector[index]; }
 
-				      inline void          clear() noexcept { return object_vector.clear(); };
+			[[]]          inline void          clear() noexcept { return object_vector.clear(); };
 			[[nodiscard]] inline size_t        size() const noexcept { return object_vector.size(); };
 
 			std::vector<Object> object_vector = {};
@@ -306,14 +306,14 @@ namespace zakero::messagepack
 
 		struct Map
 		{
-			              std::error_code set(Object&, Object&) noexcept;
-			              std::error_code set(const Object&, const Object&) noexcept;
+			[[]]          std::error_code set(Object&, Object&) noexcept;
+			[[]]          std::error_code set(const Object&, const Object&) noexcept;
 			[[nodiscard]] bool            keyExists(const Object&) const noexcept;
 			[[nodiscard]] Object&         valueOf(Object&) noexcept;
 			[[nodiscard]] const Object&   valueOf(const Object&) const noexcept;
 
-			              void            erase(const Object&) noexcept;
-			              inline void     clear() noexcept;
+			[[]]          void            erase(const Object&) noexcept;
+			[[]]          inline void     clear() noexcept;
 			[[nodiscard]] inline size_t   size() const noexcept;
 
 			std::vector<Object>           null_map   = {};
@@ -343,25 +343,30 @@ namespace zakero::messagepack
 				, zakero::messagepack::Map
 				> value;
 
-			template<typename T> [[nodiscard]] T&                          as() noexcept { return std::get<T>(value); };
-			template<typename T> [[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); };
-			                     [[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
-			                     [[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
-			                     [[nodiscard]] messagepack::Ext&           asExt() noexcept { return std::get<messagepack::Ext>(value); };
-			                     [[nodiscard]] const messagepack::Ext&     asExt() const noexcept { return std::get<messagepack::Ext>(value); };
-			                     [[nodiscard]] messagepack::Map&           asMap() noexcept { return std::get<messagepack::Map>(value); };
-			                     [[nodiscard]] const messagepack::Map&     asMap() const noexcept { return std::get<messagepack::Map>(value); };
-			                     [[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept { return std::get<std::vector<uint8_t>>(value); };
-			                     [[nodiscard]] const std::vector<uint8_t>& asBinary() const noexcept { return std::get<std::vector<uint8_t>>(value); };
-			                     [[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value); };
+			template<typename T>
+			[[nodiscard]] T&                          as() noexcept { return std::get<T>(value); };
+			template<typename T>
+			[[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); };
 
-			template<typename T> [[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); };
-			                     [[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
-			                     [[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
-			                     [[nodiscard]] constexpr bool              isExt() const noexcept { return std::holds_alternative<messagepack::Ext>(value); };
-			                     [[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
-			                     [[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
-			                     [[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
+			[[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
+			[[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
+			[[nodiscard]] messagepack::Ext&           asExt() noexcept { return std::get<messagepack::Ext>(value); };
+			[[nodiscard]] const messagepack::Ext&     asExt() const noexcept { return std::get<messagepack::Ext>(value); };
+			[[nodiscard]] messagepack::Map&           asMap() noexcept { return std::get<messagepack::Map>(value); };
+			[[nodiscard]] const messagepack::Map&     asMap() const noexcept { return std::get<messagepack::Map>(value); };
+			[[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept { return std::get<std::vector<uint8_t>>(value); };
+			[[nodiscard]] const std::vector<uint8_t>& asBinary() const noexcept { return std::get<std::vector<uint8_t>>(value); };
+			[[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value); };
+
+			template<typename T>
+			[[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); };
+
+			[[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
+			[[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
+			[[nodiscard]] constexpr bool              isExt() const noexcept { return std::holds_alternative<messagepack::Ext>(value); };
+			[[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
+			[[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
+			[[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
 		};
 
 		// }}} Object
@@ -441,7 +446,7 @@ bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepac
  * This X-Macro table contains:
  * - The internal format type name
  * - The type id
- * - A type id mask (the complement is used to get the value)
+ * - A type id mask (the bit-wise complement is used to get the value)
  * - The minimum size of the format, including the ID byte
  * - The type spec name
  */
@@ -618,29 +623,38 @@ namespace
 		}
 	}
 
-	void serialize_(const messagepack::Array&, std::vector<uint8_t>&, std::error_code&) noexcept;
-	void serialize_(const messagepack::Ext&, std::vector<uint8_t>&, std::error_code&) noexcept;
-	void serialize_(const messagepack::Map&, std::vector<uint8_t>&, std::error_code&) noexcept;
+	std::error_code serialize_(const messagepack::Array&, std::vector<uint8_t>&) noexcept;
+	std::error_code serialize_(const messagepack::Ext&, std::vector<uint8_t>&) noexcept;
+	std::error_code serialize_(const messagepack::Map&, std::vector<uint8_t>&) noexcept;
 
-	void serialize_(const messagepack::Object& object
-		, std::vector<uint8_t>&            vector
-		, std::error_code&                 error
+	/**
+	 * \brief Serialize a MessagePack Object.
+	 *
+	 * The provided \p object will be serialized into a byte-code which 
+	 * will be appended onto the \p vector.
+	 */
+	std::error_code serialize_(const messagepack::Object& object
+		, std::vector<uint8_t>&                       vector
 		) noexcept
 	{
-		error = Error_None;
-
 		if(object.isNull())
 		{
 			vector.push_back((uint8_t)Format::Nill);
+
+			return Error_None;
 		}
-		else if(object.is<bool>())
+
+		if(object.is<bool>())
 		{
 			vector.push_back(object.as<bool>()
 				? (uint8_t)Format::True
 				: (uint8_t)Format::False
 				);
+
+			return Error_None;
 		}
-		else if(object.is<int64_t>())
+		
+		if(object.is<int64_t>())
 		{
 			const int64_t value = object.as<int64_t>();
 
@@ -743,8 +757,11 @@ namespace
 					vector.push_back(Convert_Byte0);
 				}
 			}
+
+			return Error_None;
 		}
-		else if(object.is<uint64_t>())
+		
+		if(object.is<uint64_t>())
 		{
 			const uint64_t value = object.as<uint64_t>();
 
@@ -793,8 +810,11 @@ namespace
 				vector.push_back(Convert_Byte1);
 				vector.push_back(Convert_Byte0);
 			}
+
+			return Error_None;
 		}
-		else if(object.is<float>())
+		
+		if(object.is<float>())
 		{
 			float value = object.as<float>();
 
@@ -807,8 +827,11 @@ namespace
 			vector.push_back(Convert_Byte2);
 			vector.push_back(Convert_Byte1);
 			vector.push_back(Convert_Byte0);
+
+			return Error_None;
 		}
-		else if(object.is<double>())
+		
+		if(object.is<double>())
 		{
 			double value = object.as<double>();
 
@@ -823,8 +846,11 @@ namespace
 			vector.push_back(Convert_Byte2);
 			vector.push_back(Convert_Byte1);
 			vector.push_back(Convert_Byte0);
+
+			return Error_None;
 		}
-		else if(object.isString())
+		
+		if(object.isString())
 		{
 			const std::string& value = object.asString();
 
@@ -887,8 +913,11 @@ namespace
 					vector.push_back((uint8_t)c);
 				}
 			}
+
+			return Error_None;
 		}
-		else if(object.isBinary())
+		
+		if(object.isBinary())
 		{
 			const std::vector<uint8_t>& value = object.asBinary();
 
@@ -938,31 +967,43 @@ namespace
 					, value.end()
 					);
 			}
+
+			return Error_None;
 		}
-		else if(object.isArray())
+		
+		if(object.isArray())
 		{
 			const messagepack::Array& array = object.asArray();
 
-			serialize_(array, vector, error);
+			std::error_code error = serialize_(array, vector);
+
+			return error;
 		}
-		else if(object.isExt())
+		
+		if(object.isExt())
 		{
 			const messagepack::Ext& ext = object.asExt();
 
-			serialize_(ext, vector, error);
+			std::error_code error = serialize_(ext, vector);
+
+			return error;
 		}
-		else if(object.isMap())
+		
+		if(object.isMap())
 		{
 			const messagepack::Map& map = object.asMap();
 
-			serialize_(map, vector, error);
+			std::error_code error = serialize_(map, vector);
+
+			return error;
 		}
+
+		return Error_Invalid_Format_Type;
 	}
 
 
-	void serialize_(const messagepack::Array& array
-		, std::vector<uint8_t>&           vector
-		, std::error_code&                error
+	std::error_code serialize_(const messagepack::Array& array
+		, std::vector<uint8_t>&                      vector
 		) noexcept
 	{
 		const size_t array_size = array.size();
@@ -993,31 +1034,29 @@ namespace
 		}
 		else
 		{
-			error = Error_Array_Too_Big;
-			return;
+			return Error_Array_Too_Big;
 		}
 
-		error = Error_None;
-			
 		/**
 		 * \todo Add `vector.reserve()` support. May need to 
 		 * add `Object::size()`.
 		 */
 		for(const messagepack::Object& object : array.object_vector)
 		{
-			serialize_(object, vector, error);
+			std::error_code error = serialize_(object, vector);
 
 			if(error)
 			{
-				break;
+				return error;
 			}
 		}
+
+		return Error_None;
 	}
 
 
-	void serialize_(const messagepack::Ext& ext
-		, std::vector<uint8_t>&         vector
-		, std::error_code&              error
+	std::error_code serialize_(const messagepack::Ext& ext
+		, std::vector<uint8_t>&                    vector
 		) noexcept
 	{
 		const size_t data_size = ext.data.size();
@@ -1069,12 +1108,9 @@ namespace
 		}
 		else
 		{
-			error = Error_Ext_Too_Big;
-			return;
+			return Error_Ext_Too_Big;
 		}
 
-		error = Error_None;
-			
 		Convert.uint64 = 0;
 		Convert.int8   = ext.type;
 		vector.push_back(Convert.uint8);
@@ -1085,12 +1121,13 @@ namespace
 			vector.resize(vector.size() + data_size);
 			memcpy((void*)(vector.data() + index), (void*)ext.data.data(), data_size);
 		}
+
+		return Error_None;
 	}
 
 
-	void serialize_(const messagepack::Map& map
-		, std::vector<uint8_t>&         vector
-		, std::error_code&              error
+	std::error_code serialize_(const messagepack::Map& map
+		, std::vector<uint8_t>&                    vector
 		) noexcept
 	{
 		const size_t map_size = map.size();
@@ -1121,92 +1158,135 @@ namespace
 		}
 		else
 		{
-			error = Error_Map_Too_Big;
-			return;
+			return Error_Map_Too_Big;
 		}
 			
-		error = Error_None;
-			
+		std::error_code error = Error_None;
+
 		/**
 		 * \todo Add `vector.reserve()` support. May need to 
 		 * add `Object::size()`.
 		 */
 		if(map.null_map.empty() == false)
 		{
-			serialize_(Object{}       , vector, error);
-			serialize_(map.null_map[0], vector, error);
+			error = serialize_(Object{}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(map.null_map[0], vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.bool_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.int64_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.uint64_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.float_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.double_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
 
 		for(const auto& [key, value] : map.string_map)
 		{
-			serialize_(Object{key}, vector, error);
-			serialize_(value      , vector, error);
+			error = serialize_(Object{key}, vector);
 
 			if(error)
 			{
-				return;
+				return error;
+			}
+
+			error = serialize_(value, vector);
+
+			if(error)
+			{
+				return error;
 			}
 		}
+
+		return Error_None;
 	}
 }
 
@@ -5675,7 +5755,6 @@ TEST_CASE("deserialize/error")
 		CHECK(object.isNull() == true);
 	}
 
-#if 0 // Takes too long
 	SUBCASE("Map32")
 	{
 		Map map;
@@ -5693,7 +5772,6 @@ TEST_CASE("deserialize/error")
 		CHECK(index           == index);
 		CHECK(object.isNull() == true);
 	}
-#endif
 
 	SUBCASE("Fixed_Ext1")
 	{
@@ -5872,7 +5950,7 @@ std::vector<uint8_t> serialize(const Array& array ///< The Array
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(array, vector, error);
+	error = serialize_(array, vector);
 
 	return vector;
 }
@@ -5924,7 +6002,7 @@ std::vector<uint8_t> serialize(const Ext& ext   ///< The Extension
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(ext, vector, error);
+	error = serialize_(ext, vector);
 
 	return vector;
 }
@@ -6330,7 +6408,7 @@ std::vector<uint8_t> serialize(const Map& map   ///< The Map
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(map, vector, error);
+	error = serialize_(map, vector);
 
 	return vector;
 }
@@ -6422,21 +6500,18 @@ TEST_CASE("serialize/map (map16)")
 		}
 	}
 
-#if 0 // Takes a long time
 	SUBCASE("max")
 	{
 		const size_t max = std::numeric_limits<uint16_t>::max();
-		map.object_key.reserve(max);
-		map.object_value.reserve(max);
 
-		printf("Generating %lu Map entries\n", max);
+		//printf("Generating %lu Map entries\n", max);
 		for(size_t i = 0; i < max; i++)
 		{
 			Object key = {int64_t(i)};
 			Object val = {std::to_string(i)};
 			map.set(std::move(key), std::move(val));
 
-			if(i % 1000 == 0) { printf("%lu/%lu\n", i, max); }
+			//if(i % 1000 == 0) { printf("%lu/%lu\n", i, max); }
 		}
 
 		data = serialize(map);
@@ -6460,7 +6535,6 @@ TEST_CASE("serialize/map (map16)")
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
-#endif
 }
 
 
@@ -6469,21 +6543,18 @@ TEST_CASE("serialize/map (map32)")
 	Map map;
 	std::vector<uint8_t> data;
 
-#if 0 // Takes a long time
 	SUBCASE("min")
 	{
 		const size_t min = std::numeric_limits<uint16_t>::max() + 1;
-		map.object_key.reserve(min);
-		map.object_value.reserve(min);
 
-		printf("Generating %lu Map entries\n", min);
+		//printf("Generating %lu Map entries\n", min);
 		for(size_t i = 0; i < min; i++)
 		{
 			Object key = {int64_t(i)};
 			Object val = {std::to_string(i)};
 			map.set(std::move(key), std::move(val));
 
-			if(i % 1000 == 0) { printf("%lu/%lu\n", i, min); }
+			//if(i % 1000 == 0) { printf("%lu/%lu\n", i, min); }
 		}
 
 		data = serialize(map);
@@ -6509,7 +6580,6 @@ TEST_CASE("serialize/map (map32)")
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
-#endif
 
 #if 0 // Will use too much memory and take to long
 	SUBCASE("max")
@@ -6602,7 +6672,7 @@ std::vector<uint8_t> serialize(const Object& object ///< The Object
 {
 	std::vector<uint8_t> vector;
 
-	serialize_(object, vector, error);
+	error = serialize_(object, vector);
 
 	return vector;
 }

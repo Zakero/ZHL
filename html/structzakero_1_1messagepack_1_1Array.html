@@ -152,7 +152,7 @@ Public Attributes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The role of this structure is to store a collection of Objects in a resizable array. The underling <code>object_vector</code> can be accessed directly or use the helper methods to increase code readability.</p>
-<p>Objects can be tested to find out if they are Arrays by using <a class="el" href="structzakero_1_1messagepack_1_1Object.html#a6a37f094a43e1f174aa8d7e121d41df6" title="Is Object an Array?">Object::isArray()</a> and converted into an <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a> with <a class="el" href="structzakero_1_1messagepack_1_1Object.html#a1676933d6f4208d27a87bb795d5c1770" title="Convert to an Array.">Object::asArray()</a>. An <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a> can not be converted into an <a class="el" href="structzakero_1_1messagepack_1_1Object.html" title="A Data Object.">Object</a>. However, an <a class="el" href="structzakero_1_1messagepack_1_1Object.html" title="A Data Object.">Object</a> can be constructed using an <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a> and the utility methods can operate on Arrays as if they were Objects. </p>
+<p>Objects can be tested to find out if they are Arrays by using <a class="el" href="structzakero_1_1messagepack_1_1Object.html#a6a37f094a43e1f174aa8d7e121d41df6" title="Is Object an Array?">Object::isArray()</a> and converted into an <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a> with <a class="el" href="structzakero_1_1messagepack_1_1Object.html#a1676933d6f4208d27a87bb795d5c1770" title="Convert to an Array.">Object::asArray()</a>. An <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a> can not be converted into an <a class="el" href="structzakero_1_1messagepack_1_1Object.html" title="A Data Object.">Object</a>. However, an <a class="el" href="structzakero_1_1messagepack_1_1Object.html" title="A Data Object.">Object</a> can be constructed using an <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a15053f2e4fcd5330b5b7e9bea2f06293"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a15053f2e4fcd5330b5b7e9bea2f06293">&#9670;&nbsp;</a></span>append() <span class="overload">[1/16]</span></h2>
@@ -184,8 +184,8 @@ Public Attributes</h2></td></tr>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(sub_array);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a></div><div class="ttdoc">An array of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:267</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a2fe36ea849cdc7d79b9e714359f95aaa"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">zakero::messagepack::Array::append</a></div><div class="ttdeci">size_t append(const bool) noexcept</div><div class="ttdoc">Append a boolean value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:1221</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a></div><div class="ttdoc">An array of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:272</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a2fe36ea849cdc7d79b9e714359f95aaa"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">zakero::messagepack::Array::append</a></div><div class="ttdeci">size_t append(const bool) noexcept</div><div class="ttdoc">Append a boolean value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:1425</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The index location of where the <code>value</code> was stored. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -261,8 +261,7 @@ Public Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>The <code>value</code> will be appended to the contents of the <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>. <br  />
-</p>
+<p>The <code>value</code> will be appended to the contents of the <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>.</p>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(<span class="keyword">true</span>);</div>
 </div><!-- fragment --></dd></dl>
@@ -343,9 +342,9 @@ Public Attributes</h2></td></tr>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(ext);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html">zakero::messagepack::Ext</a></div><div class="ttdoc">Extension Data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:299</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_a19c37a7ecdc3abbf2c8710058329a910"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#a19c37a7ecdc3abbf2c8710058329a910">zakero::messagepack::Ext::data</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; data</div><div class="ttdoc">Extension binary data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:300</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_aefcfd23033c4325da30be0f00f3db4c1"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#aefcfd23033c4325da30be0f00f3db4c1">zakero::messagepack::Ext::type</a></div><div class="ttdeci">int8_t type</div><div class="ttdoc">A unique identifier for the extension.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:301</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html">zakero::messagepack::Ext</a></div><div class="ttdoc">Extension Data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:304</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_a19c37a7ecdc3abbf2c8710058329a910"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#a19c37a7ecdc3abbf2c8710058329a910">zakero::messagepack::Ext::data</a></div><div class="ttdeci">std::vector&lt; uint8_t &gt; data</div><div class="ttdoc">Extension binary data.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:305</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Ext_html_aefcfd23033c4325da30be0f00f3db4c1"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Ext.html#aefcfd23033c4325da30be0f00f3db4c1">zakero::messagepack::Ext::type</a></div><div class="ttdeci">int8_t type</div><div class="ttdoc">A unique identifier for the extension.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:306</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The index location of where the <code>value</code> was stored. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -456,12 +455,12 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>The <code>value</code> will be appended to the contents of this <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>.</p>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a> map;</div>
-<div class="line">map.<a class="code" href="structzakero_1_1messagepack_1_1Map.html#a35dc3a704506c7140ccb56797a90e950">set</a>(Object{42}, Object{std::string(<span class="stringliteral">&quot;foo&quot;</span>)});</div>
+<div class="line">map.<a class="code" href="structzakero_1_1messagepack_1_1Map.html#a47b7d07354419ee9ba664679e576f9a9">set</a>(Object{42}, Object{std::string(<span class="stringliteral">&quot;foo&quot;</span>)});</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(map);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a></div><div class="ttdoc">A Key/Value collection of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:308</div></div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html_a35dc3a704506c7140ccb56797a90e950"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html#a35dc3a704506c7140ccb56797a90e950">zakero::messagepack::Map::set</a></div><div class="ttdeci">size_t set(Object &amp;, Object &amp;) noexcept</div><div class="ttdoc">Set a key/value pair.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:2883</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a></div><div class="ttdoc">A Key/Value collection of Objects.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:313</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Map_html_a47b7d07354419ee9ba664679e576f9a9"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Map.html#a47b7d07354419ee9ba664679e576f9a9">zakero::messagepack::Map::set</a></div><div class="ttdeci">std::error_code set(Object &amp;, Object &amp;) noexcept</div><div class="ttdoc">Set a key/value pair.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:3108</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The index location of where the <code>value</code> was stored. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -500,7 +499,7 @@ Public Attributes</h2></td></tr>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a> <span class="keywordtype">object</span>{int8_t(42)};</div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(<span class="keywordtype">object</span>);</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Object_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a></div><div class="ttdoc">A Data Object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:332</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Object_html"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Object.html">zakero::messagepack::Object</a></div><div class="ttdoc">A Data Object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:337</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The index location of where the <code>value</code> was stored. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -690,7 +689,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>The <code>value</code> will be appended to the contents of this <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>.</p>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Map.html">zakero::messagepack::Map</a> map;</div>
-<div class="line">map.<a class="code" href="structzakero_1_1messagepack_1_1Map.html#a35dc3a704506c7140ccb56797a90e950">set</a>(Object{42}, Object{std::string(<span class="stringliteral">&quot;foo&quot;</span>)});</div>
+<div class="line">map.<a class="code" href="structzakero_1_1messagepack_1_1Map.html#a47b7d07354419ee9ba664679e576f9a9">set</a>(Object{42}, Object{std::string(<span class="stringliteral">&quot;foo&quot;</span>)});</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#a2fe36ea849cdc7d79b9e714359f95aaa">append</a>(map);</div>
@@ -805,7 +804,7 @@ Public Attributes</h2></td></tr>
 <p>A "Null" value will be appended to the contents of this <a class="el" href="structzakero_1_1messagepack_1_1Array.html" title="An array of Objects.">Array</a>.</p>
 <dl class="section user"><dt>Example</dt><dd><div class="fragment"><div class="line"><a class="code" href="structzakero_1_1messagepack_1_1Array.html">zakero::messagepack::Array</a> array;</div>
 <div class="line">array.<a class="code" href="structzakero_1_1messagepack_1_1Array.html#adf40415affe3a46917802a076f9a4d84">appendNull</a>();</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_adf40415affe3a46917802a076f9a4d84"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#adf40415affe3a46917802a076f9a4d84">zakero::messagepack::Array::appendNull</a></div><div class="ttdeci">size_t appendNull() noexcept</div><div class="ttdoc">Append a &quot;Null&quot; value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:2534</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_adf40415affe3a46917802a076f9a4d84"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#adf40415affe3a46917802a076f9a4d84">zakero::messagepack::Array::appendNull</a></div><div class="ttdeci">size_t appendNull() noexcept</div><div class="ttdoc">Append a &quot;Null&quot; value.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:2738</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The index location of where the value was stored. </dd></dl>
 
@@ -876,7 +875,7 @@ Public Attributes</h2></td></tr>
 <div class="line">{</div>
 <div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;Bar Bigger\n&quot;</span>;</div>
 <div class="line">}</div>
-<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a01e06a57ea62cf2516d6de343abb02a4"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a01e06a57ea62cf2516d6de343abb02a4">zakero::messagepack::Array::object</a></div><div class="ttdeci">Object &amp; object(const size_t index) noexcept</div><div class="ttdoc">Access a data object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:286</div></div>
+<div class="ttc" id="astructzakero_1_1messagepack_1_1Array_html_a01e06a57ea62cf2516d6de343abb02a4"><div class="ttname"><a href="structzakero_1_1messagepack_1_1Array.html#a01e06a57ea62cf2516d6de343abb02a4">zakero::messagepack::Array::object</a></div><div class="ttdeci">Object &amp; object(const size_t index) noexcept</div><div class="ttdoc">Access a data object.</div><div class="ttdef"><b>Definition:</b> Zakero_MessagePack.h:291</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>The data object.</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>

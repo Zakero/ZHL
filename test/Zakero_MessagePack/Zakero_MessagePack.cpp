@@ -30,8 +30,8 @@ int main(int argc, char** argv)
 		return result;
 	}
 
-	// --- Do Misc Stuff --- ///
+	// --- Misc Stuff --- ///
 
-	// --- Do Done --- ///
+	// --- Done --- ///
 	return result;
 }

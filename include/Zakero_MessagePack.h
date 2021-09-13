@@ -143,6 +143,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.1__
+ * - Beta Release 2
+ * - Restricted Map key types to improve performance.
+ *
  * __v0.9.0__
  * - Beta Release
  * - Added error checks to the deserializer
@@ -433,6 +437,12 @@ bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepac
  * existence is checked.
  */
 #define ZAKERO_MESSAGEPACK_IMPLEMENTATION
+
+/**
+ * \def X(name_, val_, mesg_)
+ *
+ * \brief Generate Code.
+ */
 
 #endif
 
@@ -1037,10 +1047,6 @@ namespace
 			return Error_Array_Too_Big;
 		}
 
-		/**
-		 * \todo Add `vector.reserve()` support. May need to 
-		 * add `Object::size()`.
-		 */
 		for(const messagepack::Object& object : array.object_vector)
 		{
 			std::error_code error = serialize_(object, vector);
@@ -1163,10 +1169,6 @@ namespace
 			
 		std::error_code error = Error_None;
 
-		/**
-		 * \todo Add `vector.reserve()` support. May need to 
-		 * add `Object::size()`.
-		 */
 		if(map.null_map.empty() == false)
 		{
 			error = serialize_(Object{}, vector);
@@ -3072,9 +3074,6 @@ TEST_CASE("map/set (copy)")
  * \endparcode
  *
  * \return An error code.
- *
- * \todo Storing the key/value pairs in vectors is very slow. Look into using 
- * std::hash<std::variant> to create a std::map().
  */
 std::error_code Map::set(Object& key   ///< The key
 	, Object&                value ///< The value
@@ -4639,9 +4638,11 @@ TEST_CASE("extension/timestamp/convert/96bit")
  * constexpr size_t error_code_index = 2;
  * if(array(error_index).boolean == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(error_code_index).as<int64_t>());
  * }
  * \endparcode
+ *
+ * \return The MessagePack Object.
  */
 Object deserialize(const std::vector<uint8_t>& data ///< The packed data
 	) noexcept
@@ -4679,11 +4680,13 @@ Object deserialize(const std::vector<uint8_t>& data ///< The packed data
  *
  * constexpr size_t error_index = 1;
  * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * if(array(error_index).as<bool>() == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(error_code_index).as<int64_t>());
  * }
  * \endparcode
+ *
+ * \return The MessagePack Object.
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, std::error_code&                     error ///< The error code
@@ -4721,11 +4724,13 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
  *
  * constexpr size_t error_index = 1;
  * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * if(array(error_index).as<bool>() == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(error_code_index).as<int64_t>());
  * }
  * \endparcode
+ *
+ * \return The MessagePack Object.
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
@@ -4764,11 +4769,13 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
  *
  * constexpr size_t error_index = 1;
  * constexpr size_t error_code_index = 2;
- * if(array(error_index).boolean == true)
+ * if(array(error_index).as<bool>() == true)
  * {
- * 	writeError(array(error_code_index).int64_);
+ * 	writeError(array(error_code_index).as<int64_t>());
  * }
  * \endparcode
+ *
+ * \return The MessagePack Object.
  */
 Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 	, size_t&                              index ///< The starting index
@@ -8852,7 +8859,7 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 /**
  * \brief OStream operator.
  *
- * The \p array will be converted into a JSON formatted string and writen to 
+ * The \p array will be converted into a JSON formatted string and written to 
  * the \p stream.
  *
  * \return The \p stream object.
@@ -8870,7 +8877,7 @@ std::ostream& operator<<(std::ostream&      stream ///< The stream to use.
 /**
  * \brief OStream operator.
  *
- * The \p ext will be converted into a JSON formatted string and writen to the 
+ * The \p ext will be converted into a JSON formatted string and written to the 
  * \p stream.
  *
  * \return The \p stream object.
@@ -8888,7 +8895,7 @@ std::ostream& operator<<(std::ostream&    stream ///< The stream to use.
 /**
  * \brief OStream operator.
  *
- * The \p map will be converted into a JSON formatted string and writen to the 
+ * The \p map will be converted into a JSON formatted string and written to the 
  * \p stream.
  *
  * \return The \p stream object.
@@ -8906,7 +8913,7 @@ std::ostream& operator<<(std::ostream&    stream ///< The stream to use.
 /**
  * \brief OStream operator.
  *
- * The \p object will be converted into a JSON formatted string and writen to 
+ * The \p object will be converted into a JSON formatted string and written to 
  * the \p stream.
  *
  * \return The \p stream object.
@@ -9003,6 +9010,15 @@ bool operator==(const zakero::messagepack::Object& lhs ///< The Object
 }
 
 
+/**
+ * \brief Compare two Objects for inequality.
+ *
+ * For two Objects to _differ_, their variant types must be different __or__ 
+ * the contents of the Objects must be different.
+ *
+ * \retval true  The Objects are different.
+ * \retval false The Objects are not different (they are the same).
+ */
 bool operator!=(const zakero::messagepack::Object& lhs ///< The Object
 	, const zakero::messagepack::Object&       rhs ///< The Object
 	) noexcept

@@ -47,7 +47,7 @@
  * \parwhat{zakero_messagepack}
  * The _Zakero_MessagePack_ library provides a way to serialize data for 
  * storage or transport over a network. Deserialization is also available so 
- * that the data may be accessed.  The MessagePack specification provides a 
+ * that the data may be accessed. The MessagePack specification provides a 
  * format that allows many different types of data to be packed with very 
  * little overhead.
  * \endparwhat
@@ -78,13 +78,14 @@
  * \parhow{zakero_messagepack}
  * __Step 0__
  *
- * Your compiler must support at least the C++20 standard.  The location of the 
- * `Zakero_*.h` header files _must_ be in your compiler's include path.
+ * Your compiler must support at least the C++20 standard. The location of the 
+ * `Zakero_MessagePack.h` header files _must_ be in your compiler's include 
+ * path.
  *
  * __Step 1__
  *
  * The first step is to select which C++ source code file will contain the 
- * _Zakero MessagePack_ implementation.  Once the location has been determined, 
+ * _Zakero MessagePack_ implementation. Once the location has been determined, 
  * add the following to that file:
  *
  * ~~~
@@ -105,8 +106,8 @@
  * __Step 2__
  *
  * Create MessagePack [Objects](\ref zakero::messagepack::Object) to store 
- * data.  Use containers to store more objects. Then serialize the data.  
- * MessagePack [Objects](\ref zakero::messagepack::Object)s can also be created 
+ * data. Use containers to store more objects. Then serialize the data.  
+ * MessagePack [Objects](\ref zakero::messagepack::Object) can also be created 
  * by deserializing data.
  *
  * _Add data manually_
@@ -313,8 +314,8 @@ namespace zakero::messagepack
 			[[]]          std::error_code set(Object&, Object&) noexcept;
 			[[]]          std::error_code set(const Object&, const Object&) noexcept;
 			[[nodiscard]] bool            keyExists(const Object&) const noexcept;
-			[[nodiscard]] Object&         valueOf(Object&) noexcept;
-			[[nodiscard]] const Object&   valueOf(const Object&) const noexcept;
+			[[nodiscard]] Object&         at(Object&) noexcept;
+			[[nodiscard]] const Object&   at(const Object&) const noexcept;
 
 			[[]]          void            erase(const Object&) noexcept;
 			[[]]          inline void     clear() noexcept;
@@ -429,9 +430,8 @@ bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepac
  * \brief Activate the implementation code.
  *
  * Defining this macro will cause the zakero::MessagePack implementation to be 
- * included.  This should only be done once, since compiler and/or linker 
- * errors will typically be generated if more than a single implementation is 
- * found.
+ * included. This should only be done once, since compiler and/or linker errors 
+ * will typically be generated if more than a single implementation is found.
  *
  * \note It does not matter if the macro is given a value or not, only its 
  * existence is checked.
@@ -501,13 +501,18 @@ bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepac
 	X(Fixed_Int_Neg , 0xe0      , 0b11100000  , 1      , "negative fixint" ) \
 
 // }}}
-// {{{ Documentation
-
-
-// }}}
 
 namespace zakero::messagepack
 {
+// {{{ Documentation
+
+/**
+ * \class ErrorCategory_
+ *
+ * \brief MessagePack Error Categories.
+ */
+
+// }}}
 // {{{ Anonymous Namespace
 
 namespace
@@ -642,9 +647,11 @@ namespace
 	 *
 	 * The provided \p object will be serialized into a byte-code which 
 	 * will be appended onto the \p vector.
+	 *
+	 * \return An error code.
 	 */
-	std::error_code serialize_(const messagepack::Object& object
-		, std::vector<uint8_t>&                       vector
+	std::error_code serialize_(const messagepack::Object& object ///< The Object to serialize
+		, std::vector<uint8_t>&                       vector ///< Where to store the Object
 		) noexcept
 	{
 		if(object.isNull())
@@ -1012,8 +1019,16 @@ namespace
 	}
 
 
-	std::error_code serialize_(const messagepack::Array& array
-		, std::vector<uint8_t>&                      vector
+	/**
+	 * \brief Serialize a MessagePack Array.
+	 *
+	 * The provided \p array will be serialized into a byte-code which will 
+	 * be appended onto the \p vector.
+	 *
+	 * \return An error code.
+	 */
+	std::error_code serialize_(const messagepack::Array& array  ///< The Array to serialize
+		, std::vector<uint8_t>&                      vector ///< Where to store the Array
 		) noexcept
 	{
 		const size_t array_size = array.size();
@@ -1061,8 +1076,16 @@ namespace
 	}
 
 
-	std::error_code serialize_(const messagepack::Ext& ext
-		, std::vector<uint8_t>&                    vector
+	/**
+	 * \brief Serialize a MessagePack Extension.
+	 *
+	 * The provided \p array will be serialized into a byte-code which will 
+	 * be appended onto the \p vector.
+	 *
+	 * \return An error code.
+	 */
+	std::error_code serialize_(const messagepack::Ext& ext    ///< The Extension to serialize
+		, std::vector<uint8_t>&                    vector ///< Where to store the Extension
 		) noexcept
 	{
 		const size_t data_size = ext.data.size();
@@ -1132,8 +1155,16 @@ namespace
 	}
 
 
-	std::error_code serialize_(const messagepack::Map& map
-		, std::vector<uint8_t>&                    vector
+	/**
+	 * \brief Serialize a MessagePack Map.
+	 *
+	 * The provided \p map will be serialized into a byte-code which will 
+	 * be appended onto the \p vector.
+	 *
+	 * \return An error code.
+	 */
+	std::error_code serialize_(const messagepack::Map& map    ///< The Map to serialize
+		, std::vector<uint8_t>&                    vector ///< Where to store the Map
 		) noexcept
 	{
 		const size_t map_size = map.size();
@@ -1363,10 +1394,9 @@ ErrorCategory_ ErrorCategory;
  * use the helper methods to increase code readability.
  *
  * Objects can be tested to find out if they are Arrays by using 
- * Object::isArray() and converted into an Array with Object::asArray().  An 
+ * Object::isArray() and converted into an Array with Object::asArray(). An 
  * Array can not be converted into an Object. However, an Object can be 
- * constructed using an Array and the utility methods can operate on Arrays as 
- * if they were Objects.
+ * constructed using an Array.
  */
 
 
@@ -1382,7 +1412,7 @@ ErrorCategory_ ErrorCategory;
 /**
  * \brief Append a boolean value.
  *
- * The \p value will be appended to the contents of the Array.  
+ * The \p value will be appended to the contents of the Array. 
  *
  * \parcode
  * zakero::messagepack::Array array;
@@ -2446,17 +2476,17 @@ TEST_CASE("array/append/map (copy)")
 	CHECK(test.object(index).isMap());
 	CHECK(test.object(index).asMap().size() == 2);
 	CHECK(test.object(index).asMap().keyExists(key_1) == true);
-	CHECK(test.object(index).asMap().valueOf(key_1) == val_1);
+	CHECK(test.object(index).asMap().at(key_1) == val_1);
 	CHECK(test.object(index).asMap().keyExists(key_2) == true);
-	CHECK(test.object(index).asMap().valueOf(key_2) == val_2);
+	CHECK(test.object(index).asMap().at(key_2) == val_2);
 
 	index++;
 	CHECK(test.object(index).isMap());
 	CHECK(test.object(index).asMap().size() == 2);
 	CHECK(test.object(index).asMap().keyExists(val_1) == true);
-	CHECK(test.object(index).asMap().valueOf(val_1) == key_1);
+	CHECK(test.object(index).asMap().at(val_1) == key_1);
 	CHECK(test.object(index).asMap().keyExists(val_2) == true);
-	CHECK(test.object(index).asMap().valueOf(val_2) == key_2);
+	CHECK(test.object(index).asMap().at(val_2) == key_2);
 }
 #endif // }}}
 
@@ -2531,17 +2561,17 @@ TEST_CASE("array/append/map (move)")
 	CHECK(test.object(index).isMap());
 	CHECK(test.object(index).asMap().size() == 2);
 	CHECK(test.object(index).asMap().keyExists(key_1) == true);
-	CHECK(test.object(index).asMap().valueOf(key_1) == val_1);
+	CHECK(test.object(index).asMap().at(key_1) == val_1);
 	CHECK(test.object(index).asMap().keyExists(key_2) == true);
-	CHECK(test.object(index).asMap().valueOf(key_2) == val_2);
+	CHECK(test.object(index).asMap().at(key_2) == val_2);
 
 	index++;
 	CHECK(test.object(index).isMap());
 	CHECK(test.object(index).asMap().size() == 2);
 	CHECK(test.object(index).asMap().keyExists(val_1) == true);
-	CHECK(test.object(index).asMap().valueOf(val_1) == key_1);
+	CHECK(test.object(index).asMap().at(val_1) == key_1);
 	CHECK(test.object(index).asMap().keyExists(val_2) == true);
-	CHECK(test.object(index).asMap().valueOf(val_2) == key_2);
+	CHECK(test.object(index).asMap().at(val_2) == key_2);
 }
 #endif // }}}
 
@@ -2926,14 +2956,13 @@ TEST_CASE("array/append/null")
  * of the "keys" to include all MessagePack types __except__ Array, Binary, 
  * Ext, and Map.
  *
- * The Map uses several std::map's to hold the "values".  While it is possible 
+ * The Map uses several std::map's to hold the "values". While it is possible 
  * to directly access these std::map's, it is recommended to use Map's methods 
  * since they ensure the uniqueness of the key and other checks.
  *
  * Objects can be tested to find out if they are Map by using Object::isMap() 
  * and converted into a Map with Object::asMap(). A Map can not be converted 
- * into an Object. However, an Object can be constructed using a Map and the 
- * utility methods can operate on Maps as if they were Objects.
+ * into an Object. However, an Object can be constructed using a Map.
  */
 
 /**
@@ -3007,13 +3036,13 @@ TEST_CASE("map/set (copy)")
 	{
 		map.set(key_null, val_null);
 		CHECK(map.size() == 1);
-		const Object& obj_1 = map.valueOf(key_null);
+		const Object& obj_1 = map.at(key_null);
 		CHECK(obj_1  == val_null);
 		CHECK(&obj_1 != &val_null);
 
 		map.set(key_null, val_null);
 		CHECK(map.size() == 1);
-		const Object& obj_2 = map.valueOf(key_null);
+		const Object& obj_2 = map.at(key_null);
 		CHECK(obj_2  == val_null);
 		CHECK(&obj_2 != &val_null);
 	}
@@ -3022,12 +3051,12 @@ TEST_CASE("map/set (copy)")
 	{
 		map.set(key_null, val_null);
 		CHECK(map.size() == 1);
-		const Object& obj_1 = map.valueOf(key_null);
+		const Object& obj_1 = map.at(key_null);
 		CHECK(obj_1 == val_null);
 
 		map.set(key_null, val_zero);
 		CHECK(map.size() == 1);
-		const Object& obj_2 = map.valueOf(key_null);
+		const Object& obj_2 = map.at(key_null);
 		CHECK(obj_2 == val_zero);
 	}
 
@@ -3037,10 +3066,10 @@ TEST_CASE("map/set (copy)")
 		map.set(key_zero, val_null);
 		CHECK(map.size() == 2);
 
-		const Object& obj_1 = map.valueOf(key_null);
+		const Object& obj_1 = map.at(key_null);
 		CHECK(obj_1 == val_null);
 
-		const Object& obj_2 = map.valueOf(key_zero);
+		const Object& obj_2 = map.at(key_zero);
 		CHECK(obj_2 == val_null);
 	}
 
@@ -3050,10 +3079,10 @@ TEST_CASE("map/set (copy)")
 		map.set(key_zero, val_zero);
 		CHECK(map.size() == 2);
 
-		const Object& obj_1 = map.valueOf(key_null);
+		const Object& obj_1 = map.at(key_null);
 		CHECK(obj_1 == val_null);
 
-		const Object& obj_2 = map.valueOf(key_zero);
+		const Object& obj_2 = map.at(key_zero);
 		CHECK(obj_2 == val_zero);
 	}
 }
@@ -3133,15 +3162,15 @@ TEST_CASE("map/set")
 		map.set(key_true, val_true);
 		CHECK(map.size() == 1);
 
-		Object& obj_1 = map.valueOf(key_true);
+		Object& obj_1 = map.at(key_true);
 		CHECK(obj_1 == val_true);
 		obj_1 = {val_zero};
-		CHECK(map.valueOf(key_true) == val_zero);
+		CHECK(map.at(key_true) == val_zero);
 
 		map.set(key_true, val_zero);
 		CHECK(map.size() == 1);
 
-		Object& obj_2 = map.valueOf(key_true);
+		Object& obj_2 = map.at(key_true);
 		CHECK(obj_2 == val_zero);
 	}
 
@@ -3150,11 +3179,11 @@ TEST_CASE("map/set")
 		map.set(key_true, val_true);
 		CHECK(map.size() == 1);
 
-		CHECK(map.valueOf(key_true) == val_true);
+		CHECK(map.at(key_true) == val_true);
 
 		map.set(key_true, val_zero);
 		CHECK(map.size() == 1);
-		CHECK(map.valueOf(key_true) == val_zero);
+		CHECK(map.at(key_true) == val_zero);
 	}
 
 	SUBCASE("Different Key, Same Value")
@@ -3162,8 +3191,8 @@ TEST_CASE("map/set")
 		map.set(key_true, val_true);
 		map.set(key_zero, val_true);
 		CHECK(map.size() == 2);
-		CHECK(map.valueOf(key_true) == val_true);
-		CHECK(map.valueOf(key_zero) == val_true);
+		CHECK(map.at(key_true) == val_true);
+		CHECK(map.at(key_zero) == val_true);
 	}
 
 	SUBCASE("Different Key, Different Value")
@@ -3171,8 +3200,8 @@ TEST_CASE("map/set")
 		map.set(key_true, val_true);
 		map.set(key_zero, val_zero);
 		CHECK(map.size() == 2);
-		CHECK(map.valueOf(key_true) == val_true);
-		CHECK(map.valueOf(key_zero) == val_zero);
+		CHECK(map.at(key_true) == val_true);
+		CHECK(map.at(key_zero) == val_zero);
 	}
 }
 #endif // }}}
@@ -3362,7 +3391,7 @@ TEST_CASE("map/keyexists")
  * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
  *
  * const zakero::messagepack::Object key = Object{true};
- * const zakero::messagepack::Object& object = map.valueOf({true});
+ * const zakero::messagepack::Object& object = map.at({true});
  *
  * if(&object == &key)
  * {
@@ -3372,7 +3401,7 @@ TEST_CASE("map/keyexists")
  *
  * \return The value.
  */
-const Object& Map::valueOf(const Object& key ///< The key
+const Object& Map::at(const Object& key ///< The key
 	) const noexcept
 {
 	if(keyExists(key) == false)
@@ -3444,19 +3473,19 @@ TEST_CASE("map/valueof (const)")
 		map.set(key_double, value_5);
 		map.set(key_string, value_6);
 
-		CHECK(map.valueOf(key_null)   == value_0);
-		CHECK(map.valueOf(key_bool)   == value_1);
-		CHECK(map.valueOf(key_int64)  == value_2);
-		CHECK(map.valueOf(key_uint64) == value_3);
-		CHECK(map.valueOf(key_float)  == value_4);
-		CHECK(map.valueOf(key_double) == value_5);
-		CHECK(map.valueOf(key_string) == value_6);
+		CHECK(map.at(key_null)   == value_0);
+		CHECK(map.at(key_bool)   == value_1);
+		CHECK(map.at(key_int64)  == value_2);
+		CHECK(map.at(key_uint64) == value_3);
+		CHECK(map.at(key_float)  == value_4);
+		CHECK(map.at(key_double) == value_5);
+		CHECK(map.at(key_string) == value_6);
 	}
 
 	SUBCASE("Not Exists")
 	{
 		const Object  bad_key = {};
-		const Object& bad_val = map.valueOf(bad_key);
+		const Object& bad_val = map.at(bad_key);
 		CHECK(&bad_key == &bad_val);
 	}
 }
@@ -3475,10 +3504,10 @@ TEST_CASE("map/valueof (const)")
  * zakero::messagepack::Map map;
  *
  * map.set(Object{uint64_t(42)}, Object{std::string("The Answer"});
- * zakero::messagepack::Object& thing = map.valueOf({uint64_t(42)});
+ * zakero::messagepack::Object& thing = map.at({uint64_t(42)});
  *
  * zakero::messagepack::Object key = Object{true};
- * zakero::messagepack::Object& object = map.valueOf(key);
+ * zakero::messagepack::Object& object = map.at(key);
  *
  * if(&object == &key)
  * {
@@ -3488,7 +3517,7 @@ TEST_CASE("map/valueof (const)")
  *
  * \return The value.
  */
-Object& Map::valueOf(Object& key ///< The key
+Object& Map::at(Object& key ///< The key
 	) noexcept
 {
 	if(keyExists(key) == false)
@@ -3560,22 +3589,22 @@ TEST_CASE("map/valueof")
 		map.set(key_double, value_5);
 		map.set(key_string, value_6);
 
-		CHECK(map.valueOf(key_null)   == value_0);
-		CHECK(map.valueOf(key_bool)   == value_1);
-		CHECK(map.valueOf(key_int64)  == value_2);
-		CHECK(map.valueOf(key_uint64) == value_3);
-		CHECK(map.valueOf(key_float)  == value_4);
-		CHECK(map.valueOf(key_double) == value_5);
-		CHECK(map.valueOf(key_string) == value_6);
+		CHECK(map.at(key_null)   == value_0);
+		CHECK(map.at(key_bool)   == value_1);
+		CHECK(map.at(key_int64)  == value_2);
+		CHECK(map.at(key_uint64) == value_3);
+		CHECK(map.at(key_float)  == value_4);
+		CHECK(map.at(key_double) == value_5);
+		CHECK(map.at(key_string) == value_6);
 
-		map.valueOf(key_null) = {false};
-		CHECK(map.valueOf(key_null) == Object{false});
+		map.at(key_null) = {false};
+		CHECK(map.at(key_null) == Object{false});
 	}
 
 	SUBCASE("Not Exists")
 	{
 		Object  bad_key = {};
-		Object& bad_val = map.valueOf(bad_key);
+		Object& bad_val = map.at(bad_key);
 		CHECK(&bad_key == &bad_val);
 	}
 }
@@ -6464,7 +6493,7 @@ TEST_CASE("serialize/map (fixed_map)")
 			Object key = Object{int64_t(i)};
 			CHECK(map.keyExists(key) == true);
 			
-			Object value = map.valueOf(key);
+			Object value = map.at(key);
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
@@ -6502,7 +6531,7 @@ TEST_CASE("serialize/map (map16)")
 			Object key = Object{int64_t(i)};
 			CHECK(map.keyExists(key) == true);
 			
-			Object value = map.valueOf(key);
+			Object value = map.at(key);
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
@@ -6538,7 +6567,7 @@ TEST_CASE("serialize/map (map16)")
 			Object key = Object{int64_t(i)};
 			CHECK(map.keyExists(key) == true);
 			
-			Object value = map.valueOf(key);
+			Object value = map.at(key);
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
@@ -6583,7 +6612,7 @@ TEST_CASE("serialize/map (map32)")
 			Object key = Object{int64_t(i)};
 			CHECK(map.keyExists(key) == true);
 			
-			Object value = map.valueOf(key);
+			Object value = map.at(key);
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}
@@ -6624,7 +6653,7 @@ TEST_CASE("serialize/map (map32)")
 			Object key = Object{int64_t(i)};
 			CHECK(map.keyExists(key) == true);
 			
-			Object value = map.valueOf(key);
+			Object value = map.at(key);
 			CHECK(value.asString() == std::to_string(i));
 		}
 	}

@@ -21,6 +21,9 @@
  *
  *
  * \parversion{zakero_base}
+ * __v0.9.5__
+ * - Added mapKeys()
+ *
  * __v0.9.4__
  * - Added ZAKERO_DISABLE_IMPLICIT_CASTS()
  *
@@ -64,7 +67,9 @@
 
 #include <chrono>
 #include <locale>
+#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 
@@ -405,6 +410,64 @@ namespace zakero
 
 
 	/**
+	 * \brief Get the keys in a map.
+	 *
+	 * Use this method to create a vector of all the keys in the provided 
+	 * \p map.
+	 *
+	 * \note A copy of each key is made.
+	 *
+	 * \return A vector of keys.
+	 */
+	template <class Key   ///< The key type
+		, class Value ///< The value type
+		>
+	[[nodiscard]]
+	inline std::vector<Key> mapKeys(const std::map<Key, Value>& map ///< The map
+		) noexcept
+	{
+		std::vector<Key> vector;
+		vector.reserve(map.size());
+
+		for(const auto& iter : map)
+		{
+			vector.push_back(iter.first);
+		}
+
+		return vector;
+	}
+
+
+	/**
+	 * \brief Get the keys in a map.
+	 *
+	 * Use this method to create a vector of all the keys in the provided 
+	 * \p map.
+	 *
+	 * \note A copy of each key is made.
+	 *
+	 * \return A vector of keys.
+	 */
+	template <class Key   ///< The key type
+		, class Value ///< The value type
+		>
+	[[nodiscard]]
+	inline std::vector<Key> mapKeys(const std::unordered_map<Key, Value>& map ///< The map
+		) noexcept
+	{
+		std::vector<Key> vector;
+		vector.reserve(map.size());
+
+		for(const auto& iter : map)
+		{
+			vector.push_back(iter.first);
+		}
+
+		return vector;
+	}
+
+
+	/**
 	 * \brief Check the contents of a std::vector.
 	 *
 	 * A convience method to make searching a vector easier, like 
@@ -505,6 +568,51 @@ namespace zakero
 		) noexcept
 	{
 		return vector.erase(std::remove(std::begin(vector), std::end(vector), value), std::end(vector));
+	}
+
+
+	/**
+	 * \brief Erase the contents of a std::vector.
+	 *
+	 * A convenience method to make removing content from a vector easier.  
+	 * The order of the element in the \p vector are __NOT__ preserved. The 
+	 * reason is to make the removal of the data at the \p iter location as 
+	 * fast as possible.
+	 *
+	 * \par "Example"
+	 * \parblock
+	 * \code
+	 * std::vector<int> v = { 0, 1, 2, 3 };
+	 *
+	 * auto iter = std::next(std::begin(v));
+	 *
+	 * vectorErase(v, iter);
+	 * // v = { 0, 3, 2 };
+	 * \endcode
+	 * \endparblock
+	 *
+	 * \retval true  The \p value was found.
+	 * \retval false The \p value was __not__ found.
+	 */
+	template <class Type ///< The vector type
+		>
+	inline auto vectorErase(std::vector<Type>&     vector ///< The vector to search
+		, typename std::vector<Type>::iterator iter   ///< The iterator to erase
+		) noexcept
+	{
+		if(vector.empty())
+		{
+			return vector.end();
+		}
+
+		auto last = std::prev(std::end(vector));
+
+		if(last != iter)
+		{
+			iter_swap(iter, last);
+		}
+
+		return vector.erase(last);
 	}
 
 

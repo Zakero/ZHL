@@ -84,7 +84,7 @@
  * ~~~
  * \endparhow
  *
- * \parversion{zakero_base}
+ * \parversion{zakero_haiku}
  * __v0.1.0__
  * - The initial implementation
  * \endparversion

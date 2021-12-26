@@ -340,7 +340,7 @@ namespace zakero
 /**
  * \brief The INI identifier for error messages.
  */
-#define ZAKERO_INI_ "Ini(0x" << std::hex << this << std::dec << ") "
+#define ZAKERO_INI_ "Ini(" << std::hex << this << std::dec << ") "
 
 
 /**

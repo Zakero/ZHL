@@ -222,7 +222,7 @@ namespace zakero
 {
 	// {{{ Declaration
 
-	class IniErrorCategory_
+	static class IniErrorCategory_
 		: public std::error_category
 	{
 		public:
@@ -235,7 +235,7 @@ namespace zakero
 				return "zakero.Ini";
 			}
 
-			std::string message(int condition) const override
+			std::string message(int condition) const noexcept override
 			{
 				switch(condition)
 				{
@@ -364,7 +364,7 @@ namespace
 // {{{ Documentation
 
 /**
- * \class zakero::IniErrorCategories
+ * \class zakero::IniErrorCategory
  *
  * \brief Error Categories.
  *
@@ -394,11 +394,14 @@ namespace
 
 // }}}
 // {{{ Ini
+// {{{ Ini: Class Variables
 
 #define X(name_, val_, mesg_) \
 const std::error_code Ini::name_(val_, IniErrorCategory);
 ZAKERO_INI__ERROR_DATA
 #undef X
+
+// }}}
 
 /**
  * \brief Constructor.

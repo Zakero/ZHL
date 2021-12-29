@@ -144,6 +144,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.2__
+ * - Beta Release 3
+ * - Fixed GCC compiler warnings
+ *
  * __v0.9.1__
  * - Beta Release 2
  * - Restricted Map key types to improve performance.
@@ -187,6 +191,7 @@
 #include <cstring>
 #include <ctime>
 #include <limits>
+#include <map>
 #include <string>
 #include <system_error>
 #include <variant>
@@ -346,12 +351,12 @@ namespace zakero::messagepack
 				, zakero::messagepack::Array
 				, zakero::messagepack::Ext
 				, zakero::messagepack::Map
-				> value;
+				> value = {};
 
 			template<typename T>
-			[[nodiscard]] T&                          as() noexcept { return std::get<T>(value); };
+			[[nodiscard]] T&                          as() noexcept { return std::get<T>(value); }
 			template<typename T>
-			[[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); };
+			[[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); }
 
 			[[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
 			[[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
@@ -364,7 +369,7 @@ namespace zakero::messagepack
 			[[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value); };
 
 			template<typename T>
-			[[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); };
+			[[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); }
 
 			[[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
 			[[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };

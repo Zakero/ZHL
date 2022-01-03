@@ -197,9 +197,18 @@
 /**
  * \brief xkb.h uses the C++ keyword `explicit` for a variable name.
  */
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wkeyword-macro"
+#endif
+
 #define explicit explicit_
 #include <xcb/xkb.h>
 #undef explicit
+
+#if __clang__
+#pragma clang diagnostic pop
+#endif
 
 // Zakero
 #include "Zakero_Base.h"

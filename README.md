@@ -17,7 +17,7 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 | Zakero_Haiku.h       |  0.1.0  | A collection of helper functions for the Haiku OS                 |
 | Zakero_Ini.h         |  0.2.0  | An INI file parser                                                |
 | Zakero_MemoryPool.h  |  0.9.0  | An expandable memory pool that is based on Unix File Descriptors  |
-| Zakero_MessagePack.h |  0.9.2  | An implementation of the MessagePack specification                |
+| Zakero_MessagePack.h |  0.9.3  | An implementation of the MessagePack specification                |
 | Zakero_Profiler.h    |  0.9.1  | Generate profiling data that can be visualized in Chrome/Chromium |
 | Zakero_Xenium.h      |  0.1.0  | A class that makes working with X11/XCB much easier               |
 | Zakero_Yetani.h      |  0.6.1  | A class that makes working with Wayland much easier               |

@@ -144,6 +144,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.3__
+ * - Quality of life improvements
+ * - Bug fixes
+ *
  * __v0.9.2__
  * - Beta Release 3
  * - Bug fixes

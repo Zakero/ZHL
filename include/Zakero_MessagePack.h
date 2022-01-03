@@ -146,6 +146,7 @@
  * \parversion{zakero_messagepack}
  * __v0.9.2__
  * - Beta Release 3
+ * - Bug fixes
  * - Fixed GCC compiler warnings
  *
  * __v0.9.1__
@@ -298,6 +299,10 @@ namespace zakero::messagepack
 
 			[[]]          inline void          clear() noexcept { return object_vector.clear(); };
 			[[nodiscard]] inline size_t        size() const noexcept { return object_vector.size(); };
+			[[]]          inline void          resize(size_t count) noexcept { object_vector.resize(count); };
+
+			Object&       operator[](size_t index) noexcept { return object_vector[index]; };
+			const Object& operator[](size_t index) const noexcept { return object_vector.at(index); };
 
 			std::vector<Object> object_vector = {};
 		};
@@ -325,6 +330,21 @@ namespace zakero::messagepack
 			[[]]          void            erase(const Object&) noexcept;
 			[[]]          inline void     clear() noexcept;
 			[[nodiscard]] inline size_t   size() const noexcept;
+
+			Object&       operator[](Object& object) noexcept { return at(object); };
+			const Object& operator[](Object& object) const noexcept { return at(object); };
+			Object&       operator[](bool key) noexcept { return bool_map[key]; };
+			const Object& operator[](bool key) const noexcept { return bool_map.at(key); };
+			Object&       operator[](int64_t key) noexcept { return int64_map[key]; };
+			const Object& operator[](int64_t key) const noexcept { return int64_map.at(key); };
+			Object&       operator[](uint64_t key) noexcept { return uint64_map[key]; };
+			const Object& operator[](uint64_t key) const noexcept { return uint64_map.at(key); };
+			Object&       operator[](float key) noexcept { return float_map[key]; };
+			const Object& operator[](float key) const noexcept { return float_map.at(key); };
+			Object&       operator[](double key) noexcept { return double_map[key]; };
+			const Object& operator[](double key) const noexcept { return double_map.at(key); };
+			Object&       operator[](std::string key) noexcept { return string_map[key]; };
+			const Object& operator[](std::string key) const noexcept { return string_map.at(key); };
 
 			std::vector<Object>           null_map   = {};
 			std::map<bool, Object>        bool_map   = {};
@@ -8875,7 +8895,7 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 	}
 	else if(object.isMap())
 	{
-		s += "'type': 'zakero::messagepack::Ext', 'value': "
+		s += "'type': 'zakero::messagepack::Map', 'value': "
 			+ zakero::messagepack::to_string(object.asMap())
 			;
 	}

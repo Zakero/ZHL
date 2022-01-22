@@ -101,6 +101,9 @@
  * \endparhow
  *
  * \parversion{zakero_memorypool}
+ * __0.2.1__
+ * - The comment character is now configurable.
+ *
  * __0.2.0__
  * - A complete rewrite based on unordered_map.
  *
@@ -195,9 +198,11 @@ namespace zakero
 namespace zakero
 {
 	[[]]          std::error_code iniRead(const std::filesystem::path, zakero::Ini&) noexcept;
+	[[]]          std::error_code iniRead(const std::filesystem::path, const char, zakero::Ini&) noexcept;
 	[[]]          std::error_code iniWrite(const zakero::Ini&, std::filesystem::path) noexcept;
 
 	[[]]          std::error_code iniParse(const std::string_view, zakero::Ini&) noexcept;
+	[[]]          std::error_code iniParse(const std::string_view, const char, zakero::Ini&) noexcept;
 	[[nodiscard]] std::string     to_string(const zakero::Ini&) noexcept;
 }
 
@@ -353,6 +358,37 @@ std::error_code iniRead(const std::filesystem::path path ///< The file path
 	, zakero::Ini&                              ini  ///< Where to store the data
 	) noexcept
 {
+	return iniRead(path, '\0', ini);
+}
+
+
+/**
+ * \brief Read data from a file.
+ *
+ * INI file data can be loaded into this object by using this method.  The file 
+ * will overwrite any existing data.
+ *
+ * This method provides a way to set a \p comment character. As comments are 
+ * _not_ a part of the INI standard, this parser will treat any line that 
+ * contains the \p comment character all the way to the end of the line as a 
+ * comment and ignore it.  Recomended comment characters are:
+ * - '#' (Bash Style)
+ * - ';' (DOS Batch Script Style)
+ *
+ * \examplecode
+ * zakero::Ini prefs;
+ *
+ * iniParse(defaults, prefs);
+ * iniRead("/path/to/some_file.ini", '#', prefs);
+ * \endexamplecode
+ *
+ * \return An error code.
+ */
+std::error_code iniRead(const std::filesystem::path path    ///< The file path
+	, const char                                comment ///< The comment character
+	, zakero::Ini&                              ini     ///< Where to store the data
+	) noexcept
+{
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
 	if(path.empty())
 	{
@@ -494,6 +530,7 @@ std::error_code iniRead(const std::filesystem::path path ///< The file path
 	}
 
 	std::error_code error = iniParse(std::string_view(data.begin(), data.end())
+		, comment
 		, ini
 		);
 
@@ -565,6 +602,34 @@ std::error_code iniParse(const std::string_view string ///< The string to parse
 	, Ini&                                  ini    ///< The parsed INI data
 	) noexcept
 {
+	return iniParse(string, '#', ini);
+}
+
+
+/**
+ * \brief Parse a string into INI data
+ *
+ * The raw character data in the provided \p string will be parsed and stored 
+ * in the \p ini object.
+ *
+ * This method provides a way to set a \p comment character. As comments are 
+ * _not_ a part of the INI standard, this parser will treat any line that 
+ * contains the \p comment character all the way to the end of the line as a 
+ * comment and ignore it.  Recomended comment characters are:
+ * - '#' (Bash Style)
+ * - ';' (DOS Batch Style)
+ *
+ * \note Any existing data in the \p ini object may be overwritten by new data.
+ *
+ * \bug No error checking is done, assumes properly formatted data.
+ *
+ * \return An error code
+ */
+std::error_code iniParse(const std::string_view string  ///< The string to parse
+	, const char                            comment ///< The comment character
+	, Ini&                                  ini     ///< The parsed INI data
+	) noexcept
+{
 	std::string section = "";
 
 	auto iter = string.begin();
@@ -581,7 +646,7 @@ std::error_code iniParse(const std::string_view string ///< The string to parse
 		}
 
 		// Comment
-		if(*iter == ';')
+		if(*iter == comment)
 		{
 			while(iter != string.end() && *iter != '\n')
 			{

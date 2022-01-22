@@ -15,7 +15,7 @@ official website for the project is [zhl.zakero.com](https://zhl.zakero.com).
 |----------------------|:-------:|-------------------------------------------------------------------|
 | Zakero_Base.h        |  0.9.5  | A collection of helper functions, macros, and templates           |
 | Zakero_Haiku.h       |  0.1.0  | A collection of helper functions for the Haiku OS                 |
-| Zakero_Ini.h         |  0.2.0  | An INI file parser                                                |
+| Zakero_Ini.h         |  0.2.1  | An INI file parser                                                |
 | Zakero_MemoryPool.h  |  0.9.0  | An expandable memory pool that is based on Unix File Descriptors  |
 | Zakero_MessagePack.h |  0.9.4  | An implementation of the MessagePack specification                |
 | Zakero_Profiler.h    |  0.9.1  | Generate profiling data that can be visualized in Chrome/Chromium |

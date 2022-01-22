@@ -144,6 +144,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.4__
+ * - Quality of life improvements when using `Map::operation[]`
+ * - Bug fixes
+ *
  * __v0.9.3__
  * - Quality of life improvements
  * - Bug fixes
@@ -198,6 +202,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <variant>
 #include <vector>
@@ -241,6 +246,9 @@
 	X(Error_Ext_Too_Big         ,  7 , "The extension is too large to serialize" ) \
 	X(Error_Map_Too_Big         ,  8 , "The map is too large to serialize"       ) \
 
+#define ZAKERO_DISABLE_IMPLICIT_CASTS(func_name_) \
+	template <typename... T>                 \
+	void func_name_(T...) = delete
 // }}}
 
 
@@ -335,20 +343,24 @@ namespace zakero::messagepack
 			[[]]          inline void     clear() noexcept;
 			[[nodiscard]] inline size_t   size() const noexcept;
 
-			Object&       operator[](Object& object) noexcept { return at(object); };
-			const Object& operator[](Object& object) const noexcept { return at(object); };
-			Object&       operator[](bool key) noexcept { return bool_map[key]; };
-			const Object& operator[](bool key) const noexcept { return bool_map.at(key); };
-			Object&       operator[](int64_t key) noexcept { return int64_map[key]; };
-			const Object& operator[](int64_t key) const noexcept { return int64_map.at(key); };
-			Object&       operator[](uint64_t key) noexcept { return uint64_map[key]; };
-			const Object& operator[](uint64_t key) const noexcept { return uint64_map.at(key); };
-			Object&       operator[](float key) noexcept { return float_map[key]; };
-			const Object& operator[](float key) const noexcept { return float_map.at(key); };
-			Object&       operator[](double key) noexcept { return double_map[key]; };
-			const Object& operator[](double key) const noexcept { return double_map.at(key); };
-			Object&       operator[](std::string key) noexcept { return string_map[key]; };
-			const Object& operator[](std::string key) const noexcept { return string_map.at(key); };
+			Object&       operator[](Object& object) noexcept                   { return at(object);                      };
+			const Object& operator[](const Object& object) const noexcept       { return at(object);                      };
+			Object&       operator[](bool key) noexcept                         { return bool_map[key];                   };
+			const Object& operator[](bool key) const noexcept                   { return bool_map.at(key);                };
+			Object&       operator[](int64_t key) noexcept                      { return int64_map[key];                  };
+			const Object& operator[](int64_t key) const noexcept                { return int64_map.at(key);               };
+			Object&       operator[](uint64_t key) noexcept                     { return uint64_map[key];                 };
+			const Object& operator[](uint64_t key) const noexcept               { return uint64_map.at(key);              };
+			Object&       operator[](float key) noexcept                        { return float_map[key];                  };
+			const Object& operator[](float key) const noexcept                  { return float_map.at(key);               };
+			Object&       operator[](double key) noexcept                       { return double_map[key];                 };
+			const Object& operator[](double key) const noexcept                 { return double_map.at(key);              };
+			Object&       operator[](const char* key) noexcept                  { return string_map[std::string(key)];    };
+			const Object& operator[](const char* key) const noexcept            { return string_map.at(std::string(key)); };
+			Object&       operator[](std::string key) noexcept                  { return string_map[key];                 };
+			const Object& operator[](std::string key) const noexcept            { return string_map.at(key);              };
+			Object&       operator[](const std::string_view key) noexcept       { return string_map[std::string(key)];    };
+			const Object& operator[](const std::string_view key) const noexcept { return string_map.at(std::string(key)); };
 
 			std::vector<Object>           null_map   = {};
 			std::map<bool, Object>        bool_map   = {};
@@ -401,6 +413,8 @@ namespace zakero::messagepack
 			[[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
 			[[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
 			[[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
+
+			[[nodiscard]] std::string                 type() const noexcept;
 		};
 
 		// }}} Object
@@ -3477,7 +3491,7 @@ const Object& Map::at(const Object& key ///< The key
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("map/valueof (const)")
+TEST_CASE("map/set/at (const)")
 {
 	Map map;
 
@@ -3521,6 +3535,89 @@ TEST_CASE("map/valueof (const)")
 		const Object  bad_key = {};
 		const Object& bad_val = map.at(bad_key);
 		CHECK(&bad_key == &bad_val);
+	}
+}
+
+TEST_CASE("map/set/operator[](Object&) (const)")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		const Object key_null   = {};
+		const Object key_bool   = {true};
+		const Object key_int64  = {int64_t(0)};
+		const Object key_uint64 = {uint64_t(0)};
+		const Object key_float  = {float(0)};
+		const Object key_double = {double(0)};
+		const Object key_string = {std::string("_")};
+
+		const Object value_0 = {uint64_t(0)};
+		const Object value_1 = {uint64_t(1)};
+		const Object value_2 = {uint64_t(2)};
+		const Object value_3 = {uint64_t(3)};
+		const Object value_4 = {uint64_t(4)};
+		const Object value_5 = {uint64_t(5)};
+		const Object value_6 = {uint64_t(6)};
+
+		map.set(key_null,   value_0);
+		map.set(key_bool,   value_1);
+		map.set(key_int64,  value_2);
+		map.set(key_uint64, value_3);
+		map.set(key_float,  value_4);
+		map.set(key_double, value_5);
+		map.set(key_string, value_6);
+
+		CHECK(map[key_null]   == value_0);
+		CHECK(map[key_bool]   == value_1);
+		CHECK(map[key_int64]  == value_2);
+		CHECK(map[key_uint64] == value_3);
+		CHECK(map[key_float]  == value_4);
+		CHECK(map[key_double] == value_5);
+		CHECK(map[key_string] == value_6);
+	}
+
+	SUBCASE("Not Exists")
+	{
+		const Object  bad_key = {};
+		const Object& bad_val = map[bad_key];
+		CHECK(&bad_key == &bad_val);
+	}
+}
+
+TEST_CASE("map/set/operator[](native type) (const)")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		const bool        key_bool   = {true};
+		const int64_t     key_int64  = {int64_t(0)};
+		const uint64_t    key_uint64 = {uint64_t(0)};
+		const float       key_float  = {float(0)};
+		const double      key_double = {double(0)};
+		const std::string key_string = {std::string("_")};
+
+		const Object value_1 = {uint64_t(1)};
+		const Object value_2 = {uint64_t(2)};
+		const Object value_3 = {uint64_t(3)};
+		const Object value_4 = {uint64_t(4)};
+		const Object value_5 = {uint64_t(5)};
+		const Object value_6 = {uint64_t(6)};
+
+		map.set({key_bool  } , value_1);
+		map.set({key_int64 } , value_2);
+		map.set({key_uint64} , value_3);
+		map.set({key_float } , value_4);
+		map.set({key_double} , value_5);
+		map.set({key_string} , value_6);
+
+		CHECK(map[key_bool]   == value_1);
+		CHECK(map[key_int64]  == value_2);
+		CHECK(map[key_uint64] == value_3);
+		CHECK(map[key_float]  == value_4);
+		CHECK(map[key_double] == value_5);
+		CHECK(map[key_string] == value_6);
 	}
 }
 #endif // }}}
@@ -3593,7 +3690,7 @@ Object& Map::at(Object& key ///< The key
 
 
 #ifdef ZAKERO_MESSAGEPACK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("map/valueof")
+TEST_CASE("map/set/at")
 {
 	Map map;
 
@@ -3640,6 +3737,116 @@ TEST_CASE("map/valueof")
 		Object  bad_key = {};
 		Object& bad_val = map.at(bad_key);
 		CHECK(&bad_key == &bad_val);
+	}
+}
+
+TEST_CASE("map/set/operator[](Object&)")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		Object key_null   = {};
+		Object key_bool   = {true};
+		Object key_int64  = {int64_t(0)};
+		Object key_uint64 = {uint64_t(0)};
+		Object key_float  = {float(0)};
+		Object key_double = {double(0)};
+		Object key_string = {std::string("_")};
+
+		Object value_0 = {uint64_t(0)};
+		Object value_1 = {uint64_t(1)};
+		Object value_2 = {uint64_t(2)};
+		Object value_3 = {uint64_t(3)};
+		Object value_4 = {uint64_t(4)};
+		Object value_5 = {uint64_t(5)};
+		Object value_6 = {uint64_t(6)};
+
+		map.set(key_null,   value_0);
+		map.set(key_bool,   value_1);
+		map.set(key_int64,  value_2);
+		map.set(key_uint64, value_3);
+		map.set(key_float,  value_4);
+		map.set(key_double, value_5);
+		map.set(key_string, value_6);
+
+		CHECK(map[key_null]   == value_0);
+		CHECK(map[key_bool]   == value_1);
+		CHECK(map[key_int64]  == value_2);
+		CHECK(map[key_uint64] == value_3);
+		CHECK(map[key_float]  == value_4);
+		CHECK(map[key_double] == value_5);
+		CHECK(map[key_string] == value_6);
+	}
+
+	SUBCASE("Not Exists")
+	{
+		Object  bad_key = {};
+		Object& bad_val = map[bad_key];
+		CHECK(&bad_key == &bad_val);
+	}
+}
+
+TEST_CASE("map/set/operator[](raw native types)")
+{
+	Map map;
+
+	SUBCASE("Exists")
+	{
+		std::string string = "Hello, World!";
+		Object value = {string};
+
+		map.set({(bool)     true } , value);
+		map.set({(int64_t)  0    } , value);
+		map.set({(uint64_t) 1    } , value);
+		map.set({(float)    2.2  } , value);
+		map.set({(double)   3.3  } , value);
+		map.set({           "foo"} , value);
+
+		CHECK(map[(bool)     true ].isString() == true);
+		CHECK(map[(bool)     true ].isString() == value.isString());
+		CHECK(map[(bool)     true ] == value);
+		CHECK(map[(bool)     true ].asString() == string);
+
+		CHECK(map[(int64_t)  0    ].isString() == true);
+		CHECK(map[(int64_t)  0    ].isString() == value.isString());
+		CHECK(map[(int64_t)  0    ] == value);
+		CHECK(map[(int64_t)  0    ].asString() == string);
+
+		CHECK(map[(uint64_t) 1    ].isString() == true);
+		CHECK(map[(uint64_t) 1    ].isString() == value.isString());
+		CHECK(map[(uint64_t) 1    ] == value);
+		CHECK(map[(uint64_t) 1    ].asString() == string);
+
+		CHECK(map[(float)    2.2  ].isString() == true);
+		CHECK(map[(float)    2.2  ].isString() == value.isString());
+		CHECK(map[(float)    2.2  ] == value);
+		CHECK(map[(float)    2.2  ].asString() == string);
+
+		CHECK(map[(double)   3.3  ].isString() == true);
+		CHECK(map[(double)   3.3  ].isString() == value.isString());
+		CHECK(map[(double)   3.3  ] == value);
+		CHECK(map[(double)   3.3  ].asString() == string);
+
+		CHECK(map[           "foo"].isString() == true);
+		CHECK(map[           "foo"].isString() == value.isString());
+		CHECK(map[           "foo"] == value);
+		CHECK(map[           "foo"].asString() == string);
+
+		Object obj = map["foo"];
+		CHECK(obj == value);
+		CHECK(obj.isString() == true);
+
+		std::string str = map["foo"].asString();
+		CHECK(str == string);
+
+		map.set({ "aaa" } , { "aaa" });
+
+		bool b = map["aaa"].isString();
+		CHECK(b == true);
+
+		std::string s = map["aaa"].asString();
+		CHECK(s == "aaa");
 	}
 }
 #endif // }}}
@@ -3973,6 +4180,78 @@ size_t Map::size() const noexcept
  *
  * \see is()
  */
+
+
+/**
+ * \fn zakero::messagepack::Object::type()
+ *
+ * \brief Provide the Object type as a std::string.
+ *
+ * The datatype name of the value in this Object will be returned as a 
+ * std::string. While not very useful for final/release codebases, this method 
+ * can be a great help when debugging.
+ *
+ * \return A string.
+ */
+std::string Object::type() const noexcept
+{
+	if(this->isNull())
+	{
+		return "null";
+	}
+
+	if(this->is<bool>())
+	{
+		return "bool";
+	}
+
+	if(this->is<int64_t>())
+	{
+		return "int64_t";
+	}
+
+	if(this->is<uint64_t>())
+	{
+		return "uint64_t";
+	}
+
+	if(this->is<float>())
+	{
+		return "float";
+	}
+
+	if(this->is<double>())
+	{
+		return "dnuble";
+	}
+
+	if(this->is<std::string>())
+	{
+		return "std::string";
+	}
+
+	if(this->is<std::vector<uint8_t>>())
+	{
+		return "std::vector<uint8_t>";
+	}
+
+	if(this->isArray())
+	{
+		return "zakero::messagepack::Array";
+	}
+
+	if(this->isExt())
+	{
+		return "zakero::messagepack::Ext";
+	}
+
+	if(this->isMap())
+	{
+		return "zakero::messagepack::Map";
+	}
+
+	return {};
+}
 
 // }}} Object
 // {{{ Extensions
@@ -8816,15 +9095,15 @@ std::string to_string(const messagepack::Map& map ///< The Map to convert.
 std::string to_string(const messagepack::Object& object ///< The Object to convert.
 	) noexcept
 {
-	std::string s = "{ ";
+	std::string s = "{ 'type': '" + object.type() + "'";
 
 	if(object.isNull())
 	{
-		s += "'type': 'null'";
+		// Null objects do not have a value.
 	}
 	else if(object.is<bool>())
 	{
-		s += "'type': 'bool', 'value': ";
+		s += ", 'value': ";
 		if(object.as<bool>() == true)
 		{
 			s += "true";
@@ -8836,41 +9115,29 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 	}
 	else if(object.is<int64_t>())
 	{
-		s += "'type': 'int64_t', 'value': "
-			+ std::to_string(object.as<int64_t>())
-			;
+		s += ", 'value': " + std::to_string(object.as<int64_t>());
 	}
 	else if(object.is<uint64_t>())
 	{
-		s += "'type': 'uint64_t', 'value': "
-			+ std::to_string(object.as<uint64_t>())
-			;
+		s += ", 'value': " + std::to_string(object.as<uint64_t>());
 	}
 	else if(object.is<float>())
 	{
-		s += "'type': 'float', 'value': "
-			+ std::to_string(object.as<float>())
-			;
+		s += ", 'value': " + std::to_string(object.as<float>());
 	}
 	else if(object.is<double>())
 	{
-		s += "'type': 'double', 'value': "
-			+ std::to_string(object.as<double>())
-			;
+		s += ", 'value': " + std::to_string(object.as<double>());
 	}
 	else if(object.is<std::string>())
 	{
-		s += "'type': 'std::string', 'value': '"
-			+ object.as<std::string>()
-			+ "'"
-			;
+		s += ", 'value': " + object.as<std::string>() + "'";
 	}
 	else if(object.is<std::vector<uint8_t>>())
 	{
-		s += "'type': 'std::vector<uint8_t>', 'value': ["
-			;
+		s += ", 'value': ";
 
-		std::string prefix = " ";
+		std::string prefix = "[ ";
 
 		const std::vector<uint8_t>& data = object.as<std::vector<uint8_t>>();
 		for(size_t i = 0; i < data.size(); i++)
@@ -8887,21 +9154,15 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 	}
 	else if(object.isArray())
 	{
-		s += "'type': 'zakero::messagepack::Array', 'value': "
-			+ zakero::messagepack::to_string(object.asArray())
-			;
+		s += ", 'value': " + zakero::messagepack::to_string(object.asArray());
 	}
 	else if(object.isExt())
 	{
-		s += "'type': 'zakero::messagepack::Ext', 'value': "
-			+ zakero::messagepack::to_string(object.asExt())
-			;
+		s += ", 'value': " + zakero::messagepack::to_string(object.asExt());
 	}
 	else if(object.isMap())
 	{
-		s += "'type': 'zakero::messagepack::Map', 'value': "
-			+ zakero::messagepack::to_string(object.asMap())
-			;
+		s += ", 'value': " + zakero::messagepack::to_string(object.asMap());
 	}
 
 	s += " }";

@@ -236,19 +236,16 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_MESSAGEPACK__ERROR_DATA \
-	X(Error_None                ,  0 , "No Error"                                ) \
-	X(Error_Unknown             ,  1 , "An unknown error has occurred"           ) \
-	X(Error_Incomplete          ,  2 , "The data to deserialize is incomplete"   ) \
-	X(Error_Invalid_Format_Type ,  3 , "An invalid Format Type was encountered"  ) \
-	X(Error_Invalid_Index       ,  4 , "Invalid starting index to deserialize"   ) \
-	X(Error_No_Data             ,  5 , "No data to deserialize"                  ) \
-	X(Error_Array_Too_Big       ,  6 , "The array is too large to serialize"     ) \
-	X(Error_Ext_Too_Big         ,  7 , "The extension is too large to serialize" ) \
-	X(Error_Map_Too_Big         ,  8 , "The map is too large to serialize"       ) \
+	X(Error_None                , 0 , "No Error"                                ) \
+	X(Error_Unknown             , 1 , "An unknown error has occurred"           ) \
+	X(Error_Incomplete          , 2 , "The data to deserialize is incomplete"   ) \
+	X(Error_Invalid_Format_Type , 3 , "An invalid Format Type was encountered"  ) \
+	X(Error_Invalid_Index       , 4 , "Invalid starting index to deserialize"   ) \
+	X(Error_No_Data             , 5 , "No data to deserialize"                  ) \
+	X(Error_Array_Too_Big       , 6 , "The array is too large to serialize"     ) \
+	X(Error_Ext_Too_Big         , 7 , "The extension is too large to serialize" ) \
+	X(Error_Map_Too_Big         , 8 , "The map is too large to serialize"       ) \
 
-#define ZAKERO_DISABLE_IMPLICIT_CASTS(func_name_) \
-	template <typename... T>                 \
-	void func_name_(T...) = delete
 // }}}
 
 
@@ -306,15 +303,15 @@ namespace zakero::messagepack
 			[[]]          size_t               append(Object&) noexcept;
 			[[]]          size_t               appendNull() noexcept;
 
-			[[nodiscard]] inline Object&       object(const size_t index) noexcept { return object_vector[index]; }
+			[[nodiscard]] inline Object&       object(const size_t index) noexcept       { return object_vector[index]; }
 			[[nodiscard]] inline const Object& object(const size_t index) const noexcept { return object_vector[index]; }
 
-			[[]]          inline void          clear() noexcept { return object_vector.clear(); };
-			[[nodiscard]] inline size_t        size() const noexcept { return object_vector.size(); };
-			[[]]          inline void          resize(size_t count) noexcept { object_vector.resize(count); };
+			[[]]          inline void          clear() noexcept              { return object_vector.clear(); }
+			[[nodiscard]] inline size_t        size() const noexcept         { return object_vector.size();  }
+			[[]]          inline void          resize(size_t count) noexcept { object_vector.resize(count);  }
 
-			Object&       operator[](size_t index) noexcept { return object_vector[index]; };
-			const Object& operator[](size_t index) const noexcept { return object_vector.at(index); };
+			Object&       operator[](size_t index) noexcept       { return object_vector[index];    }
+			const Object& operator[](size_t index) const noexcept { return object_vector.at(index); }
 
 			std::vector<Object> object_vector = {};
 		};
@@ -343,24 +340,24 @@ namespace zakero::messagepack
 			[[]]          inline void     clear() noexcept;
 			[[nodiscard]] inline size_t   size() const noexcept;
 
-			Object&       operator[](Object& object) noexcept                   { return at(object);                      };
-			const Object& operator[](const Object& object) const noexcept       { return at(object);                      };
-			Object&       operator[](bool key) noexcept                         { return bool_map[key];                   };
-			const Object& operator[](bool key) const noexcept                   { return bool_map.at(key);                };
-			Object&       operator[](int64_t key) noexcept                      { return int64_map[key];                  };
-			const Object& operator[](int64_t key) const noexcept                { return int64_map.at(key);               };
-			Object&       operator[](uint64_t key) noexcept                     { return uint64_map[key];                 };
-			const Object& operator[](uint64_t key) const noexcept               { return uint64_map.at(key);              };
-			Object&       operator[](float key) noexcept                        { return float_map[key];                  };
-			const Object& operator[](float key) const noexcept                  { return float_map.at(key);               };
-			Object&       operator[](double key) noexcept                       { return double_map[key];                 };
-			const Object& operator[](double key) const noexcept                 { return double_map.at(key);              };
-			Object&       operator[](const char* key) noexcept                  { return string_map[std::string(key)];    };
-			const Object& operator[](const char* key) const noexcept            { return string_map.at(std::string(key)); };
-			Object&       operator[](std::string key) noexcept                  { return string_map[key];                 };
-			const Object& operator[](std::string key) const noexcept            { return string_map.at(key);              };
-			Object&       operator[](const std::string_view key) noexcept       { return string_map[std::string(key)];    };
-			const Object& operator[](const std::string_view key) const noexcept { return string_map.at(std::string(key)); };
+			Object&       operator[](Object& object) noexcept                   { return at(object);                      }
+			const Object& operator[](const Object& object) const noexcept       { return at(object);                      }
+			Object&       operator[](bool key) noexcept                         { return bool_map[key];                   }
+			const Object& operator[](bool key) const noexcept                   { return bool_map.at(key);                }
+			Object&       operator[](int64_t key) noexcept                      { return int64_map[key];                  }
+			const Object& operator[](int64_t key) const noexcept                { return int64_map.at(key);               }
+			Object&       operator[](uint64_t key) noexcept                     { return uint64_map[key];                 }
+			const Object& operator[](uint64_t key) const noexcept               { return uint64_map.at(key);              }
+			Object&       operator[](float key) noexcept                        { return float_map[key];                  }
+			const Object& operator[](float key) const noexcept                  { return float_map.at(key);               }
+			Object&       operator[](double key) noexcept                       { return double_map[key];                 }
+			const Object& operator[](double key) const noexcept                 { return double_map.at(key);              }
+			Object&       operator[](const char* key) noexcept                  { return string_map[std::string(key)];    }
+			const Object& operator[](const char* key) const noexcept            { return string_map.at(std::string(key)); }
+			Object&       operator[](std::string key) noexcept                  { return string_map[key];                 }
+			const Object& operator[](std::string key) const noexcept            { return string_map.at(key);              }
+			Object&       operator[](const std::string_view key) noexcept       { return string_map[std::string(key)];    }
+			const Object& operator[](const std::string_view key) const noexcept { return string_map.at(std::string(key)); }
 
 			std::vector<Object>           null_map   = {};
 			std::map<bool, Object>        bool_map   = {};
@@ -390,29 +387,29 @@ namespace zakero::messagepack
 				> value = {};
 
 			template<typename T>
-			[[nodiscard]] T&                          as() noexcept { return std::get<T>(value); }
+			[[nodiscard]] T&                          as() noexcept             { return std::get<T>(value); }
 			template<typename T>
-			[[nodiscard]] const T&                    as() const noexcept { return std::get<T>(value); }
+			[[nodiscard]] const T&                    as() const noexcept       { return std::get<T>(value); }
 
-			[[nodiscard]] messagepack::Array&         asArray() noexcept { return std::get<messagepack::Array>(value); };
-			[[nodiscard]] const messagepack::Array&   asArray() const noexcept { return std::get<messagepack::Array>(value); };
-			[[nodiscard]] messagepack::Ext&           asExt() noexcept { return std::get<messagepack::Ext>(value); };
-			[[nodiscard]] const messagepack::Ext&     asExt() const noexcept { return std::get<messagepack::Ext>(value); };
-			[[nodiscard]] messagepack::Map&           asMap() noexcept { return std::get<messagepack::Map>(value); };
-			[[nodiscard]] const messagepack::Map&     asMap() const noexcept { return std::get<messagepack::Map>(value); };
-			[[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept { return std::get<std::vector<uint8_t>>(value); };
-			[[nodiscard]] const std::vector<uint8_t>& asBinary() const noexcept { return std::get<std::vector<uint8_t>>(value); };
-			[[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value); };
+			[[nodiscard]] messagepack::Array&         asArray() noexcept        { return std::get<messagepack::Array>(value);   }
+			[[nodiscard]] const messagepack::Array&   asArray() const noexcept  { return std::get<messagepack::Array>(value);   }
+			[[nodiscard]] messagepack::Ext&           asExt() noexcept          { return std::get<messagepack::Ext>(value);     }
+			[[nodiscard]] const messagepack::Ext&     asExt() const noexcept    { return std::get<messagepack::Ext>(value);     }
+			[[nodiscard]] messagepack::Map&           asMap() noexcept          { return std::get<messagepack::Map>(value);     }
+			[[nodiscard]] const messagepack::Map&     asMap() const noexcept    { return std::get<messagepack::Map>(value);     }
+			[[nodiscard]] std::vector<uint8_t>&       asBinary() noexcept       { return std::get<std::vector<uint8_t>>(value); }
+			[[nodiscard]] const std::vector<uint8_t>& asBinary() const noexcept { return std::get<std::vector<uint8_t>>(value); }
+			[[nodiscard]] const std::string&          asString() const noexcept { return std::get<std::string>(value);          }
 
 			template<typename T>
-			[[nodiscard]] constexpr bool              is() const noexcept { return std::holds_alternative<T>(value); }
+			[[nodiscard]] constexpr bool              is() const noexcept       { return std::holds_alternative<T>(value); }
 
-			[[nodiscard]] constexpr bool              isArray() const noexcept { return std::holds_alternative<messagepack::Array>(value); };
-			[[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); };
-			[[nodiscard]] constexpr bool              isExt() const noexcept { return std::holds_alternative<messagepack::Ext>(value); };
-			[[nodiscard]] constexpr bool              isMap() const noexcept { return std::holds_alternative<messagepack::Map>(value); };
-			[[nodiscard]] constexpr bool              isNull() const noexcept { return std::holds_alternative<std::monostate>(value); };
-			[[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value); };
+			[[nodiscard]] constexpr bool              isArray() const noexcept  { return std::holds_alternative<messagepack::Array>(value);   }
+			[[nodiscard]] constexpr bool              isBinary() const noexcept { return std::holds_alternative<std::vector<uint8_t>>(value); }
+			[[nodiscard]] constexpr bool              isExt() const noexcept    { return std::holds_alternative<messagepack::Ext>(value);     }
+			[[nodiscard]] constexpr bool              isMap() const noexcept    { return std::holds_alternative<messagepack::Map>(value);     }
+			[[nodiscard]] constexpr bool              isNull() const noexcept   { return std::holds_alternative<std::monostate>(value);       }
+			[[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value);          }
 
 			[[nodiscard]] std::string                 type() const noexcept;
 		};

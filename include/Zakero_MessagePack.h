@@ -145,7 +145,8 @@
  *
  * \parversion{zakero_messagepack}
  * __v0.9.4__
- * - Quality of life improvements when using `Map::operation[]`
+ * - Quality of life improvements when using `Map::operator[]`
+ * - Quality of life improvements when using `Object::operator=`
  * - Bug fixes
  *
  * __v0.9.3__
@@ -285,30 +286,30 @@ namespace zakero::messagepack
 
 		struct Array
 		{
-			[[]]          size_t               append(const bool) noexcept;
-			[[]]          size_t               append(const int64_t) noexcept;
-			[[]]          size_t               append(const uint64_t) noexcept;
-			[[]]          size_t               append(const float) noexcept;
-			[[]]          size_t               append(const double) noexcept;
-			[[]]          size_t               append(const std::string_view) noexcept;
-			[[]]          size_t               append(const std::vector<uint8_t>&) noexcept;
-			[[]]          size_t               append(std::vector<uint8_t>&) noexcept;
-			[[]]          size_t               append(const Array&) noexcept;
-			[[]]          size_t               append(Array&) noexcept;
-			[[]]          size_t               append(const Ext&) noexcept;
-			[[]]          size_t               append(Ext&) noexcept;
-			[[]]          size_t               append(const Map&) noexcept;
-			[[]]          size_t               append(Map&) noexcept;
-			[[]]          size_t               append(const Object&) noexcept;
-			[[]]          size_t               append(Object&) noexcept;
-			[[]]          size_t               appendNull() noexcept;
+			[[]]          size_t        append(const bool) noexcept;
+			[[]]          size_t        append(const int64_t) noexcept;
+			[[]]          size_t        append(const uint64_t) noexcept;
+			[[]]          size_t        append(const float) noexcept;
+			[[]]          size_t        append(const double) noexcept;
+			[[]]          size_t        append(const std::string_view) noexcept;
+			[[]]          size_t        append(const std::vector<uint8_t>&) noexcept;
+			[[]]          size_t        append(std::vector<uint8_t>&) noexcept;
+			[[]]          size_t        append(const Array&) noexcept;
+			[[]]          size_t        append(Array&) noexcept;
+			[[]]          size_t        append(const Ext&) noexcept;
+			[[]]          size_t        append(Ext&) noexcept;
+			[[]]          size_t        append(const Map&) noexcept;
+			[[]]          size_t        append(Map&) noexcept;
+			[[]]          size_t        append(const Object&) noexcept;
+			[[]]          size_t        append(Object&) noexcept;
+			[[]]          size_t        appendNull() noexcept;
 
-			[[nodiscard]] inline Object&       object(const size_t index) noexcept       { return object_vector[index]; }
-			[[nodiscard]] inline const Object& object(const size_t index) const noexcept { return object_vector[index]; }
+			[[nodiscard]] Object&       object(const size_t index) noexcept       { return object_vector[index]; }
+			[[nodiscard]] const Object& object(const size_t index) const noexcept { return object_vector[index]; }
 
-			[[]]          inline void          clear() noexcept              { return object_vector.clear(); }
-			[[nodiscard]] inline size_t        size() const noexcept         { return object_vector.size();  }
-			[[]]          inline void          resize(size_t count) noexcept { object_vector.resize(count);  }
+			[[]]          void          clear() noexcept              { return object_vector.clear(); }
+			[[nodiscard]] size_t        size() const noexcept         { return object_vector.size();  }
+			[[]]          void          resize(size_t count) noexcept { object_vector.resize(count);  }
 
 			Object&       operator[](size_t index) noexcept       { return object_vector[index];    }
 			const Object& operator[](size_t index) const noexcept { return object_vector.at(index); }
@@ -412,6 +413,18 @@ namespace zakero::messagepack
 			[[nodiscard]] constexpr bool              isString() const noexcept { return std::holds_alternative<std::string>(value);          }
 
 			[[nodiscard]] std::string                 type() const noexcept;
+
+			Object& operator=(bool value) noexcept                        { this->value = value;              return *this; };
+			Object& operator=(int64_t value) noexcept                     { this->value = value;              return *this; };
+			Object& operator=(uint64_t value) noexcept                    { this->value = value;              return *this; };
+			Object& operator=(float value) noexcept                       { this->value = value;              return *this; };
+			Object& operator=(double value) noexcept                      { this->value = value;              return *this; };
+			Object& operator=(const char* value) noexcept                 { this->value = std::string(value); return *this; };
+			Object& operator=(const std::string value) noexcept           { this->value = value;              return *this; };
+			Object& operator=(const std::string_view value) noexcept      { this->value = std::string(value); return *this; };
+			Object& operator=(zakero::messagepack::Array& value) noexcept { this->value = value;              return *this; };
+			Object& operator=(zakero::messagepack::Ext& value) noexcept   { this->value = value;              return *this; };
+			Object& operator=(zakero::messagepack::Map& value) noexcept   { this->value = value;              return *this; };
 		};
 
 		// }}} Object
@@ -2712,7 +2725,7 @@ size_t Array::append(Object& object ///< The object to add
 	const size_t index = object_vector.size();
 
 	object_vector.push_back(std::move(object));
-	object = {};
+	object = Object{};
 
 	return index;
 }
@@ -9128,7 +9141,7 @@ std::string to_string(const messagepack::Object& object ///< The Object to conve
 	}
 	else if(object.is<std::string>())
 	{
-		s += ", 'value': " + object.as<std::string>() + "'";
+		s += ", 'value': '" + object.as<std::string>() + "'";
 	}
 	else if(object.is<std::vector<uint8_t>>())
 	{

@@ -522,15 +522,18 @@ namespace zakero
 					// }}}
 					// {{{ Size
 
-					std::error_code sizeSet(const Xenium::SizeMm&) noexcept;
-					std::error_code sizeSet(const Xenium::SizePercent&) noexcept;
-					std::error_code sizeSet(const Xenium::SizePixel&) noexcept;
-					std::error_code sizeSetMinMax(const Xenium::SizeMm&, const Xenium::SizeMm&) noexcept;
-					std::error_code sizeSetMinMax(const Xenium::SizePercent&, const Xenium::SizePercent&) noexcept;
-					std::error_code sizeSetMinMax(const Xenium::SizePixel&, const Xenium::SizePixel&) noexcept;
-					void            sizeOnChange(Xenium::LambdaSizeMm) noexcept;
-					void            sizeOnChange(Xenium::LambdaSizePercent) noexcept;
-					void            sizeOnChange(Xenium::LambdaSizePixel) noexcept;
+					[[nodiscard]] Xenium::SizeMm      sizeMm() const noexcept;
+					[[nodiscard]] Xenium::SizePercent sizePercent() const noexcept;
+					[[nodiscard]] Xenium::SizePixel   sizePixel() const noexcept;
+					std::error_code                   sizeSet(const Xenium::SizeMm&) noexcept;
+					std::error_code                   sizeSet(const Xenium::SizePercent&) noexcept;
+					std::error_code                   sizeSet(const Xenium::SizePixel&) noexcept;
+					std::error_code                   sizeSetMinMax(const Xenium::SizeMm&, const Xenium::SizeMm&) noexcept;
+					std::error_code                   sizeSetMinMax(const Xenium::SizePercent&, const Xenium::SizePercent&) noexcept;
+					std::error_code                   sizeSetMinMax(const Xenium::SizePixel&, const Xenium::SizePixel&) noexcept;
+					void                              sizeOnChange(Xenium::LambdaSizeMm) noexcept;
+					void                              sizeOnChange(Xenium::LambdaSizePercent) noexcept;
+					void                              sizeOnChange(Xenium::LambdaSizePixel) noexcept;
 
 					// }}}
 					// {{{ Conversion
@@ -6777,6 +6780,57 @@ void Xenium::Window::decorationsOnChange(Xenium::LambdaWindowDecorations lambda 
 
 // }}}
 // {{{ Class Window : Size
+
+/**
+ * \brief Get the window size.
+ *
+ * The size returned by this method is of the currently cached window size.  If 
+ * a request was made to change the size and this method was called immediately 
+ * afterwards, then the returned value may not match the new requested size.  
+ * To always get the most accurate window size, use 
+ * Xenium::Window::sizeOnChange().
+ *
+ * \return The window size.
+ */
+Xenium::SizeMm Xenium::Window::sizeMm() const noexcept
+{
+	return xenium->window_size_map[window_id].mm;
+}
+
+
+/**
+ * \brief Get the window size.
+ *
+ * The size returned by this method is of the currently cached window size.  If 
+ * a request was made to change the size and this method was called immediately 
+ * afterwards, then the returned value may not match the new requested size.  
+ * To always get the most accurate window size, use 
+ * Xenium::Window::sizeOnChange().
+ *
+ * \return The window size.
+ */
+Xenium::SizePercent Xenium::Window::sizePercent() const noexcept
+{
+	return xenium->window_size_map[window_id].percent;
+}
+
+
+/**
+ * \brief Get the window size.
+ *
+ * The size returned by this method is of the currently cached window size.  If 
+ * a request was made to change the size and this method was called immediately 
+ * afterwards, then the returned value may not match the new requested size.  
+ * To always get the most accurate window size, use 
+ * Xenium::Window::sizeOnChange().
+ *
+ * \return The window size.
+ */
+Xenium::SizePixel Xenium::Window::sizePixel() const noexcept
+{
+	return xenium->window_size_map[window_id].pixel;
+}
+
 
 /**
  * \brief Set the window size.

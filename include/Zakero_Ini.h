@@ -94,9 +94,9 @@
  * ~~~
  * zakero::Ini ini;
  *
- * iniRead("/path/to/file.ini", ini);
+ * zakero::ini::read("/path/to/file.ini", ini);
  * ini["Some Section"]["foo"] = "bar";
- * iniWrite(ini, "/path/to/file.ini");
+ * zakero::ini::write(ini, "/path/to/file.ini");
  * ~~~
  * \endparhow
  *
@@ -134,8 +134,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-// Linux
 
 
 /******************************************************************************
@@ -179,10 +177,10 @@
  * Typedefs / Usings
  */
 
-namespace zakero
+namespace zakero::ini
 {
-	using IniSection = std::unordered_map<std::string, std::string>;
-	using Ini        = std::unordered_map<std::string, IniSection>;
+	using Section = std::unordered_map<std::string, std::string>;
+	using Ini     = std::unordered_map<std::string, zakero:ini::Section>;
 }
 
 
@@ -195,19 +193,19 @@ namespace zakero
  * Functions
  */
 
-namespace zakero
+namespace zakero::ini
 {
-	[[]]          std::error_code iniRead(const std::filesystem::path, zakero::Ini&) noexcept;
-	[[]]          std::error_code iniRead(const std::filesystem::path, const char, zakero::Ini&) noexcept;
-	[[]]          std::error_code iniWrite(const zakero::Ini&, std::filesystem::path) noexcept;
+	[[]]          std::error_code read(const std::filesystem::path, zakero::ini::Ini&) noexcept;
+	[[]]          std::error_code read(const std::filesystem::path, const char, zakero::ini::Ini&) noexcept;
+	[[]]          std::error_code write(const zakero::ini::Ini&, std::filesystem::path) noexcept;
 
-	[[]]          std::error_code iniParse(const std::string_view, zakero::Ini&) noexcept;
-	[[]]          std::error_code iniParse(const std::string_view, const char, zakero::Ini&) noexcept;
-	[[nodiscard]] std::string     to_string(const zakero::Ini&) noexcept;
+	[[]]          std::error_code parse(const std::string_view, zakero::ini::Ini&) noexcept;
+	[[]]          std::error_code parse(const std::string_view, const char, zakero::ini::Ini&) noexcept;
+	[[nodiscard]] std::string     to_string(const zakero::ini::Ini&) noexcept;
 }
 
-std::ostream& operator<<(std::ostream&, const zakero::Ini&) noexcept;
-std::ostream& operator<<(std::ostream&, const zakero::Ini*) noexcept;
+std::ostream& operator<<(std::ostream&, const zakero::ini::Ini&) noexcept;
+std::ostream& operator<<(std::ostream&, const zakero::ini::Ini*) noexcept;
 
 
 /******************************************************************************
@@ -218,7 +216,7 @@ std::ostream& operator<<(std::ostream&, const zakero::Ini*) noexcept;
 
 #ifdef ZAKERO_INI_IMPLEMENTATION
 
-namespace zakero
+namespace zakero::ini
 {
 // {{{ Macros
 // {{{ Macros : Doxygen
@@ -337,7 +335,7 @@ ZAKERO__INI_ERROR_DATA
 // }}}
 // {{{ Documentation
 // }}}
-// {{{ Ini
+// {{{ zakero::ini::read
 
 /**
  * \brief Read data from a file.
@@ -348,17 +346,17 @@ ZAKERO__INI_ERROR_DATA
  * \examplecode
  * zakero::Ini prefs;
  *
- * iniParse(defaults, prefs);
- * iniRead("/path/to/some_file.ini", prefs);
+ * zakero::ini::parse(defaults, prefs);
+ * zakero::ini::read("/path/to/some_file.ini", prefs);
  * \endexamplecode
  *
  * \return An error code.
  */
-std::error_code iniRead(const std::filesystem::path path ///< The file path
-	, zakero::Ini&                              ini  ///< Where to store the data
+std::error_code read(const std::filesystem::path path ///< The file path
+	, zakero::ini::Ini&                      ini  ///< Where to store the data
 	) noexcept
 {
-	return iniRead(path, '\0', ini);
+	return read(path, '\0', ini);
 }
 
 
@@ -378,15 +376,15 @@ std::error_code iniRead(const std::filesystem::path path ///< The file path
  * \examplecode
  * zakero::Ini prefs;
  *
- * iniParse(defaults, prefs);
- * iniRead("/path/to/some_file.ini", '#', prefs);
+ * zakero::ini::parse(defaults, prefs);
+ * zakero::ini::read("/path/to/some_file.ini", '#', prefs);
  * \endexamplecode
  *
  * \return An error code.
  */
-std::error_code iniRead(const std::filesystem::path path    ///< The file path
-	, const char                                comment ///< The comment character
-	, zakero::Ini&                              ini     ///< Where to store the data
+std::error_code read(const std::filesystem::path path    ///< The file path
+	, const char                             comment ///< The comment character
+	, zakero::ini::Ini&                      ini     ///< Where to store the data
 	) noexcept
 {
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
@@ -529,7 +527,7 @@ std::error_code iniRead(const std::filesystem::path path    ///< The file path
 		return Error_File_Is_Bad;
 	}
 
-	std::error_code error = iniParse(std::string_view(data.begin(), data.end())
+	std::error_code error = parse(std::string_view(data.begin(), data.end())
 		, comment
 		, ini
 		);
@@ -537,6 +535,8 @@ std::error_code iniRead(const std::filesystem::path path    ///< The file path
 	return error;
 }
 
+// }}} zakero::ini::read
+// {{{ zakero::ini::write
 
 /**
  * \brief Write data to a file.
@@ -547,12 +547,12 @@ std::error_code iniRead(const std::filesystem::path path    ///< The file path
  * \examplecode
  * Ini config;
  *
- * iniRead("/path/to/config.ini", config);
- * iniWrite(config, "/path/to/backup.ini");
+ * zakero::ini::read("/path/to/config.ini", config);
+ * zakero::ini::write(config, "/path/to/backup.ini");
  * \endexamplecode
  */
-std::error_code iniWrite(const Ini& ini  ///< The data to write
-	, std::filesystem::path     path ///< The file to be written
+std::error_code write(const Ini& ini  ///< The data to write
+	, std::filesystem::path  path ///< The file to be written
 	) noexcept
 {
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
@@ -585,6 +585,8 @@ std::error_code iniWrite(const Ini& ini  ///< The data to write
 	return Error_None;
 }
 
+// }}} zakero::ini::write
+// {{{ zakero::ini::parse
 
 /**
  * \brief Parse a string into INI data
@@ -598,11 +600,11 @@ std::error_code iniWrite(const Ini& ini  ///< The data to write
  *
  * \return An error code
  */
-std::error_code iniParse(const std::string_view string ///< The string to parse
-	, Ini&                                  ini    ///< The parsed INI data
+std::error_code parse(const std::string_view string ///< The string to parse
+	, Ini&                               ini    ///< The parsed INI data
 	) noexcept
 {
-	return iniParse(string, '#', ini);
+	return parse(string, '#', ini);
 }
 
 
@@ -625,9 +627,9 @@ std::error_code iniParse(const std::string_view string ///< The string to parse
  *
  * \return An error code
  */
-std::error_code iniParse(const std::string_view string  ///< The string to parse
-	, const char                            comment ///< The comment character
-	, Ini&                                  ini     ///< The parsed INI data
+std::error_code parse(const std::string_view string  ///< The string to parse
+	, const char                         comment ///< The comment character
+	, Ini&                               ini     ///< The parsed INI data
 	) noexcept
 {
 	std::string section = "";
@@ -742,6 +744,8 @@ std::error_code iniParse(const std::string_view string  ///< The string to parse
 	return Error_None;
 }
 
+// }}} zakero::ini::parse
+// {{{ Utilities
 
 /**
  * \brief Convert into a string.
@@ -808,6 +812,10 @@ std::string to_string(const Ini& ini ///< The INI data
 	return buffer.str();
 }
 
+// }}} Utilities
+}
+
+// {{{ Operators
 
 /**
  * \brief Write INI data to a stream.
@@ -817,7 +825,7 @@ std::string to_string(const Ini& ini ///< The INI data
  * \examplecode
  * Ini ini;
  *
- * iniRead("/path/to/config.ini", ini);
+ * zakero::ini::read("/path/to/config.ini", ini);
  *
  * std::cout << ini;
  * \endexamplecode
@@ -840,7 +848,7 @@ std::ostream& operator<<(std::ostream& stream
  * \examplecode
  * Ini* ini = new Ini();
  *
- * iniRead("/path/to/config.ini", *ini);
+ * zakero::ini::read("/path/to/config.ini", *ini);
  *
  * std::cout << ini;
  * \endexamplecode
@@ -854,8 +862,7 @@ std::ostream& operator<<(std::ostream& stream
 	return stream;
 }
 
-// }}}
-}
+// }}} Operators
 
 #endif // ZAKERO_INI_IMPLEMENTATION
 

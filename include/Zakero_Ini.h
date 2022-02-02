@@ -180,7 +180,7 @@
 namespace zakero::ini
 {
 	using Section = std::unordered_map<std::string, std::string>;
-	using Ini     = std::unordered_map<std::string, zakero:ini::Section>;
+	using Ini     = std::unordered_map<std::string, zakero::ini::Section>;
 }
 
 
@@ -831,10 +831,10 @@ std::string to_string(const Ini& ini ///< The INI data
  * \endexamplecode
  */
 std::ostream& operator<<(std::ostream& stream
-	, const zakero::Ini&           ini
+	, const zakero::ini::Ini&      ini
 	) noexcept
 {
-	stream << zakero::to_string(ini);
+	stream << zakero::ini::to_string(ini);
 
 	return stream;
 }
@@ -854,10 +854,10 @@ std::ostream& operator<<(std::ostream& stream
  * \endexamplecode
  */
 std::ostream& operator<<(std::ostream& stream
-	, const zakero::Ini*           ini
+	, const zakero::ini::Ini*      ini
 	) noexcept
 {
-	stream << zakero::to_string(*ini);
+	stream << zakero::ini::to_string(*ini);
 
 	return stream;
 }

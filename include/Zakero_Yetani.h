@@ -1205,6 +1205,8 @@ namespace zakero
 			{
 				std::string make                     = "";
 				std::string model                    = "";
+				std::string name                     = "";
+				std::string description              = "";
 				int32_t     x                        = 0;
 				int32_t     y                        = 0;
 				int32_t     width                    = 0;
@@ -2022,6 +2024,8 @@ namespace zakero
 			static void handlerOutputGeometry(void*, struct wl_output*, int32_t, int32_t, int32_t, int32_t, int32_t, const char*, const char*, int32_t) noexcept;
 			static void handlerOutputMode(void*, struct wl_output*, uint32_t, int32_t, int32_t, int32_t) noexcept;
 			static void handlerOutputScale(void*, struct wl_output*, int32_t) noexcept;
+			static void handlerOutputName(void*, struct wl_output*, const char*) noexcept;
+			static void handlerOutputDescription(void*, struct wl_output*, const char*) noexcept;
 			static void handlerPointerAxis(void*, struct wl_pointer*, uint32_t, uint32_t, wl_fixed_t) noexcept;
 			static void handlerPointerAxisDiscrete(void*, struct wl_pointer*, uint32_t, int32_t) noexcept;
 			static void handlerPointerAxisSource(void*, struct wl_pointer*, uint32_t) noexcept;
@@ -3150,10 +3154,12 @@ struct wl_keyboard_listener Yetani::keyboard_listener =
 };
 
 struct wl_output_listener Yetani::output_listener =
-{	.geometry = &Yetani::handlerOutputGeometry
-,	.mode     = &Yetani::handlerOutputMode
-,	.done     = &Yetani::handlerOutputDone
-,	.scale    = &Yetani::handlerOutputScale
+{	.geometry    = &Yetani::handlerOutputGeometry
+,	.mode        = &Yetani::handlerOutputMode
+,	.done        = &Yetani::handlerOutputDone
+,	.scale       = &Yetani::handlerOutputScale
+,	.name        = &Yetani::handlerOutputName
+,	.description = &Yetani::handlerOutputDescription
 };
 
 struct wl_pointer_listener Yetani::pointer_listener =
@@ -6181,6 +6187,48 @@ void Yetani::handlerOutputScale(void* data      ///< User data
 	}
 
 	output_changes.scale_factor = factor;
+}
+
+
+/**
+ * \brief Handle Wayland Output name events
+ */
+void Yetani::handlerOutputName(void* data      ///< User data
+	, struct wl_output*          wl_output ///< The output device
+	, const char*                name      ///< The output name
+	) noexcept
+{
+	Yetani* yetani         = (Yetani*)data;
+	Output& output_changes = yetani->output_changes_map[wl_output];
+
+	if(yetani->output_state_map[wl_output] != Yetani::OutputState::Added)
+	{
+		yetani->output_state_map[wl_output] = Yetani::OutputState::Changed;
+	}
+
+	output_changes.name = std::string(name);
+	ZAKERO_YETANI__DEBUG_VAR(output_changes.name);
+}
+
+
+/**
+ * \brief Handle Wayland Output description events
+ */
+void Yetani::handlerOutputDescription(void* data        ///< User data
+	, struct wl_output*          wl_output   ///< The output device
+	, const char*                description ///< The output description
+	) noexcept
+{
+	Yetani* yetani         = (Yetani*)data;
+	Output& output_changes = yetani->output_changes_map[wl_output];
+
+	if(yetani->output_state_map[wl_output] != Yetani::OutputState::Added)
+	{
+		yetani->output_state_map[wl_output] = Yetani::OutputState::Changed;
+	}
+
+	output_changes.description = std::string(description);
+	ZAKERO_YETANI__DEBUG_VAR(output_changes.description);
 }
 
 // }}}
@@ -10466,6 +10514,8 @@ std::string to_string(const Yetani::Output& output ///< The value
 		+ ", \"subpixel_name\": \""          + Yetani::outputSubpixelName(output.subpixel) + "\""
 		+ ", \"make\": \""                   + output.make + "\""
 		+ ", \"model\": \""                  + output.model + "\""
+		+ ", \"name\": \""                   + output.name + "\""
+		+ ", \"description\": \""            + output.description + "\""
 		+ ", \"transform\": "                + std::to_string(output.transform)
 		+ ", \"transform_name\": \""         + Yetani::outputTransformName(output.transform) + "\""
 		+ ", \"flags\": "                    + std::to_string(output.flags)

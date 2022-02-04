@@ -617,6 +617,53 @@ namespace zakero
 
 
 	/**
+	 * \brief Split a string into smaller strings.
+	 *
+	 * Using this method will provide an easy way to split a string into 
+	 * smaller strings based on the specified \p delimiter. If two 
+	 * delimiters are next to eachother, an empty string will be used to 
+	 * represent that position.
+	 *
+	 * \par "Example"
+	 * \parblock
+	 * \code
+	 * std::string str = "foo:bar::blah";
+	 * std::vector<std::string> list = zakero::split(str, ":");
+	 * // list = [ "foo", "bar", "", "blah" ]
+	 * \endcode
+	 * \endparblock
+	 *
+	 * \retval A vector of strings.
+	 */
+	[[nodiscard]]
+	inline std::vector<std::string> split(const std::string_view string    ///< The string to split
+		, const std::string_view                             delimiter ///< The delimiter to use
+		) noexcept
+	{
+		std::vector<std::string> retval = {};
+
+		std::string::size_type start = 0;
+		std::string::size_type end   = 0;
+
+		while(true)
+		{
+			end = string.find(delimiter, start);
+
+			if(end == std::string::npos)
+			{
+				retval.emplace_back(string.substr(start, string.size()));
+				break;
+			}
+
+			retval.emplace_back(string.substr(start, end - start));
+			start = end + delimiter.size();
+		}
+
+		return retval;
+	}
+
+
+	/**
 	 * \brief Convert a string into a boolean value.
 	 *
 	 * \todo Make the list of "true" string values convertible.  

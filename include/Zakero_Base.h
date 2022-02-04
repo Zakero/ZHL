@@ -23,6 +23,7 @@
  * \parversion{zakero_base}
  * __v0.9.5__
  * - Added mapKeys()
+ * - Added split()
  *
  * __v0.9.4__
  * - Added ZAKERO_DISABLE_IMPLICIT_CASTS()

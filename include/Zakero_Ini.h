@@ -103,6 +103,7 @@
  * \parversion{zakero_memorypool}
  * __0.2.1__
  * - The comment character is now configurable.
+ * - Error logging can be disabled separate from debugging error checks.
  *
  * __0.2.0__
  * - A complete rewrite based on unordered_map.
@@ -149,6 +150,17 @@
  * both internal to zakero::Ini as well as external.
  */
 #define ZAKERO_INI_DEBUG_ENABLED 0
+#endif
+
+#ifndef ZAKERO_INI_ERROR_STREAM_ENABLED
+/**
+ * \brief Enable debug stream.
+ *
+ * Enabling this macro, by setting the value to `1`, will log error messages to 
+ * the stream defined by `ZAKERO_INI_ERROR_STREAM`.
+ * This addition logging is useful for diagonosing problems.
+ */
+#define ZAKERO_INI_ERROR_STREAM_ENABLED 0
 #endif
 
 #ifndef ZAKERO_INI_ERROR_STREAM
@@ -236,7 +248,7 @@ namespace zakero::ini
  * \note It does not matter if the macro is given a value or not, only its 
  * existence is checked.
  */
-#define ZAKERO_MEMORYPOOL_IMPLEMENTATION
+#define ZAKERO_INI_IMPLEMENTATION
 
 #endif
 
@@ -307,7 +319,7 @@ namespace
 
 			const char* name() const noexcept override
 			{
-				return "zakero.Ini";
+				return "zakero.ini";
 			}
 
 			std::string message(int condition) const noexcept override
@@ -390,32 +402,38 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
 	if(path.empty())
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: 'path' can not be empty"
 			<< '\n'
 			;
+		#endif
 
 		return Error_Invalid_Parameter;
 	}
 
 	if(std::filesystem::exists(path) == false)
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: 'path' does not exist: "
 			<< path
 			<< '\n'
 			;
+		#endif
 
 		return Error_Invalid_Parameter;
 	}
 
 	if(std::filesystem::is_regular_file(path) == false)
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: 'path' is not a file: "
 			<< path
 			<< '\n'
 			;
+		#endif
 
 		return Error_Invalid_Parameter;
 	}
@@ -427,11 +445,13 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 		&& (bool(perms & std::filesystem::perms::others_read) == false)
 		)
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: 'path' is not readable: "
 			<< path
 			<< '\n'
 			;
+		#endif
 
 		return Error_Invalid_Parameter;
 	}
@@ -447,6 +467,7 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 		if(error != 0)
 		{
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
+			#if ZAKERO_INI_ERROR_STREAM_ENABLED
 			ZAKERO_INI_ERROR_STREAM
 				<< "Error: "
 				<< path
@@ -454,6 +475,7 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 				<< strerror(error)
 				<< '\n'
 				;
+			#endif
 #endif // }}}
 			return ZAKERO__INI_SYSTEM_ERROR(error);
 		}
@@ -464,12 +486,14 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 	if(fseek(file_handle, 0, SEEK_END) != 0)
 	{
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM
 			<< "Error: "
 			<< path
 			<< ": Can't find end of file_handle"
 			<< '\n'
 			;
+		#endif
 #endif // }}}
 		fclose(file_handle);
 
@@ -485,6 +509,7 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 		if(error != 0)
 		{
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
+			#if ZAKERO_INI_ERROR_STREAM_ENABLED
 			ZAKERO_INI_ERROR_STREAM
 				<< "Error: "
 				<< path
@@ -492,6 +517,7 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 				<< strerror(error)
 				<< '\n'
 				;
+			#endif
 #endif // }}}
 			return ZAKERO__INI_SYSTEM_ERROR(error);
 		}
@@ -515,12 +541,14 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 	if(bytes != file_size)
 	{
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM
 			<< "Error: "
 			<< path
 			<< ": Can't read data"
 			<< '\n'
 			;
+		#endif
 #endif // }}}
 		data.clear();
 
@@ -558,10 +586,12 @@ std::error_code write(const Ini& ini  ///< The data to write
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
 	if(path.empty())
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: path can not be empty"
 			<< '\n'
 			;
+		#endif
 	}
 
 	std::filesystem::perms perms = std::filesystem::status(path).permissions();
@@ -571,10 +601,12 @@ std::error_code write(const Ini& ini  ///< The data to write
 		&& (bool(perms & std::filesystem::perms::others_write) == false)
 		)
 	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
 		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
 			<< "Invalid Parameter: path is not writable"
 			<< '\n'
 			;
+		#endif
 	}
 #endif // }}}
 

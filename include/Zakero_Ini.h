@@ -207,12 +207,14 @@ namespace zakero::ini
 
 namespace zakero::ini
 {
-	[[]]          std::error_code read(const std::filesystem::path, zakero::ini::Ini&) noexcept;
-	[[]]          std::error_code read(const std::filesystem::path, const char, zakero::ini::Ini&) noexcept;
-	[[]]          std::error_code write(const zakero::ini::Ini&, std::filesystem::path) noexcept;
-
 	[[]]          std::error_code parse(const std::string_view, zakero::ini::Ini&) noexcept;
 	[[]]          std::error_code parse(const std::string_view, const char, zakero::ini::Ini&) noexcept;
+
+	[[]]          std::error_code read(const std::filesystem::path, zakero::ini::Ini&) noexcept;
+	[[]]          std::error_code read(const std::filesystem::path, const char, zakero::ini::Ini&) noexcept;
+
+	[[]]          std::error_code write(const zakero::ini::Ini&, std::filesystem::path) noexcept;
+
 	[[nodiscard]] std::string     to_string(const zakero::ini::Ini&) noexcept;
 }
 
@@ -347,7 +349,166 @@ ZAKERO__INI_ERROR_DATA
 // }}}
 // {{{ Documentation
 // }}}
-// {{{ zakero::ini::read
+// {{{ zakero::ini::parse()
+
+/**
+ * \brief Parse a string into INI data
+ *
+ * The raw character data in the provided \p string will be parsed and stored 
+ * in the \p ini object.
+ *
+ * \note Any existing data in the \p ini object may be overwritten by new data.
+ *
+ * \bug No error checking is done, assumes properly formatted data.
+ *
+ * \return An error code
+ */
+std::error_code parse(const std::string_view string ///< The string to parse
+	, Ini&                               ini    ///< The parsed INI data
+	) noexcept
+{
+	return parse(string, '#', ini);
+}
+
+
+/**
+ * \brief Parse a string into INI data
+ *
+ * The raw character data in the provided \p string will be parsed and stored 
+ * in the \p ini object.
+ *
+ * This method provides a way to set a \p comment character. As comments are 
+ * _not_ a part of the INI standard, this parser will treat any line that 
+ * contains the \p comment character all the way to the end of the line as a 
+ * comment and ignore it.  Recomended comment characters are:
+ * - '#' (Bash Style)
+ * - ';' (DOS Batch Style)
+ *
+ * \note Any existing data in the \p ini object may be overwritten by new data.
+ *
+ * \bug No error checking is done, assumes properly formatted data.
+ *
+ * \return An error code
+ */
+std::error_code parse(const std::string_view string  ///< The string to parse
+	, const char                         comment ///< The comment character
+	, Ini&                               ini     ///< The parsed INI data
+	) noexcept
+{
+	std::string section = "";
+
+	auto iter = string.begin();
+	while(iter != string.end())
+	{
+		while(iter != string.end() && isspace(*iter))
+		{
+			++iter;
+		}
+
+		if(iter == string.end())
+		{
+			break;
+		}
+
+		// Comment
+		if(*iter == comment)
+		{
+			while(iter != string.end() && *iter != '\n')
+			{
+				++iter;
+			}
+		}
+		// Section
+		else if(*iter == '[')
+		{
+			++iter;
+			auto start = iter;
+
+			while(iter != string.end()
+				&& *iter != ']'
+				&& *iter != '\n'
+				)
+			{
+				++iter;
+			}
+
+			if(*iter == ']')
+			{
+				section = std::string(start, iter);
+				++iter;
+			}
+		}
+		// Property
+		else
+		{
+			auto start = iter;
+			std::string name;
+			std::string value;
+
+			while(iter != string.end()
+				&& *iter != '='
+				&& *iter != ':'
+				&& *iter != '\n'
+				)
+			{
+				++iter;
+			}
+
+			if(*iter == '=' || *iter == ':')
+			{
+				auto temp = iter;
+				--temp;
+				while(isspace(*temp))
+				{
+					--temp;
+				}
+				++temp;
+
+				name = std::string(start, temp);
+
+				++iter;
+
+				while(iter != string.end()
+					&& isspace(*iter)
+					&& *iter != '\n'
+					)
+				{
+					++iter;
+				}
+
+				start = iter;
+
+				while(iter != string.end() && *iter != '\n')
+				{
+					++iter;
+				}
+
+				while(isspace(*iter))
+				{
+					--iter;
+				}
+
+				++iter;
+
+				if(start == iter)
+				{
+					value = "";
+				}
+				else
+				{
+					value = std::string(start, iter);
+				}
+
+				ini[section][name] = value;
+			}
+		}
+	}
+
+	return Error_None;
+}
+
+// }}} zakero::ini::parse()
+// {{{ zakero::ini::read()
 
 /**
  * \brief Read data from a file.
@@ -563,8 +724,8 @@ std::error_code read(const std::filesystem::path path    ///< The file path
 	return error;
 }
 
-// }}} zakero::ini::read
-// {{{ zakero::ini::write
+// }}} zakero::ini::read()
+// {{{ zakero::ini::write()
 
 /**
  * \brief Write data to a file.
@@ -617,167 +778,8 @@ std::error_code write(const Ini& ini  ///< The data to write
 	return Error_None;
 }
 
-// }}} zakero::ini::write
-// {{{ zakero::ini::parse
-
-/**
- * \brief Parse a string into INI data
- *
- * The raw character data in the provided \p string will be parsed and stored 
- * in the \p ini object.
- *
- * \note Any existing data in the \p ini object may be overwritten by new data.
- *
- * \bug No error checking is done, assumes properly formatted data.
- *
- * \return An error code
- */
-std::error_code parse(const std::string_view string ///< The string to parse
-	, Ini&                               ini    ///< The parsed INI data
-	) noexcept
-{
-	return parse(string, '#', ini);
-}
-
-
-/**
- * \brief Parse a string into INI data
- *
- * The raw character data in the provided \p string will be parsed and stored 
- * in the \p ini object.
- *
- * This method provides a way to set a \p comment character. As comments are 
- * _not_ a part of the INI standard, this parser will treat any line that 
- * contains the \p comment character all the way to the end of the line as a 
- * comment and ignore it.  Recomended comment characters are:
- * - '#' (Bash Style)
- * - ';' (DOS Batch Style)
- *
- * \note Any existing data in the \p ini object may be overwritten by new data.
- *
- * \bug No error checking is done, assumes properly formatted data.
- *
- * \return An error code
- */
-std::error_code parse(const std::string_view string  ///< The string to parse
-	, const char                         comment ///< The comment character
-	, Ini&                               ini     ///< The parsed INI data
-	) noexcept
-{
-	std::string section = "";
-
-	auto iter = string.begin();
-	while(iter != string.end())
-	{
-		while(iter != string.end() && isspace(*iter))
-		{
-			++iter;
-		}
-
-		if(iter == string.end())
-		{
-			break;
-		}
-
-		// Comment
-		if(*iter == comment)
-		{
-			while(iter != string.end() && *iter != '\n')
-			{
-				++iter;
-			}
-		}
-		// Section
-		else if(*iter == '[')
-		{
-			++iter;
-			auto start = iter;
-
-			while(iter != string.end()
-				&& *iter != ']'
-				&& *iter != '\n'
-				)
-			{
-				++iter;
-			}
-
-			if(*iter == ']')
-			{
-				section = std::string(start, iter);
-				++iter;
-			}
-		}
-		// Property
-		else
-		{
-			auto start = iter;
-			std::string name;
-			std::string value;
-
-			while(iter != string.end()
-				&& *iter != '='
-				&& *iter != ':'
-				&& *iter != '\n'
-				)
-			{
-				++iter;
-			}
-
-			if(*iter == '=' || *iter == ':')
-			{
-				auto temp = iter;
-				--temp;
-				while(isspace(*temp))
-				{
-					--temp;
-				}
-				++temp;
-
-				name = std::string(start, temp);
-
-				++iter;
-
-				while(iter != string.end()
-					&& isspace(*iter)
-					&& *iter != '\n'
-					)
-				{
-					++iter;
-				}
-
-				start = iter;
-
-				while(iter != string.end() && *iter != '\n')
-				{
-					++iter;
-				}
-
-				while(isspace(*iter))
-				{
-					--iter;
-				}
-
-				++iter;
-
-				if(start == iter)
-				{
-					value = "";
-				}
-				else
-				{
-					value = std::string(start, iter);
-				}
-
-				ini[section][name] = value;
-			}
-		}
-	}
-
-	return Error_None;
-}
-
-// }}} zakero::ini::parse
-// {{{ Utilities
+// }}} zakero::ini::write()
+// {{{ zakero::ini::to_string()
 
 /**
  * \brief Convert into a string.
@@ -844,7 +846,7 @@ std::string to_string(const Ini& ini ///< The INI data
 	return buffer.str();
 }
 
-// }}} Utilities
+// }}} zakero::ini::to_string()
 }
 
 // {{{ Operators

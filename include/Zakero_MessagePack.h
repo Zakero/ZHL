@@ -5143,7 +5143,6 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		return {};
 	}
 
-printf("--  1 -- index: %lu/%lu\n", index, data.size());
 	const uint8_t format_byte = data[index++];
 
 	const Format format_type = (Format)format_byte;
@@ -5163,31 +5162,25 @@ printf("--  1 -- index: %lu/%lu\n", index, data.size());
 	switch(format_type)
 	{
 		case Format::Nill:
-printf("--  2 -- index: %lu/%lu\n", index, data.size());
 			return Object{};
 
 		case Format::False:
-printf("--  3 -- index: %lu/%lu\n", index, data.size());
 			return Object{false};
 
 		case Format::True:
-printf("--  4 -- index: %lu/%lu\n", index, data.size());
 			return Object{true};
 
 		case Format::Int8:
-printf("--  5 -- index: %lu/%lu\n", index, data.size());
 			Convert.int64 = (int8_t)data[index++];
 			return Object{Convert.int64};
 	
 		case Format::Int16:
-printf("--  6 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			return Object{int64_t(Convert.int16)};
 
 		case Format::Int32:
-printf("--  7 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5196,7 +5189,6 @@ printf("--  7 -- index: %lu/%lu\n", index, data.size());
 			return Object{int64_t(Convert.int32)};
 	
 		case Format::Int64:
-printf("--  8 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5208,19 +5200,16 @@ printf("--  8 -- index: %lu/%lu\n", index, data.size());
 			return Object{Convert.int64};
 	
 		case Format::Uint8:
-printf("--  9 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = data[index++];
 			return Object{Convert.uint64};
 	
 		case Format::Uint16:
-printf("-- 10 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			return Object{Convert.uint64};
 	
 		case Format::Uint32:
-printf("-- 11 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5229,7 +5218,6 @@ printf("-- 11 -- index: %lu/%lu\n", index, data.size());
 			return Object{Convert.uint64};
 
 		case Format::Uint64:
-printf("-- 12 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5241,7 +5229,6 @@ printf("-- 12 -- index: %lu/%lu\n", index, data.size());
 			return Object{Convert.uint64};
 	
 		case Format::Float32:
-printf("-- 13 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5250,7 +5237,6 @@ printf("-- 13 -- index: %lu/%lu\n", index, data.size());
 			return Object{Convert.float32};
 	
 		case Format::Float64:
-printf("-- 14 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5263,7 +5249,6 @@ printf("-- 14 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Str8:
 		{
-printf("-- 15 -- index: %lu/%lu\n", index, data.size());
 			const size_t length = data[index++];
 
 			if((index + length) > data.size())
@@ -5281,7 +5266,6 @@ printf("-- 15 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Str16:
 		{
-printf("-- 16 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
@@ -5302,7 +5286,6 @@ printf("-- 16 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Str32:
 		{
-printf("-- 17 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5325,7 +5308,6 @@ printf("-- 17 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Bin8:
 		{
-printf("-- 18 -- index: %lu/%lu\n", index, data.size());
 			const size_t length = data[index++];
 
 			if((index + length) > data.size())
@@ -5344,7 +5326,6 @@ printf("-- 18 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Bin16:
 		{
-printf("-- 19 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
@@ -5366,7 +5347,6 @@ printf("-- 19 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Bin32:
 		{
-printf("-- 20 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5390,7 +5370,6 @@ printf("-- 20 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Array16:
 		{
-printf("-- 21 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Array{}};
 
 			Convert.uint64 = 0;
@@ -5412,7 +5391,6 @@ printf("-- 21 -- index: %lu/%lu\n", index, data.size());
 	
 		case Format::Array32:
 		{
-printf("-- 22 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Array{}};
 
 			Convert.uint64 = 0;
@@ -5436,7 +5414,6 @@ printf("-- 22 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Map16:
 		{
-printf("-- 23 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Map{}};
 
 			Convert.uint64 = 0;
@@ -5466,7 +5443,6 @@ printf("-- 23 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Map32:
 		{
-printf("-- 24 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Map{}};
 
 			Convert.uint64 = 0;
@@ -5498,7 +5474,6 @@ printf("-- 24 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Fixed_Ext1:
 		{
-printf("-- 25 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5513,7 +5488,6 @@ printf("-- 25 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Fixed_Ext2:
 		{
-printf("-- 26 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5529,7 +5503,6 @@ printf("-- 26 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Fixed_Ext4:
 		{
-printf("-- 27 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5547,7 +5520,6 @@ printf("-- 27 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Fixed_Ext8:
 		{
-printf("-- 28 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5568,7 +5540,6 @@ printf("-- 28 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Fixed_Ext16:
 		{
-printf("-- 29 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5589,7 +5560,6 @@ printf("-- 29 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Ext8:
 		{
-printf("-- 30 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5617,7 +5587,6 @@ printf("-- 30 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Ext16:
 		{
-printf("-- 31 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5646,7 +5615,6 @@ printf("-- 31 -- index: %lu/%lu\n", index, data.size());
 
 		case Format::Ext32:
 		{
-printf("-- 32 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5687,7 +5655,6 @@ printf("-- 32 -- index: %lu/%lu\n", index, data.size());
 
 	if((format_byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
 	{
-printf("-- 33 -- index: %lu/%lu\n", index, data.size());
 		const int64_t value = format_byte & (uint8_t)Fixed_Int_Pos_Value;
 
 		return Object{value};
@@ -5695,7 +5662,6 @@ printf("-- 33 -- index: %lu/%lu\n", index, data.size());
 
 	if((format_byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
 	{
-printf("-- 34 -- index: %lu/%lu\n", index, data.size());
 		const int64_t value = (int8_t)(format_byte & Fixed_Int_Neg_Value) - 32;
 
 		return Object{value};
@@ -5703,7 +5669,6 @@ printf("-- 34 -- index: %lu/%lu\n", index, data.size());
 	
 	if((format_byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
 	{
-printf("-- 35 -- index: %lu/%lu\n", index, data.size());
 		const size_t length = format_byte & Fixed_Str_Value;
 
 		if(length == 0)
@@ -5728,7 +5693,6 @@ printf("-- 35 -- index: %lu/%lu\n", index, data.size());
 	
 	if((format_byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
 	{
-printf("-- 36 -- index: %lu/%lu\n", index, data.size());
 		Object object = {Array{}};
 
 		const size_t count = format_byte & (uint8_t)Fixed_Array_Value;
@@ -5748,7 +5712,6 @@ printf("-- 36 -- index: %lu/%lu\n", index, data.size());
 	
 	if((format_byte & (uint8_t)Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map)
 	{
-printf("-- 37 -- index: %lu/%lu\n", index, data.size());
 		Object object = {Map{}};
 
 		const size_t count = format_byte & (uint8_t)Fixed_Map_Value;
@@ -5784,7 +5747,6 @@ TEST_CASE("deserialize/error")
 	Object               object = {};
 	size_t               index  = 0;
 
-#if 0
 	SUBCASE("no data")
 	{
 		object = deserialize(data, index, error);
@@ -5810,7 +5772,7 @@ TEST_CASE("deserialize/error")
 
 		object = deserialize(data, index, error);
 		CHECK(error           == Error_Invalid_Format_Type);
-		CHECK(index           == 0);
+		CHECK(index           == 1);
 		CHECK(object.isNull() == true);
 	}
 	
@@ -6154,7 +6116,7 @@ TEST_CASE("deserialize/error")
 			map.set(Object{int64_t(i)}, Object{});
 		}
 		data = serialize(map);
-		data.resize(data.size() - 1);
+		data.resize(data.size() / 2);
 
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Map32);
@@ -6276,7 +6238,6 @@ TEST_CASE("deserialize/error")
 		CHECK(object.isNull() == true);
 	}
 
-
 	SUBCASE("multi-part/null")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6308,7 +6269,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/false")
 	{
@@ -6343,7 +6303,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/true")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6376,7 +6335,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/int8")
 	{
@@ -6413,7 +6371,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/int16")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6448,7 +6405,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/int32")
 	{
@@ -6485,7 +6441,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/int64")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6520,7 +6475,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/uint8")
 	{
@@ -6557,7 +6511,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/uint16")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6592,7 +6545,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/uint32")
 	{
@@ -6629,7 +6581,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/uint64")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6664,7 +6615,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/float32")
 	{
@@ -6705,7 +6655,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/float64")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6745,7 +6694,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/str8")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6779,7 +6727,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/str16")
 	{
@@ -6815,7 +6762,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/str32")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6849,7 +6795,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/bin8")
 	{
@@ -6891,7 +6836,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/bin16")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6932,7 +6876,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/bin32")
 	{
 		std::vector<uint8_t> vector = {};
@@ -6972,7 +6915,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/array16")
 	{
@@ -7029,7 +6971,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/array32")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7085,7 +7026,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/map16")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7139,7 +7079,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/map32")
 	{
@@ -7195,7 +7134,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/ext (fixed_ext1)")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7236,7 +7174,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/ext (fixed_ext2)")
 	{
@@ -7279,7 +7216,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/ext (fixed_ext4)")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7320,7 +7256,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/ext (fixed_ext8)")
 	{
@@ -7363,7 +7298,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/ext (fixed_ext16)")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7404,7 +7338,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/ext (ext8)")
 	{
@@ -7447,7 +7380,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/ext (ext16)")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7488,7 +7420,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/ext (ext32)")
 	{
@@ -7531,7 +7462,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/fixed_int (positive)")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7566,7 +7496,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/fixed_int (negative)")
 	{
@@ -7603,7 +7532,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-
 	SUBCASE("multi-part/fixed_str")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7638,7 +7566,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
 
 	SUBCASE("multi-part/fixed_array")
 	{
@@ -7684,8 +7611,6 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-#endif
-
 	SUBCASE("multi-part/fixed_map")
 	{
 		std::vector<uint8_t> vector = {};
@@ -7729,62 +7654,6 @@ TEST_CASE("deserialize/error")
 			last_index = index;
 		}
 	}
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-	SUBCASE("multi-part/array")
-	{
-		std::vector<uint8_t> vector = {};
-
-		//Array numbers;
-		//numbers.append((int64_t)1);
-		//numbers.append((int64_t)2);
-		//numbers.append((int64_t)3);
-
-		Array array;
-		array.append(Object{});
-		//array.append((int64_t)42);
-		//array.append("Array Data String");
-		//array.append(numbers);
-
-		data = serialize(array);
-		vector.insert(std::end(vector)
-			, std::begin(data), std::end(data)
-			);
-
-		vector.insert(std::end(vector)
-			, std::begin(data), std::end(data)
-			);
-
-		index = 0;
-		Object part_1 = deserialize(data, index, error);
-		CHECK(error            == Error_None);
-		CHECK(part_1.isArray() == true);
-
-		Array& array_1 = part_1.asArray();
-		CHECK(array_1[0] == array[0]);
-		//CHECK(array_1[1] == array[1]);
-		//CHECK(array_1[2] == array[2]);
-
-		Object part_2 = deserialize(data, index, error);
-		CHECK(error            == Error_None);
-		CHECK(part_2.isArray() == true);
-
-		Array& array_2 = part_2.asArray();
-		CHECK(array_2[0] == array[0]);
-		//CHECK(array_2[1] == array[1]);
-		//CHECK(array_2[2] == array[2]);
-	}
-#endif
 }
 #endif // }}}
 

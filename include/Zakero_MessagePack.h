@@ -550,7 +550,7 @@ bool operator!=(const zakero::messagepack::Object& lhs, const zakero::messagepac
 	X(Array16       , 0xdc      , 0b11111111  , 19     , "array 16"        ) \
 	X(Array32       , 0xdd      , 0b11111111  , 65541  , "array 32"        ) \
 	X(Map16         , 0xde      , 0b11111111  , 35     , "map 16"          ) \
-	X(Map32         , 0xdf      , 0b11111111  , 327429 , "map 32"          ) \
+	X(Map32         , 0xdf      , 0b11111111  , 131076 , "map 32"          ) \
 	X(Fixed_Int_Neg , 0xe0      , 0b11100000  , 1      , "negative fixint" ) \
 /**
  * \def X
@@ -5143,7 +5143,7 @@ Object deserialize(const std::vector<uint8_t>& data  ///< The packed data
 		return {};
 	}
 
-printf("--  1 -- index: %lu\n", index);
+printf("--  1 -- index: %lu/%lu\n", index, data.size());
 	const uint8_t format_byte = data[index++];
 
 	const Format format_type = (Format)format_byte;
@@ -5163,31 +5163,31 @@ printf("--  1 -- index: %lu\n", index);
 	switch(format_type)
 	{
 		case Format::Nill:
-printf("--  2 -- index: %lu\n", index);
+printf("--  2 -- index: %lu/%lu\n", index, data.size());
 			return Object{};
 
 		case Format::False:
-printf("--  3 -- index: %lu\n", index);
+printf("--  3 -- index: %lu/%lu\n", index, data.size());
 			return Object{false};
 
 		case Format::True:
-printf("--  4 -- index: %lu\n", index);
+printf("--  4 -- index: %lu/%lu\n", index, data.size());
 			return Object{true};
 
 		case Format::Int8:
-printf("--  5 -- index: %lu\n", index);
+printf("--  5 -- index: %lu/%lu\n", index, data.size());
 			Convert.int64 = (int8_t)data[index++];
 			return Object{Convert.int64};
 	
 		case Format::Int16:
-printf("--  6 -- index: %lu\n", index);
+printf("--  6 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			return Object{int64_t(Convert.int16)};
 
 		case Format::Int32:
-printf("--  7 -- index: %lu\n", index);
+printf("--  7 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5196,7 +5196,7 @@ printf("--  7 -- index: %lu\n", index);
 			return Object{int64_t(Convert.int32)};
 	
 		case Format::Int64:
-printf("--  8 -- index: %lu\n", index);
+printf("--  8 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5208,19 +5208,19 @@ printf("--  8 -- index: %lu\n", index);
 			return Object{Convert.int64};
 	
 		case Format::Uint8:
-printf("--  9 -- index: %lu\n", index);
+printf("--  9 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = data[index++];
 			return Object{Convert.uint64};
 	
 		case Format::Uint16:
-printf("-- 10 -- index: %lu\n", index);
+printf("-- 10 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
 			return Object{Convert.uint64};
 	
 		case Format::Uint32:
-printf("-- 11 -- index: %lu\n", index);
+printf("-- 11 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5229,7 +5229,7 @@ printf("-- 11 -- index: %lu\n", index);
 			return Object{Convert.uint64};
 
 		case Format::Uint64:
-printf("-- 12 -- index: %lu\n", index);
+printf("-- 12 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5241,7 +5241,7 @@ printf("-- 12 -- index: %lu\n", index);
 			return Object{Convert.uint64};
 	
 		case Format::Float32:
-printf("-- 13 -- index: %lu\n", index);
+printf("-- 13 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5250,7 +5250,7 @@ printf("-- 13 -- index: %lu\n", index);
 			return Object{Convert.float32};
 	
 		case Format::Float64:
-printf("-- 14 -- index: %lu\n", index);
+printf("-- 14 -- index: %lu/%lu\n", index, data.size());
 			Convert_Byte7 = data[index++];
 			Convert_Byte6 = data[index++];
 			Convert_Byte5 = data[index++];
@@ -5263,7 +5263,7 @@ printf("-- 14 -- index: %lu\n", index);
 	
 		case Format::Str8:
 		{
-printf("-- 15 -- index: %lu\n", index);
+printf("-- 15 -- index: %lu/%lu\n", index, data.size());
 			const size_t length = data[index++];
 
 			if((index + length) > data.size())
@@ -5281,7 +5281,7 @@ printf("-- 15 -- index: %lu\n", index);
 
 		case Format::Str16:
 		{
-printf("-- 16 -- index: %lu\n", index);
+printf("-- 16 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
@@ -5302,7 +5302,7 @@ printf("-- 16 -- index: %lu\n", index);
 	
 		case Format::Str32:
 		{
-printf("-- 17 -- index: %lu\n", index);
+printf("-- 17 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5325,7 +5325,7 @@ printf("-- 17 -- index: %lu\n", index);
 	
 		case Format::Bin8:
 		{
-printf("-- 18 -- index: %lu\n", index);
+printf("-- 18 -- index: %lu/%lu\n", index, data.size());
 			const size_t length = data[index++];
 
 			if((index + length) > data.size())
@@ -5344,7 +5344,7 @@ printf("-- 18 -- index: %lu\n", index);
 	
 		case Format::Bin16:
 		{
-printf("-- 19 -- index: %lu\n", index);
+printf("-- 19 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte1 = data[index++];
 			Convert_Byte0 = data[index++];
@@ -5366,7 +5366,7 @@ printf("-- 19 -- index: %lu\n", index);
 	
 		case Format::Bin32:
 		{
-printf("-- 20 -- index: %lu\n", index);
+printf("-- 20 -- index: %lu/%lu\n", index, data.size());
 			Convert.uint64 = 0;
 			Convert_Byte3 = data[index++];
 			Convert_Byte2 = data[index++];
@@ -5390,7 +5390,7 @@ printf("-- 20 -- index: %lu\n", index);
 
 		case Format::Array16:
 		{
-printf("-- 21 -- index: %lu\n", index);
+printf("-- 21 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Array{}};
 
 			Convert.uint64 = 0;
@@ -5412,7 +5412,7 @@ printf("-- 21 -- index: %lu\n", index);
 	
 		case Format::Array32:
 		{
-printf("-- 22 -- index: %lu\n", index);
+printf("-- 22 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Array{}};
 
 			Convert.uint64 = 0;
@@ -5436,7 +5436,7 @@ printf("-- 22 -- index: %lu\n", index);
 
 		case Format::Map16:
 		{
-printf("-- 23 -- index: %lu\n", index);
+printf("-- 23 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Map{}};
 
 			Convert.uint64 = 0;
@@ -5466,7 +5466,7 @@ printf("-- 23 -- index: %lu\n", index);
 
 		case Format::Map32:
 		{
-printf("-- 24 -- index: %lu\n", index);
+printf("-- 24 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Map{}};
 
 			Convert.uint64 = 0;
@@ -5498,7 +5498,7 @@ printf("-- 24 -- index: %lu\n", index);
 
 		case Format::Fixed_Ext1:
 		{
-printf("-- 25 -- index: %lu\n", index);
+printf("-- 25 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5513,7 +5513,7 @@ printf("-- 25 -- index: %lu\n", index);
 
 		case Format::Fixed_Ext2:
 		{
-printf("-- 26 -- index: %lu\n", index);
+printf("-- 26 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5529,7 +5529,7 @@ printf("-- 26 -- index: %lu\n", index);
 
 		case Format::Fixed_Ext4:
 		{
-printf("-- 27 -- index: %lu\n", index);
+printf("-- 27 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5547,7 +5547,7 @@ printf("-- 27 -- index: %lu\n", index);
 
 		case Format::Fixed_Ext8:
 		{
-printf("-- 28 -- index: %lu\n", index);
+printf("-- 28 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5568,7 +5568,7 @@ printf("-- 28 -- index: %lu\n", index);
 
 		case Format::Fixed_Ext16:
 		{
-printf("-- 29 -- index: %lu\n", index);
+printf("-- 29 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5589,7 +5589,7 @@ printf("-- 29 -- index: %lu\n", index);
 
 		case Format::Ext8:
 		{
-printf("-- 30 -- index: %lu\n", index);
+printf("-- 30 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5617,7 +5617,7 @@ printf("-- 30 -- index: %lu\n", index);
 
 		case Format::Ext16:
 		{
-printf("-- 31 -- index: %lu\n", index);
+printf("-- 31 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5639,14 +5639,14 @@ printf("-- 31 -- index: %lu\n", index);
 			ext.data.resize(data_size);
 			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
 
-			index += data_size + 1;
+			index += data_size;
 
 			return object;
 		}
 
 		case Format::Ext32:
 		{
-printf("-- 32 -- index: %lu\n", index);
+printf("-- 32 -- index: %lu/%lu\n", index, data.size());
 			Object object = {Ext{}};
 			Ext& ext = object.asExt();
 
@@ -5670,7 +5670,7 @@ printf("-- 32 -- index: %lu\n", index);
 			ext.data.resize(data_size);
 			memcpy((void*)ext.data.data(), (void*)&data[index], data_size);
 
-			index += data_size + 1;
+			index += data_size;
 
 			return object;
 		}
@@ -5687,7 +5687,7 @@ printf("-- 32 -- index: %lu\n", index);
 
 	if((format_byte & (uint8_t)Fixed_Int_Pos_Mask) == (uint8_t)Format::Fixed_Int_Pos)
 	{
-printf("-- 33 -- index: %lu\n", index);
+printf("-- 33 -- index: %lu/%lu\n", index, data.size());
 		const int64_t value = format_byte & (uint8_t)Fixed_Int_Pos_Value;
 
 		return Object{value};
@@ -5695,7 +5695,7 @@ printf("-- 33 -- index: %lu\n", index);
 
 	if((format_byte & (uint8_t)Fixed_Int_Neg_Mask) == (uint8_t)Format::Fixed_Int_Neg)
 	{
-printf("-- 34 -- index: %lu\n", index);
+printf("-- 34 -- index: %lu/%lu\n", index, data.size());
 		const int64_t value = (int8_t)(format_byte & Fixed_Int_Neg_Value) - 32;
 
 		return Object{value};
@@ -5703,7 +5703,7 @@ printf("-- 34 -- index: %lu\n", index);
 	
 	if((format_byte & (uint8_t)Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str)
 	{
-printf("-- 35 -- index: %lu\n", index);
+printf("-- 35 -- index: %lu/%lu\n", index, data.size());
 		const size_t length = format_byte & Fixed_Str_Value;
 
 		if(length == 0)
@@ -5728,7 +5728,7 @@ printf("-- 35 -- index: %lu\n", index);
 	
 	if((format_byte & (uint8_t)Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array)
 	{
-printf("-- 36 -- index: %lu\n", index);
+printf("-- 36 -- index: %lu/%lu\n", index, data.size());
 		Object object = {Array{}};
 
 		const size_t count = format_byte & (uint8_t)Fixed_Array_Value;
@@ -5748,7 +5748,7 @@ printf("-- 36 -- index: %lu\n", index);
 	
 	if((format_byte & (uint8_t)Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map)
 	{
-printf("-- 37 -- index: %lu\n", index);
+printf("-- 37 -- index: %lu/%lu\n", index, data.size());
 		Object object = {Map{}};
 
 		const size_t count = format_byte & (uint8_t)Fixed_Map_Value;
@@ -6277,14 +6277,14 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Null")
+	SUBCASE("multi-part/null")
 	{
 		std::vector<uint8_t> vector = {};
 
 		Object object = Object{};
 		data = serialize(object);
 
-		int multi_part_count = 3;
+		const int multi_part_count = 3;
 
 		for(int i = 0; i < multi_part_count; i++)
 		{
@@ -6310,14 +6310,14 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/False")
+	SUBCASE("multi-part/false")
 	{
 		std::vector<uint8_t> vector = {};
 
 		Object object = Object{false};
 		data = serialize(object);
 
-		int multi_part_count = 3;
+		const int multi_part_count = 3;
 
 		for(int i = 0; i < multi_part_count; i++)
 		{
@@ -6344,14 +6344,14 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/True")
+	SUBCASE("multi-part/true")
 	{
 		std::vector<uint8_t> vector = {};
 
 		Object object = Object{true};
 		data = serialize(object);
 
-		int multi_part_count = 3;
+		const int multi_part_count = 3;
 
 		for(int i = 0; i < multi_part_count; i++)
 		{
@@ -6378,11 +6378,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Int8")
+	SUBCASE("multi-part/int8")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int           multi_part_count = 3;
+		const int     multi_part_count = 3;
 		const int64_t value_start      = std::numeric_limits<int8_t>::min();
 		int64_t       value            = value_start;
 
@@ -6414,11 +6414,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Int16")
+	SUBCASE("multi-part/int16")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int           multi_part_count = 3;
+		const int     multi_part_count = 3;
 		const int64_t value_start      = std::numeric_limits<int16_t>::min();
 		int64_t       value            = value_start;
 
@@ -6450,11 +6450,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Int32")
+	SUBCASE("multi-part/int32")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int           multi_part_count = 3;
+		const int     multi_part_count = 3;
 		const int64_t value_start      = std::numeric_limits<int32_t>::min();
 		int64_t       value            = value_start;
 
@@ -6486,11 +6486,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Int64")
+	SUBCASE("multi-part/int64")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int           multi_part_count = 3;
+		const int     multi_part_count = 3;
 		const int64_t value_start      = std::numeric_limits<int64_t>::min();
 		int64_t       value            = value_start;
 
@@ -6522,11 +6522,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Uint8")
+	SUBCASE("multi-part/uint8")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int            multi_part_count = 3;
+		const int      multi_part_count = 3;
 		const uint64_t value_start      = std::numeric_limits<uint8_t>::max();
 		uint64_t       value            = value_start;
 
@@ -6558,11 +6558,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Uint16")
+	SUBCASE("multi-part/uint16")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int            multi_part_count = 3;
+		const int      multi_part_count = 3;
 		const uint64_t value_start      = std::numeric_limits<uint16_t>::max();
 		uint64_t       value            = value_start;
 
@@ -6594,11 +6594,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Uint32")
+	SUBCASE("multi-part/uint32")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int            multi_part_count = 3;
+		const int      multi_part_count = 3;
 		const uint64_t value_start      = std::numeric_limits<uint32_t>::max();
 		uint64_t       value            = value_start;
 
@@ -6630,11 +6630,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Uint64")
+	SUBCASE("multi-part/uint64")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int            multi_part_count = 3;
+		const int      multi_part_count = 3;
 		const uint64_t value_start      = std::numeric_limits<uint64_t>::max();
 		uint64_t       value            = value_start;
 
@@ -6666,11 +6666,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Float32")
+	SUBCASE("multi-part/float32")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int         multi_part_count = 3;
+		const int   multi_part_count = 3;
 		const float value_start      = std::numeric_limits<float>::max();
 		float       value            = value_start;
 
@@ -6706,11 +6706,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Float64")
+	SUBCASE("multi-part/float64")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int          multi_part_count = 3;
+		const int    multi_part_count = 3;
 		const double value_start      = std::numeric_limits<double>::max();
 		double       value            = value_start;
 
@@ -6746,11 +6746,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Str8")
+	SUBCASE("multi-part/str8")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int               multi_part_count = 3;
+		const int         multi_part_count = 3;
 		const std::string value            = std::string(std::numeric_limits<uint8_t>::max(), 'X');
 
 		Object object = Object{value};
@@ -6780,13 +6780,12 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
-#endif
 
-	SUBCASE("MultiPart/Str16")
+	SUBCASE("multi-part/str16")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int               multi_part_count = 3;
+		const int         multi_part_count = 3;
 		const std::string value            = std::string(std::numeric_limits<uint8_t>::max() + 1, 'X');
 
 		Object object = Object{value};
@@ -6817,11 +6816,11 @@ TEST_CASE("deserialize/error")
 	}
 
 
-	SUBCASE("MultiPart/Str32")
+	SUBCASE("multi-part/str32")
 	{
 		std::vector<uint8_t> vector = {};
 
-		int               multi_part_count = 3;
+		const int         multi_part_count = 3;
 		const std::string value            = std::string(std::numeric_limits<uint16_t>::max() + 1, 'X');
 
 		Object object = Object{value};
@@ -6852,9 +6851,699 @@ TEST_CASE("deserialize/error")
 	}
 
 
+	SUBCASE("multi-part/bin8")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int                  multi_part_count = 3;
+		const std::vector<uint8_t> value            = std::vector<uint8_t>(std::numeric_limits<uint8_t>::max(), 0xff);
+
+		Object object = Object{value};
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error                  == Error_None);
+			CHECK(last_index             != index);
+			CHECK(part.isBinary()        == true);
+			CHECK(part.asBinary().size() == value.size());
+
+			std::vector<uint8_t>& bin = part.asBinary();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(bin[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/bin16")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int                  multi_part_count = 3;
+		const std::vector<uint8_t> value            = std::vector<uint8_t>(std::numeric_limits<uint8_t>::max() + 1, 0xff);
+
+		Object object = Object{value};
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error                  == Error_None);
+			CHECK(last_index             != index);
+			CHECK(part.isBinary()        == true);
+			CHECK(part.asBinary().size() == value.size());
+
+			std::vector<uint8_t>& bin = part.asBinary();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(bin[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/bin32")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int                  multi_part_count = 3;
+		const std::vector<uint8_t> value            = std::vector<uint8_t>(std::numeric_limits<uint16_t>::max() + 1, 0xff);
+
+		Object object = Object{value};
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error                  == Error_None);
+			CHECK(last_index             != index);
+			CHECK(part.isBinary()        == true);
+			CHECK(part.asBinary().size() == value.size());
+
+			std::vector<uint8_t>& bin = part.asBinary();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(bin[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/array16")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_len        = std::numeric_limits<uint8_t>::max() + 1;
+
+		Array value;
+		value.resize(value_len);
+		int data_type = 0;
+		for(size_t i = 0; i < value_len; i++)
+		{
+			switch(data_type)
+			{
+				case 0: value[i] = Object{};               break;
+				case 1: value[i] = Object{false};          break;
+				case 2: value[i] = Object{true};           break;
+				case 3: value[i] = Object{(uint64_t)0xff}; break;
+			}
+
+			data_type = (data_type + 1) % 4;
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error                 == Error_None);
+			CHECK(last_index            != index);
+			CHECK(part.isArray()        == true);
+			CHECK(part.asArray().size() == value.size());
+
+			Array& array = part.asArray();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(array[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/array32")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_len        = std::numeric_limits<uint16_t>::max() + 1;
+
+		Array value;
+		value.resize(value_len);
+		int data_type = 0;
+		for(size_t i = 0; i < value_len; i++)
+		{
+			switch(data_type)
+			{
+				case 0: value[i] = Object{};               break;
+				case 1: value[i] = Object{false};          break;
+				case 2: value[i] = Object{true};           break;
+				case 3: value[i] = Object{(uint64_t)0xff}; break;
+			}
+
+			data_type = (data_type + 1) % 4;
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error                 == Error_None);
+			CHECK(last_index            != index);
+			CHECK(part.isArray()        == true);
+			CHECK(part.asArray().size() == value.size());
+
+			Array& array = part.asArray();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(array[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/map16")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_len        = std::numeric_limits<uint8_t>::max() + 1;
+
+		Map value;
+		int data_type = 0;
+		for(size_t i = 0; i < value_len; i++)
+		{
+			switch(data_type)
+			{
+				case 0: value[i] = Object{};               break;
+				case 1: value[i] = Object{false};          break;
+				case 2: value[i] = Object{true};           break;
+				case 3: value[i] = Object{(uint64_t)0xff}; break;
+			}
+
+			data_type = (data_type + 1) % 4;
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error               == Error_None);
+			CHECK(last_index          != index);
+			CHECK(part.isMap()        == true);
+			CHECK(part.asMap().size() == value.size());
+
+			Map& map = part.asMap();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(map[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/map32")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_len        = std::numeric_limits<uint16_t>::max() + 1;
+
+		Map value;
+		int data_type = 0;
+		for(size_t i = 0; i < value_len; i++)
+		{
+			switch(data_type)
+			{
+				case 0: value[i] = Object{};               break;
+				case 1: value[i] = Object{false};          break;
+				case 2: value[i] = Object{true};           break;
+				case 3: value[i] = Object{(uint64_t)0xff}; break;
+			}
+
+			data_type = (data_type + 1) % 4;
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error               == Error_None);
+			CHECK(last_index          != index);
+			CHECK(part.isMap()        == true);
+			CHECK(part.asMap().size() == value.size());
+
+			Map& map = part.asMap();
+			for(size_t i = 0; i < value.size(); i++)
+			{
+				CHECK(map[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (fixed_ext1)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = 1;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (fixed_ext2)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = 2;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (fixed_ext4)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = 4;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (fixed_ext8)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = 8;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (fixed_ext16)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = 16;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (ext8)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = std::numeric_limits<uint8_t>::max();
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (ext16)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = std::numeric_limits<uint8_t>::max() + 1;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/ext (ext32)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t data_len         = std::numeric_limits<uint16_t>::max() + 1;
+		const int8_t type             = 42;
+
+		Ext value;
+		value.type = type;
+		value.data = std::vector<uint8_t>(data_len, '_');
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isExt() == true);
+
+			Ext& ext = part.asExt();
+			CHECK(ext.type == value.type);
+			CHECK(ext.data == value.data);
+
+			last_index = index;
+		}
+	}
+
+#endif
+
+
+
+
+
+
+
+
+
 
 #if 0
-	SUBCASE("MultiPart/Array")
+	SUBCASE("multi-part/array")
 	{
 		std::vector<uint8_t> vector = {};
 

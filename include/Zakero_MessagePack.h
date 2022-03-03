@@ -144,6 +144,10 @@
  *
  *
  * \parversion{zakero_messagepack}
+ * __v0.9.5__
+ * - Bug fixes
+ * - More test cases
+ *
  * __v0.9.4__
  * - Quality of life improvements when using `Map::operator[]`
  * - Quality of life improvements when using `Object::operator=`

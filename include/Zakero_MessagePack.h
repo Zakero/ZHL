@@ -5794,7 +5794,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Uint8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5807,7 +5807,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Uint16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5820,7 +5820,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Uint32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5833,7 +5833,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Uint64);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5846,7 +5846,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Int8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5859,7 +5859,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Int16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5872,7 +5872,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Int32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5885,7 +5885,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Int64);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5898,7 +5898,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Float32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5911,7 +5911,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Float64);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5924,7 +5924,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK((data[0] & Fixed_Str_Mask) == (uint8_t)Format::Fixed_Str);
 		CHECK(error                      == Error_Incomplete);
-		CHECK(index                      == index);
+		CHECK(index                      != 0);
 		CHECK(object.isNull()            == true);
 	}
 
@@ -5937,7 +5937,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Str8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5950,7 +5950,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Str16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5963,7 +5963,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Str32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5976,7 +5976,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Bin8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -5989,7 +5989,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Bin16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6002,7 +6002,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Bin32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6017,7 +6017,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK((data[0] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
 		CHECK(error                        == Error_Invalid_Index);
-		CHECK(index                        == index);
+		CHECK(index                        != 0);
 		CHECK(object.isNull()              == true);
 
 		// Check the contents of the Array
@@ -6030,7 +6030,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK((data[0] & Fixed_Array_Mask) == (uint8_t)Format::Fixed_Array);
 		CHECK(error                        == Error_Incomplete);
-		CHECK(index                        == index);
+		CHECK(index                        != 0);
 		CHECK(object.isNull()              == true);
 	}
 
@@ -6044,7 +6044,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Array16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6058,7 +6058,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Array32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6073,7 +6073,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
 		CHECK(error                        == Error_Invalid_Index);
-		CHECK(index                        == index);
+		CHECK(index                        != 0);
 		CHECK(object.isNull()              == true);
 
 		// Check the contents of the Map
@@ -6086,7 +6086,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK((data[0] & Fixed_Map_Mask) == (uint8_t)Format::Fixed_Map);
 		CHECK(error                      == Error_Incomplete);
-		CHECK(index                      == index);
+		CHECK(index                      != 0);
 		CHECK(object.isNull()            == true);
 	}
 
@@ -6104,7 +6104,7 @@ TEST_CASE("deserialize/error")
 		CHECK(data[0]         == (uint8_t)Format::Map16);
 		CHECK(data[1]         == (uint8_t)Format::Fixed_Int_Pos);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6122,7 +6122,7 @@ TEST_CASE("deserialize/error")
 		CHECK(data[0]         == (uint8_t)Format::Map32);
 		CHECK(data[1]         == (uint8_t)Format::Fixed_Int_Pos);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6136,7 +6136,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext1);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6150,7 +6150,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext2);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6164,7 +6164,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext4);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6178,7 +6178,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6192,7 +6192,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Fixed_Ext16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6206,7 +6206,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Ext8);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6220,7 +6220,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Ext16);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 
@@ -6234,7 +6234,7 @@ TEST_CASE("deserialize/error")
 		object = deserialize(data, index, error);
 		CHECK(data[0]         == (uint8_t)Format::Ext32);
 		CHECK(error           == Error_Incomplete);
-		CHECK(index           == index);
+		CHECK(index           != 0);
 		CHECK(object.isNull() == true);
 	}
 

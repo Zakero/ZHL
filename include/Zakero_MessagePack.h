@@ -7531,7 +7531,205 @@ TEST_CASE("deserialize/error")
 		}
 	}
 
+
+	SUBCASE("multi-part/fixed_int (positive)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int     multi_part_count = 3;
+		const int64_t value            = 1;
+
+		Object object = {value};
+
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error              == Error_None);
+			CHECK(last_index         != index);
+			CHECK(part.is<int64_t>() == true);
+			CHECK(part.as<int64_t>() == value);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/fixed_int (negative)")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int     multi_part_count = 3;
+		const int64_t value            = -1;
+
+		Object object = {value};
+
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error              == Error_None);
+			CHECK(last_index         != index);
+			CHECK(part.is<int64_t>() == true);
+			CHECK(part.as<int64_t>() == value);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/fixed_str")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int         multi_part_count = 3;
+		const std::string value            = "xyzzy";
+
+		Object object = {value};
+
+		data = serialize(object);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error           == Error_None);
+			CHECK(last_index      != index);
+			CHECK(part.isString() == true);
+			CHECK(part.asString() == value);
+
+			last_index = index;
+		}
+	}
+
+
+	SUBCASE("multi-part/fixed_array")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_size       = 8;
+
+		Array value;
+		for(size_t i = 0; i < value_size; i++)
+		{
+			value.appendNull();
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error          == Error_None);
+			CHECK(last_index     != index);
+			CHECK(part.isArray() == true);
+
+			Array& array = part.asArray();
+			for(size_t i = 0; i < value_size; i++)
+			{
+				CHECK(array[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
 #endif
+
+	SUBCASE("multi-part/fixed_map")
+	{
+		std::vector<uint8_t> vector = {};
+
+		const int    multi_part_count = 3;
+		const size_t value_size       = 8;
+
+		Map value;
+		for(size_t i = 0; i < value_size; i++)
+		{
+			value[i] = Object{};
+		}
+
+		data = serialize(value);
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			vector.insert(std::end(vector)
+				, std::begin(data), std::end(data)
+				);
+		}
+
+		size_t last_index = 0;
+
+		index = 0;
+		error = Error_None;
+
+		for(int i = 0; i < multi_part_count; i++)
+		{
+			Object part = deserialize(vector, index, error);
+			CHECK(error        == Error_None);
+			CHECK(last_index   != index);
+			CHECK(part.isMap() == true);
+
+			Map& map = part.asMap();
+			for(size_t i = 0; i < value_size; i++)
+			{
+				CHECK(map[i] == value[i]);
+			}
+
+			last_index = index;
+		}
+	}
+
 
 
 

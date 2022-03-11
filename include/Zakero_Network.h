@@ -257,9 +257,9 @@ namespace zakero::network
 
 		private:
 			IP*                ip_;
-			const uint16_t     port_;
-			const int          type_       = SOCK_STREAM;
-			const int          protocol_   = 0;
+			uint16_t           port_;
+			int                type_       = SOCK_STREAM;
+			int                protocol_   = 0;
 			struct sockaddr_in addr_       = { 0 };
 			int                socket_     = -1;
 			int                recv_flags_ = 0;
@@ -624,7 +624,15 @@ TCP::~TCP(
 	}
 
 	delete ip_;
-	ip_ = nullptr;
+
+	ip_         = nullptr;
+	port_       = 0;
+	type_       = SOCK_STREAM;
+	protocol_   = 0;
+	addr_       = { 0 };
+	socket_     = -1;
+	recv_flags_ = { 0 };
+	send_flags_ = { 0 };
 }
 
 // }}}

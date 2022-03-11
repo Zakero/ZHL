@@ -128,6 +128,7 @@
 // POSIX
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 // Linux
 
@@ -206,7 +207,8 @@ namespace zakero::network
 		: public IP
 	{
 		public:
-			[[nodiscard]] static IPv4*                    create(const std::string) noexcept;
+			[[nodiscard]] static IPv4*                 create(const std::string) noexcept;
+			[[nodiscard]] static std::set<std::string> hostname(const std::string) noexcept;
 
 			[[nodiscard]] struct in_addr address() const noexcept final override;
 			[[nodiscard]] IP*            copy() const noexcept final override;
@@ -216,7 +218,7 @@ namespace zakero::network
 
 		private:
 			mutable std::string string_ = {};
-			in_addr             addr_   = {};
+			in_addr             addr_   = { 0 };
 
 			[[nodiscard]] static IPv4* create(in_addr) noexcept;
 	};
@@ -433,7 +435,7 @@ IPv4* IPv4::create(const std::string address
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/create)")
+TEST_CASE("ipv4/create")
 {
 	IPv4* ip = nullptr;
 
@@ -486,6 +488,66 @@ IPv4* IPv4::create(in_addr addr
 // }}}
 
 
+std::set<std::string> IPv4::hostname(const std::string hostname
+	) noexcept
+{
+	struct addrinfo hints =
+	{	.ai_flags     = AI_ADDRCONFIG
+	,	.ai_family    = AF_INET
+	,	.ai_socktype  = 0
+	,	.ai_protocol  = 0
+	,	.ai_addrlen   = 0
+	,	.ai_addr      = nullptr
+	,	.ai_canonname = nullptr
+	,	.ai_next      = nullptr
+	};
+
+	struct addrinfo* result = nullptr;
+
+	int retval = getaddrinfo(hostname.c_str(), nullptr, &hints, &result);
+
+	if(retval != 0)
+	{
+		fprintf(stderr, "fail: %s\n", gai_strerror(retval));
+		return {};
+	}
+
+	std::set<std::string> set = {};
+
+	for(struct addrinfo* r = result; r != nullptr; r = r->ai_next)
+	{
+		struct sockaddr_in* addr = (struct sockaddr_in*)r->ai_addr;
+		set.insert(inet_ntoa(addr->sin_addr));
+	}
+
+	freeaddrinfo(result);
+
+	return set;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("ipv4/hostname")
+{
+	std::set<std::string> set;
+
+	set = IPv4::hostname("localhost");
+	CHECK(set.empty() == false);
+
+	bool found_127_0_0_1 = false;
+	for(const std::string& s : set)
+	{
+		if(s == "127.0.0.1")
+		{
+			found_127_0_0_1 = true;
+			break;
+		}
+	}
+
+	CHECK(found_127_0_0_1 == true);
+}
+#endif // }}}
+
+
 struct in_addr IPv4::address(
 	) const noexcept
 {
@@ -493,7 +555,7 @@ struct in_addr IPv4::address(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/address)")
+TEST_CASE("ipv4/address")
 {
 	const char*    ip_addr = "127.0.0.1";
 	struct in_addr addr    = { 0 };
@@ -519,7 +581,7 @@ IP* IPv4::copy(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/copy)")
+TEST_CASE("ipv4/copy")
 {
 	IP* ip      = IPv4::create("127.0.0.1");
 	IP* ip_copy = ip->copy();
@@ -541,7 +603,7 @@ int IPv4::family(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/family)")
+TEST_CASE("ipv4/family")
 {
 	IP* ip = IPv4::create("127.0.0.1");
 	CHECK(ip->family() == AF_INET);
@@ -563,7 +625,7 @@ std::string IPv4::string(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/string)")
+TEST_CASE("ipv4/string")
 {
 	IPv4* ip = nullptr;
 
@@ -591,7 +653,7 @@ int IPv4::version(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("ipv4/version)")
+TEST_CASE("ipv4/version")
 {
 	IPv4* ip = IPv4::create("127.0.0.1");
 	CHECK(ip->version() == 4);
@@ -670,7 +732,7 @@ TCP* TCP::create(const IP* ip
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/create)")
+TEST_CASE("tcp/create")
 {
 	uint16_t port = 65535;
 
@@ -726,12 +788,11 @@ bool TCP::connect(
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 #if 1 // Disable if no external internet access
-TEST_CASE("tcp/connect)")
+TEST_CASE("tcp/connect")
 {
 	SUBCASE("IPv4")
 	{
-		//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-		IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+		IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 		uint16_t port = 80;
 
 		TCP* tcp = TCP::create(ip, port);
@@ -751,7 +812,7 @@ int TCP::socket(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/socket)")
+TEST_CASE("tcp/socket")
 {
 	IPv4*    ip   = IPv4::create("127.0.0.1");
 	uint16_t port = 65535;
@@ -772,7 +833,7 @@ const IP& TCP::ip(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/ip)")
+TEST_CASE("tcp/ip")
 {
 	SUBCASE("IPv4")
 	{
@@ -793,7 +854,7 @@ uint16_t TCP::port(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/port)")
+TEST_CASE("tcp/port")
 {
 	uint16_t port = 65535;
 	IPv4* ip  = IPv4::create("127.0.0.1");
@@ -823,24 +884,27 @@ std::vector<uint8_t> TCP::read(const size_t max_bytes
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/read)")
+TEST_CASE("tcp/read")
 {
 	uint16_t port = 80;
-	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 	TCP*  tcp = TCP::create(ip, port);
 
 	tcp->connect();
 	tcp->write("GET / HTTP/1.1\r\n\r\n");
 
-	std::vector<uint8_t> data = tcp->read(1024);
+	std::vector<uint8_t> data = tcp->read(256);
 
+	CHECK(data.empty() == false);
+
+	/*
 	std::string string = {};
 	for(uint8_t ch : data)
 	{
 		string.push_back(ch);
 	}
 	std::cout << "Message:" << string << "\n";
+	*/
 
 	delete tcp;
 }
@@ -861,11 +925,10 @@ ssize_t TCP::write(std::string_view data
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/string_view)")
+TEST_CASE("tcp/write/string_view")
 {
 	uint16_t port = 80;
-	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 	TCP*  tcp = TCP::create(ip, port);
 
 	tcp->connect();
@@ -894,11 +957,10 @@ ssize_t TCP::write(std::vector<char8_t> data
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/char8_t)")
+TEST_CASE("tcp/write/vector/char8_t")
 {
 	uint16_t port = 80;
-	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 	TCP*  tcp = TCP::create(ip, port);
 
 	tcp->connect();
@@ -928,11 +990,10 @@ ssize_t TCP::write(std::vector<int8_t> data
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/int8_t)")
+TEST_CASE("tcp/write/vector/int8_t")
 {
 	uint16_t port = 80;
-	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 	TCP*  tcp = TCP::create(ip, port);
 
 	tcp->connect();
@@ -962,11 +1023,10 @@ ssize_t TCP::write(std::vector<uint8_t> data
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/uint8_t)")
+TEST_CASE("tcp/write/vector/uint8_t")
 {
 	uint16_t port = 80;
-	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
-	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	IPv4* ip = IPv4::create("140.82.112.3"); // github.com
 	TCP*  tcp = TCP::create(ip, port);
 
 	tcp->connect();

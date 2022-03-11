@@ -454,13 +454,13 @@ ErrorCategory_ ErrorCategory;
 
 // }}}
 // {{{ IP v4
-// {{{ IP v4: create
 
 IPv4* IPv4::create(const std::string address
 	) noexcept
 {
 	in_addr addr = { 0 };
 
+	// TODO : Is errno set?
 	int retval = inet_aton(address.data(), &addr);
 	if(retval == 0)
 	{
@@ -498,6 +498,10 @@ TEST_CASE("ipv4/create")
 		CHECK(ip != nullptr);
 		delete ip;
 
+		ip = IPv4::create("000.000.000.000");
+		CHECK(ip != nullptr);
+		delete ip;
+
 		ip = IPv4::create("127.0.0.1");
 		CHECK(ip != nullptr);
 		delete ip;
@@ -523,8 +527,9 @@ IPv4* IPv4::create(in_addr addr
 	return ip;
 }
 
-// }}}
-
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+// No Tests Needed
+#endif // }}}
 
 std::set<std::string> IPv4::hostname(const std::string hostname
 	) noexcept

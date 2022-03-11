@@ -257,6 +257,9 @@ namespace zakero::network
 			// --- Client --- //
 			[[]]          bool                 connect() noexcept;
 
+			// --- Server --- //
+			[[]]          void                 waitForConnection() noexcept;
+
 		private:
 			IP*                ip_;
 			uint16_t           port_;
@@ -1036,6 +1039,71 @@ TEST_CASE("tcp/write/vector/uint8_t")
 	ssize_t bytes = tcp->write(data);
 
 	CHECK(bytes > 0);
+
+	delete tcp;
+}
+#endif // }}}
+
+
+void TCP::waitForConnection(
+	) noexcept
+{
+	if(socket_ < 0)
+	{
+		// TODO : Add error handling
+		socket_ = ::socket(ip_->family(), type_, protocol_);
+
+		if(socket_ < 0)
+		{
+			return;
+		}
+
+		printf("Created Socket\n");
+	}
+
+	addr_.sin_family = ip_->family();
+	addr_.sin_port   = htons(port_);
+	addr_.sin_addr   = ip_->address();
+
+	int retval = 0;
+
+	retval = ::bind(socket_, (struct sockaddr*)&addr_, sizeof(addr_));
+	if(retval < 0)
+	{
+		return;
+	}
+	printf("Bind'ed Socket\n");
+
+	listen(socket_, 3); // "3" should be a variable
+
+	size_t socklen = sizeof(struct sockaddr_in);
+
+	printf("Accept...\n");
+	retval = accept(socket_, (struct sockaddr*)&addr_, (socklen_t*)&socklen);
+
+	if(retval < 0)
+	{
+		printf("Accept failed\n");
+	}
+	else
+	{
+		printf("Connection accepted\n");
+	}
+
+	return;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/waitforconnection")
+{
+	uint16_t port = 9999;
+	IPv4* ip  = IPv4::create("0.0.0.0");
+	TCP*  tcp = TCP::create(ip, port);
+
+	MESSAGE("Run any one of the following commands:");
+	MESSAGE("> telnet localhost ", port);
+	MESSAGE("> ftp localhost ", port);
+	tcp->waitForConnection();
 
 	delete tcp;
 }

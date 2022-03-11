@@ -194,20 +194,19 @@ namespace zakero::network
 		public:
 			virtual ~IP() noexcept {};
 			[[nodiscard]] virtual struct in_addr address() const noexcept = 0;
-			[[nodiscard]] virtual IP*            copy()  const noexcept = 0;
-			[[nodiscard]] virtual int            family()  const noexcept = 0;
-			[[nodiscard]] virtual std::string    string()  const noexcept = 0;
+			[[nodiscard]] virtual IP*            copy() const noexcept = 0;
+			[[nodiscard]] virtual int            family() const noexcept = 0;
+			[[nodiscard]] virtual std::string    string() const noexcept = 0;
 			[[nodiscard]] virtual int            version() const noexcept = 0;
 	};
 
-// }}}
 // {{{ IP v4
 
 	class IPv4
 		: public IP
 	{
 		public:
-			[[nodiscard]] static IPv4* create(const std::string) noexcept;
+			[[nodiscard]] static IPv4*   create(const std::string) noexcept;
 
 			[[nodiscard]] struct in_addr address() const noexcept final override;
 			[[nodiscard]] IP*            copy() const noexcept final override;
@@ -218,6 +217,8 @@ namespace zakero::network
 		private:
 			mutable std::string string_ = {};
 			in_addr             addr_   = {};
+
+			[[nodiscard]] static IPv4* create(in_addr) noexcept;
 	};
 
 // }}}
@@ -229,6 +230,7 @@ namespace zakero::network
 	};
 
 // }}}
+// }}}
 // {{{ TCP
 
 	class TCP
@@ -236,31 +238,40 @@ namespace zakero::network
 		public:
 			~TCP() noexcept;
 
-			[[nodiscard]] static TCP* create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCP* create(const IP*, const uint16_t) noexcept;
+			[[nodiscard]] static TCP*          create(IP*&, const uint16_t) noexcept;
+			[[nodiscard]] static TCP*          create(const IP*, const uint16_t) noexcept;
 
-			[[nodiscard]] const IP& ip() const noexcept;
-			[[nodiscard]] int       fd() const noexcept;
-			[[nodiscard]] uint16_t  port() const noexcept;
+			[[nodiscard]] const IP&            ip() const noexcept;
+			[[nodiscard]] int                  socket() const noexcept;
+			[[nodiscard]] uint16_t             port() const noexcept;
+
+			[[]]          std::vector<uint8_t> read(const size_t) const noexcept;
+
+			[[]]          ssize_t              write(std::string_view) const noexcept;
+			[[]]          ssize_t              write(std::vector<char8_t>) const noexcept;
+			[[]]          ssize_t              write(std::vector<int8_t>) const noexcept;
+			[[]]          ssize_t              write(std::vector<uint8_t>) const noexcept;
 
 			// --- Client --- //
-			[[nodiscard]] bool      connect() noexcept;
+			[[]]          bool                 connect() noexcept;
 
 		private:
 			IP*                ip_;
 			const uint16_t     port_;
-			const int          type_     = SOCK_STREAM;
-			const int          protocol_ = 0;
-			struct sockaddr_in addr_     = { 0 };
-			int                fd_       = -1;
+			const int          type_       = SOCK_STREAM;
+			const int          protocol_   = 0;
+			struct sockaddr_in addr_       = { 0 };
+			int                socket_     = -1;
+			int                recv_flags_ = 0;
+			int                send_flags_ = 0;
 
 			TCP(IP*, uint16_t) noexcept;
 	};
 
-// }}}
 // {{{ TCP Client
 
 	class TCPClient
+		: public TCP
 	{
 	};
 
@@ -268,9 +279,11 @@ namespace zakero::network
 // {{{ TCP Server
 
 	class TCPServer
+		: public TCP
 	{
 	};
 
+// }}}
 // }}}
 // {{{ UDP
 
@@ -401,6 +414,7 @@ ErrorCategory_ ErrorCategory;
 
 // }}}
 // {{{ IP v4
+// {{{ IP v4: create
 
 IPv4* IPv4::create(const std::string address
 	) noexcept
@@ -413,8 +427,7 @@ IPv4* IPv4::create(const std::string address
 		return nullptr;
 	}
 
-	IPv4* ip = new IPv4();
-	ip->addr_ = addr;
+	IPv4* ip = create(addr);
 
 	return ip;
 }
@@ -461,6 +474,17 @@ TEST_CASE("ipv4/create)")
 #endif // }}}
 
 
+IPv4* IPv4::create(in_addr addr
+	) noexcept
+{
+	IPv4* ip = new IPv4();
+	ip->addr_ = addr;
+
+	return ip;
+}
+
+// }}}
+
 struct in_addr IPv4::address(
 	) const noexcept
 {
@@ -488,8 +512,7 @@ TEST_CASE("ipv4/address)")
 IP* IPv4::copy(
 	) const noexcept
 {
-	IPv4* ip = new IPv4();
-	ip->addr_ = this->addr_;
+	IPv4* ip = create(this->addr_);
 
 	return ip;
 }
@@ -595,9 +618,9 @@ TCP::TCP(IP* ip
 TCP::~TCP(
 	) noexcept
 {
-	if(fd_ >= 0)
+	if(socket_ >= 0)
 	{
-		close(fd_);
+		close(socket_);
 	}
 
 	delete ip_;
@@ -657,7 +680,6 @@ TEST_CASE("tcp/create)")
 		CHECK(tcp != nullptr);
 
 		delete tcp;
-		delete ip;
 	}
 }
 #endif // }}}
@@ -666,12 +688,12 @@ TEST_CASE("tcp/create)")
 bool TCP::connect(
 	) noexcept
 {
-	if(fd_ < 0)
+	if(socket_ < 0)
 	{
 		// TODO : Add error handling
-		fd_ = socket(ip_->family(), type_, protocol_);
+		socket_ = ::socket(ip_->family(), type_, protocol_);
 
-		if(fd_ < 0)
+		if(socket_ < 0)
 		{
 			return false;
 		}
@@ -683,7 +705,7 @@ bool TCP::connect(
 
 	// TODO : Add error handling
 
-	int retval = ::connect(fd_, (struct sockaddr*)&addr_, sizeof(addr_));
+	int retval = ::connect(socket_, (struct sockaddr*)&addr_, sizeof(addr_));
 
 	if(retval < 0)
 	{
@@ -694,33 +716,33 @@ bool TCP::connect(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-#if 0 // Can't test, must have something to connect to...
+#if 1 // Disable if no external internet access
 TEST_CASE("tcp/connect)")
 {
 	SUBCASE("IPv4")
 	{
-		IPv4*    ip   = IPv4::create("127.0.0.1");
+		//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+		IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
 		uint16_t port = 80;
 
 		TCP* tcp = TCP::create(ip, port);
-		CHECK(tcp->connect_() == true);
+		CHECK(tcp->connect() == true);
 
 		delete tcp;
-		delete ip;
 	}
 }
 #endif
 #endif // }}}
 
 
-int TCP::fd(
+int TCP::socket(
 	) const noexcept
 {
-	return fd_;
+	return socket_;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/fd)")
+TEST_CASE("tcp/socket)")
 {
 	IPv4*    ip   = IPv4::create("127.0.0.1");
 	uint16_t port = 65535;
@@ -728,7 +750,7 @@ TEST_CASE("tcp/fd)")
 	SUBCASE("IPv4 Not Connected")
 	{
 		TCP* tcp = TCP::create(ip, port);
-		CHECK(tcp->fd() == -1);
+		CHECK(tcp->socket() == -1);
 	}
 }
 #endif // }}}
@@ -770,9 +792,189 @@ TEST_CASE("tcp/port)")
 	CHECK(tcp->port() == port);
 
 	delete tcp;
-	delete ip;
 }
 #endif // }}}
+
+
+std::vector<uint8_t> TCP::read(const size_t max_bytes
+	) const noexcept
+{
+	std::vector<uint8_t> data(max_bytes, 0);
+
+	ssize_t bytes = recv(socket_, (void*)data.data(), max_bytes, recv_flags_);
+
+	if(bytes < 0)
+	{
+		return {};
+	}
+
+	data.resize(bytes);
+
+	return data;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/read)")
+{
+	uint16_t port = 80;
+	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	TCP*  tcp = TCP::create(ip, port);
+
+	tcp->connect();
+	tcp->write("GET / HTTP/1.1\r\n\r\n");
+
+	std::vector<uint8_t> data = tcp->read(1024);
+
+	std::string string = {};
+	for(uint8_t ch : data)
+	{
+		string.push_back(ch);
+	}
+	std::cout << "Message:" << string << "\n";
+
+	delete tcp;
+}
+#endif // }}}
+
+
+ssize_t TCP::write(std::string_view data
+	) const noexcept
+{
+	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+
+	if(bytes < 0)
+	{
+		return bytes;
+	}
+
+	return bytes;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/write/string_view)")
+{
+	uint16_t port = 80;
+	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	TCP*  tcp = TCP::create(ip, port);
+
+	tcp->connect();
+
+	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
+	ssize_t bytes = tcp->write(message);
+
+	CHECK(bytes > 0);
+
+	delete tcp;
+}
+#endif // }}}
+
+
+ssize_t TCP::write(std::vector<char8_t> data
+	) const noexcept
+{
+	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+
+	if(bytes < 0)
+	{
+		return bytes;
+	}
+
+	return bytes;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/write/vector/char8_t)")
+{
+	uint16_t port = 80;
+	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	TCP*  tcp = TCP::create(ip, port);
+
+	tcp->connect();
+
+	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
+	std::vector<char8_t> data(std::begin(message), std::end(message));
+	ssize_t bytes = tcp->write(data);
+
+	CHECK(bytes > 0);
+
+	delete tcp;
+}
+#endif // }}}
+
+
+ssize_t TCP::write(std::vector<int8_t> data
+	) const noexcept
+{
+	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+
+	if(bytes < 0)
+	{
+		return bytes;
+	}
+
+	return bytes;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/write/vector/int8_t)")
+{
+	uint16_t port = 80;
+	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	TCP*  tcp = TCP::create(ip, port);
+
+	tcp->connect();
+
+	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
+	std::vector<int8_t> data(std::begin(message), std::end(message));
+	ssize_t bytes = tcp->write(data);
+
+	CHECK(bytes > 0);
+
+	delete tcp;
+}
+#endif // }}}
+
+
+ssize_t TCP::write(std::vector<uint8_t> data
+	) const noexcept
+{
+	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+
+	if(bytes < 0)
+	{
+		return bytes;
+	}
+
+	return bytes;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/write/vector/uint8_t)")
+{
+	uint16_t port = 80;
+	//IPv4* ip = IPv4::create("140.82.112.3"); // github.com
+	IPv4* ip = IPv4::create("72.167.43.31"); // zakero.com
+	TCP*  tcp = TCP::create(ip, port);
+
+	tcp->connect();
+
+	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
+	std::vector<uint8_t> data(std::begin(message), std::end(message));
+	ssize_t bytes = tcp->write(data);
+
+	CHECK(bytes > 0);
+
+	delete tcp;
+}
+#endif // }}}
+
+// }}}
+// {{{ TCP Client
+
 
 // }}}
 // {{{ TCP Server

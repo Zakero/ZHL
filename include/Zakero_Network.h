@@ -206,7 +206,7 @@ namespace zakero::network
 		: public IP
 	{
 		public:
-			[[nodiscard]] static IPv4*   create(const std::string) noexcept;
+			[[nodiscard]] static IPv4*                    create(const std::string) noexcept;
 
 			[[nodiscard]] struct in_addr address() const noexcept final override;
 			[[nodiscard]] IP*            copy() const noexcept final override;
@@ -484,6 +484,7 @@ IPv4* IPv4::create(in_addr addr
 }
 
 // }}}
+
 
 struct in_addr IPv4::address(
 	) const noexcept

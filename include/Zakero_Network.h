@@ -170,6 +170,18 @@
 	X(Error_Invalid_Service       , 11 , "The requested service is not available for the requested socket type."                           ) \
 	X(Error_Invalid_Socket_Type   , 12 , "The requested socket type is not supported."                                                     ) \
 	X(Error_Invalid_IP            , 13 , "The provided IP object is not valid."                                                            ) \
+	X(Error_Permission_Denied     , 14 , "The address or port is protected."                                                               ) \
+	X(Error_Port_Busy             , 15 , "The requested port is being used."                                                               ) \
+	X(Error_Invalid_Socket_FD     , 16 , "The socket file descriptor is not valid."                                                        ) \
+	X(Error_Socket_Busy           , 17 , "The socket is already bound."                                                                    ) \
+	X(Error_Invalid_Socket        , 18 , "The socket is invalid."                                                                          ) \
+	X(Error_Invalid_Address       , 19 , "The requested address is not valid."                                                             ) \
+	X(Error_Bad_Pointer           , 20 , "An internal pointer has become corrupted."                                                       ) \
+	X(Error_Too_Many_Links        , 21 , "Too many links were encountered resolving an address."                                           ) \
+	X(Error_Address_Too_Long      , 22 , "The address is too long."                                                                        ) \
+	X(Error_Invalid_Socket_Path   , 23 , "Part of the socket path does not exist."                                                         ) \
+	X(Error_Invalid_Socket_Dir    , 24 , "Part of the socket path is not a directory."                                                     ) \
+	X(Error_Socket_Read_Only      , 25 , "The socket inode is read-only."                                                                  ) \
 // }}}
 
 
@@ -413,7 +425,32 @@ namespace
 #endif
 #endif // }}}
 
-	std::error_code eai_to_error(const int eai
+	std::error_code bind_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			case EACCES:         return Error_Permission_Denied;
+			case EADDRINUSE:     return Error_Port_Busy;
+			case EBADF:          return Error_Invalid_Socket_FD;
+			case EINVAL:         return Error_Socket_Busy;
+			case ENOTSOCK:       return Error_Invalid_Socket;
+			case EADDRNOTAVAIL:  return Error_Invalid_Address;
+			case EFAULT:         return Error_Bad_Pointer;
+			case ELOOP:          return Error_Too_Many_Links;
+			case ENAMETOOLONG:   return Error_Address_Too_Long;
+			case ENOENT:         return Error_Invalid_Socket_Path;
+			case ENOMEM:         return Error_Out_Of_Memory;
+			case ENOTDIR:        return Error_Invalid_Socket_Dir;
+			case EROFS:          return Error_Socket_Read_Only;
+			default:
+				return std::error_code(error, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+	std::error_code eai_error_code(const int eai
 		, const int err
 		) noexcept
 	{
@@ -632,7 +669,7 @@ std::set<std::string> IPv4::hostname(const std::string hostname
 
 	if(retval != 0)
 	{
-		error = eai_to_error(retval, errno);
+		error = eai_error_code(retval, errno);
 		return {};
 	}
 
@@ -1351,8 +1388,9 @@ TEST_CASE("tcp/server/create")
 		uint16_t port = 9999;
 
 		TCPServer* tcp = TCPServer::create(ip, port, error);
-		CHECK(tcp           == nullptr);
-		CHECK(error.value() == EADDRNOTAVAIL);
+		CHECK(tcp   == nullptr);
+		CHECK(errno == EADDRNOTAVAIL);
+		CHECK(error == Error_Invalid_Address);
 		delete tcp;
 	}
 
@@ -1362,8 +1400,9 @@ TEST_CASE("tcp/server/create")
 		uint16_t port = 1;
 
 		TCPServer* tcp = TCPServer::create(ip, port, error);
-		CHECK(tcp           == nullptr);
-		CHECK(error.value() == EACCES);
+		CHECK(tcp   == nullptr);
+		CHECK(errno == EACCES);
+		CHECK(error == Error_Permission_Denied);
 		delete tcp;
 	}
 
@@ -1406,12 +1445,14 @@ std::error_code TCPServer::init(
 	retval = ::bind(socket_, (struct sockaddr*)&addr_, sizeof(addr_));
 	if(retval < 0)
 	{
+		int err = errno;
+
 		close(socket_);
 		socket_ = -1;
 
-		return std::error_code(errno, std::system_category());
+		errno = err;
+		return bind_error_code(err);
 	}
-
 
 	return Error_None;
 }

@@ -156,9 +156,19 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_NETWORK__ERROR_DATA \
-	X(Error_None                , 0 , "No Error"                                ) \
-	X(Error_Unknown             , 1 , "An unknown error has occurred"           ) \
-
+	X(Error_None                  ,  0 , "No Error"                                                                                        ) \
+	X(Error_Unknown               ,  1 , "An unknown error has occurred"                                                                   ) \
+	X(Error_IPv4_Invalid_Notation ,  2 , "The IPv4 numbers-and-dots notation was not valid"                                                ) \
+	X(Error_Address_Family        ,  3 , "The specified network host does not have any network addresses in the requested address family." ) \
+	X(Error_Try_Again_Later       ,  4 , "The name server returned a temporary failure indication. Try again later."                       ) \
+	X(Error_Bad_Hints             ,  5 , "The provided hint flags were invalid."                                                           ) \
+	X(Error_Failure               ,  6 , "The name server returned a permanent failure indication."                                        ) \
+	X(Error_Family                ,  7 , "The requested address family is not supported."                                                  ) \
+	X(Error_Out_Of_Memory         ,  8 , "Out of memory."                                                                                  ) \
+	X(Error_No_Data               ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
+	X(Error_No_Name               , 10 , "The provided name is not known."                                                                 ) \
+	X(Error_Invalid_Service       , 11 , "The requested service is not available for the requested socket type."                           ) \
+	X(Error_Invalid_Socket_Type   , 12 , "The requested socket type is not supported."                                                     ) \
 // }}}
 
 
@@ -208,7 +218,9 @@ namespace zakero::network
 	{
 		public:
 			[[nodiscard]] static IPv4*                 create(const std::string) noexcept;
+			[[nodiscard]] static IPv4*                 create(const std::string, std::error_code&) noexcept;
 			[[nodiscard]] static std::set<std::string> hostname(const std::string) noexcept;
+			[[nodiscard]] static std::set<std::string> hostname(const std::string, std::error_code&) noexcept;
 
 			[[nodiscard]] struct in_addr address() const noexcept final override;
 			[[nodiscard]] IP*            copy() const noexcept final override;
@@ -392,6 +404,29 @@ namespace
 	const std::string Test_IP = "140.82.112.3"; // github.com
 #endif
 #endif // }}}
+
+	std::error_code eai_to_error(const int eai
+		, const int err
+		) noexcept
+	{
+		switch(eai)
+		{
+			case EAI_ADDRFAMILY: return Error_Address_Family;
+			case EAI_AGAIN:      return Error_Try_Again_Later;
+			case EAI_BADFLAGS:   return Error_Bad_Hints;
+			case EAI_FAIL:       return Error_Failure;
+			case EAI_FAMILY:     return Error_Family;
+			case EAI_MEMORY:     return Error_Out_Of_Memory;
+			case EAI_NODATA:     return Error_No_Data;
+			case EAI_NONAME:     return Error_No_Name;
+			case EAI_SERVICE:    return Error_Invalid_Service;
+			case EAI_SOCKTYPE:   return Error_Invalid_Socket_Type;
+			case EAI_SYSTEM:
+				return std::error_code(err, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
 }
 
 // }}}
@@ -458,15 +493,27 @@ ErrorCategory_ ErrorCategory;
 IPv4* IPv4::create(const std::string address
 	) noexcept
 {
+	std::error_code error;
+
+	return create(address, error);
+}
+
+
+IPv4* IPv4::create(const std::string address
+	, std::error_code& error
+	) noexcept
+{
 	in_addr addr = { 0 };
 
 	// TODO : Is errno set?
 	int retval = inet_aton(address.data(), &addr);
 	if(retval == 0)
 	{
+		error = Error_IPv4_Invalid_Notation;
 		return nullptr;
 	}
 
+	error = Error_None;
 	IPv4* ip = create(addr);
 
 	return ip;
@@ -475,43 +522,62 @@ IPv4* IPv4::create(const std::string address
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("ipv4/create")
 {
-	IPv4* ip = nullptr;
+	IPv4*           ip    = nullptr;
+	std::error_code error = {};
 
 	SUBCASE("IPv4 Invalid")
 	{
-		ip = IPv4::create("");
-		CHECK(ip == nullptr);
+		ip = IPv4::create("", error);
+		CHECK(ip    == nullptr);
+		CHECK(error == Error_IPv4_Invalid_Notation);
 		delete ip;
 
-		ip = IPv4::create("aaa.bbb.ccc.ddd");
-		CHECK(ip == nullptr);
+		ip = IPv4::create("aaa.bbb.ccc.ddd", error);
+		CHECK(ip    == nullptr);
+		CHECK(error == Error_IPv4_Invalid_Notation);
 		delete ip;
 
-		ip = IPv4::create("333.444.555.666");
-		CHECK(ip == nullptr);
+		ip = IPv4::create("333.444.555.666", error);
+		CHECK(ip    == nullptr);
+		CHECK(error == Error_IPv4_Invalid_Notation);
 		delete ip;
 	}
 
 	SUBCASE("IPv4 Valid")
 	{
-		ip = IPv4::create("0.0.0.0");
-		CHECK(ip != nullptr);
+		ip = IPv4::create("0", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
 		delete ip;
 
-		ip = IPv4::create("000.000.000.000");
-		CHECK(ip != nullptr);
+		ip = IPv4::create("0x7f000001", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
 		delete ip;
 
-		ip = IPv4::create("127.0.0.1");
-		CHECK(ip != nullptr);
+		ip = IPv4::create("0.0.0.0", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
 		delete ip;
 
-		ip = IPv4::create("127.000.000.001");
-		CHECK(ip != nullptr);
+		ip = IPv4::create("000.000.000.000", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
 		delete ip;
 
-		ip = IPv4::create("255.255.255.255");
-		CHECK(ip != nullptr);
+		ip = IPv4::create("127.0.0.1", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
+		delete ip;
+
+		ip = IPv4::create("127.000.000.001", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
+		delete ip;
+
+		ip = IPv4::create("255.255.255.255", error);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
 		delete ip;
 	}
 }
@@ -534,6 +600,16 @@ IPv4* IPv4::create(in_addr addr
 std::set<std::string> IPv4::hostname(const std::string hostname
 	) noexcept
 {
+	std::error_code error;
+
+	return IPv4::hostname(hostname, error);
+}
+
+
+std::set<std::string> IPv4::hostname(const std::string hostname
+	, std::error_code& error
+	) noexcept
+{
 	struct addrinfo hints =
 	{	.ai_flags     = AI_ADDRCONFIG
 	,	.ai_family    = AF_INET
@@ -547,11 +623,12 @@ std::set<std::string> IPv4::hostname(const std::string hostname
 
 	struct addrinfo* result = nullptr;
 
+	errno = 0;
 	int retval = getaddrinfo(hostname.c_str(), nullptr, &hints, &result);
 
 	if(retval != 0)
 	{
-		fprintf(stderr, "fail: %s\n", gai_strerror(retval));
+		error = eai_to_error(retval, errno);
 		return {};
 	}
 
@@ -565,28 +642,57 @@ std::set<std::string> IPv4::hostname(const std::string hostname
 
 	freeaddrinfo(result);
 
+	error = Error_None;
+
 	return set;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("ipv4/hostname")
 {
-	std::set<std::string> set;
+	std::set<std::string> set   = {};
+	std::error_code       error = {};
 
-	set = IPv4::hostname("localhost");
-	CHECK(set.empty() == false);
-
-	bool found_127_0_0_1 = false;
-	for(const std::string& s : set)
+	SUBCASE("Hostname Invalid")
 	{
-		if(s == "127.0.0.1")
-		{
-			found_127_0_0_1 = true;
-			break;
-		}
+		set = IPv4::hostname("2607:f8b0:4000:81a::200e", error); // IPv6 address
+		CHECK(set.empty() == true);
+		CHECK(error       == Error_Address_Family);
+
+		set = IPv4::hostname("", error);
+		CHECK(set.empty() == true);
+		CHECK(error       == Error_No_Name);
+
+		set = IPv4::hostname("does.not.exist", error);
+		CHECK(set.empty() == true);
+		CHECK(error       == Error_No_Name);
 	}
 
-	CHECK(found_127_0_0_1 == true);
+	SUBCASE("Hostname Valid")
+	{
+		auto contains_127_0_0_1 = [](const std::set<std::string>& set) -> bool
+		{
+			for(const std::string& s : set)
+			{
+				if(s == "127.0.0.1")
+				{
+					return true;
+				}
+			}
+
+			return false;
+		};
+
+		set = IPv4::hostname("localhost", error);
+		CHECK(set.empty()             == false);
+		CHECK(error                   == Error_None);
+		CHECK(contains_127_0_0_1(set) == true);
+
+		set = IPv4::hostname("127.0.0.1", error);
+		CHECK(set.empty() == false);
+		CHECK(error       == Error_None);
+		CHECK(contains_127_0_0_1(set) == true);
+	}
 }
 #endif // }}}
 

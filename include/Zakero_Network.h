@@ -198,7 +198,7 @@ namespace zakero::network
 #undef X
 
 	// }}}
-// {{{ IP
+	// {{{ IP
 
 	class IP
 	{
@@ -211,7 +211,7 @@ namespace zakero::network
 			[[nodiscard]] virtual int            version() const noexcept = 0;
 	};
 
-// {{{ IP v4
+	// {{{ IP v4
 
 	class IPv4
 		: public IP
@@ -235,17 +235,17 @@ namespace zakero::network
 			[[nodiscard]] static IPv4* create(in_addr) noexcept;
 	};
 
-// }}}
-// {{{ IP v6
+	// }}}
+	// {{{ IP v6
 
 	class IPv6
 	{
 		IPv6() noexcept;
 	};
 
-// }}}
-// }}}
-// {{{ TCP
+	// }}}
+	// }}}
+	// {{{ TCP
 // {{{ TCP (Private)
 
 	class TCP_
@@ -311,7 +311,7 @@ namespace zakero::network
 	};
 
 // }}}
-// {{{ TCP Server
+	// {{{ TCP Server
 
 	class TCPServer
 		: public TCP_
@@ -328,22 +328,22 @@ namespace zakero::network
 			TCPServer(IP*, uint16_t) noexcept;
 	};
 
-// }}}
-// }}}
-// {{{ UDP
+	// }}}
+	// }}}
+	// {{{ UDP
 
 	class UDP
 	{
 	};
 
-// }}}
-// {{{ OpenSSL
+	// }}}
+	// {{{ OpenSSL
 
 	class OpenSSL
 	{
 	};
 
-// }}}
+	// }}}
 } // zakero::network
 
 // {{{ Operators
@@ -505,7 +505,6 @@ IPv4* IPv4::create(const std::string address
 {
 	in_addr addr = { 0 };
 
-	// TODO : Is errno set?
 	int retval = inet_aton(address.data(), &addr);
 	if(retval == 0)
 	{
@@ -515,6 +514,16 @@ IPv4* IPv4::create(const std::string address
 
 	error = Error_None;
 	IPv4* ip = create(addr);
+
+	return ip;
+}
+
+
+IPv4* IPv4::create(in_addr addr
+	) noexcept
+{
+	IPv4* ip = new IPv4();
+	ip->addr_ = addr;
 
 	return ip;
 }
@@ -583,19 +592,6 @@ TEST_CASE("ipv4/create")
 }
 #endif // }}}
 
-
-IPv4* IPv4::create(in_addr addr
-	) noexcept
-{
-	IPv4* ip = new IPv4();
-	ip->addr_ = addr;
-
-	return ip;
-}
-
-#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-// No Tests Needed
-#endif // }}}
 
 std::set<std::string> IPv4::hostname(const std::string hostname
 	) noexcept
@@ -1279,7 +1275,7 @@ TCPServer* TCPServer::create(const IP* ip
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/create")
+TEST_CASE("tcp/server/create")
 {
 	uint16_t port = 65535;
 

@@ -169,6 +169,7 @@
 	X(Error_No_Name               , 10 , "The provided name is not known."                                                                 ) \
 	X(Error_Invalid_Service       , 11 , "The requested service is not available for the requested socket type."                           ) \
 	X(Error_Invalid_Socket_Type   , 12 , "The requested socket type is not supported."                                                     ) \
+	X(Error_Invalid_IP            , 13 , "The provided IP object is not valid."                                                            ) \
 // }}}
 
 
@@ -217,8 +218,8 @@ namespace zakero::network
 		: public IP
 	{
 		public:
-			[[nodiscard]] static IPv4*                 create(const std::string) noexcept;
-			[[nodiscard]] static IPv4*                 create(const std::string, std::error_code&) noexcept;
+			[[nodiscard]] static IP*                   create(const std::string) noexcept;
+			[[nodiscard]] static IP*                   create(const std::string, std::error_code&) noexcept;
 			[[nodiscard]] static std::set<std::string> hostname(const std::string) noexcept;
 			[[nodiscard]] static std::set<std::string> hostname(const std::string, std::error_code&) noexcept;
 
@@ -232,7 +233,7 @@ namespace zakero::network
 			mutable std::string string_ = {};
 			in_addr             addr_   = { 0 };
 
-			[[nodiscard]] static IPv4* create(in_addr) noexcept;
+			[[nodiscard]] static IP* create(in_addr) noexcept;
 	};
 
 	// }}}
@@ -258,12 +259,12 @@ namespace zakero::network
 			[[nodiscard]] int       socket() const noexcept;
 
 		protected:
-			IP*                ip_;
-			uint16_t           port_;
-			int                type_       = SOCK_STREAM;
-			int                protocol_   = 0;
-			struct sockaddr_in addr_       = { 0 };
-			int                socket_     = -1;
+			IP*                ip_;                       // Server
+			uint16_t           port_;                     // Server
+			int                type_       = SOCK_STREAM; // Server
+			int                protocol_   = 0;           // Server
+			struct sockaddr_in addr_       = { 0 };       // Server
+			int                socket_     = -1;          // Server
 			int                recv_flags_ = 0;
 			int                send_flags_ = 0;
 
@@ -320,12 +321,19 @@ namespace zakero::network
 			virtual ~TCPServer() noexcept;
 
 			[[nodiscard]] static TCPServer*    create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer*    create(const IP*, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer*    create(IP*&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer*    create(IPv4*&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer*    create(IPv4*&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer*    create(const IP&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer*    create(const IP&, const uint16_t, std::error_code&) noexcept;
 
-			[[]]          TCP*                 waitForConnection() noexcept;
+			[[nodiscard]] TCP*                 waitForConnection() noexcept;
+			[[nodiscard]] TCP*                 waitForConnection(std::error_code&) noexcept;
 
 		private:
 			TCPServer(IP*, uint16_t) noexcept;
+
+			[[nodiscard]] std::error_code      init() noexcept;
 	};
 
 	// }}}
@@ -490,7 +498,7 @@ ErrorCategory_ ErrorCategory;
 // }}}
 // {{{ IP v4
 
-IPv4* IPv4::create(const std::string address
+IP* IPv4::create(const std::string address
 	) noexcept
 {
 	std::error_code error;
@@ -499,7 +507,7 @@ IPv4* IPv4::create(const std::string address
 }
 
 
-IPv4* IPv4::create(const std::string address
+IP* IPv4::create(const std::string address
 	, std::error_code& error
 	) noexcept
 {
@@ -513,13 +521,13 @@ IPv4* IPv4::create(const std::string address
 	}
 
 	error = Error_None;
-	IPv4* ip = create(addr);
+	IP* ip = create(addr);
 
 	return ip;
 }
 
 
-IPv4* IPv4::create(in_addr addr
+IP* IPv4::create(in_addr addr
 	) noexcept
 {
 	IPv4* ip = new IPv4();
@@ -531,7 +539,7 @@ IPv4* IPv4::create(in_addr addr
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("ipv4/create")
 {
-	IPv4*           ip    = nullptr;
+	IP*             ip    = nullptr;
 	std::error_code error = {};
 
 	SUBCASE("IPv4 Invalid")
@@ -720,7 +728,7 @@ TEST_CASE("ipv4/address")
 IP* IPv4::copy(
 	) const noexcept
 {
-	IPv4* ip = create(this->addr_);
+	IP* ip = create(this->addr_);
 
 	return ip;
 }
@@ -772,7 +780,7 @@ std::string IPv4::string(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("ipv4/string")
 {
-	IPv4* ip = nullptr;
+	IP* ip = nullptr;
 
 	SUBCASE("IPv4 Localhost 1")
 	{
@@ -800,7 +808,7 @@ int IPv4::version(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("ipv4/version")
 {
-	IPv4* ip = IPv4::create("127.0.0.1");
+	IP* ip = IPv4::create("127.0.0.1");
 	CHECK(ip->version() == 4);
 	delete ip;
 }
@@ -858,7 +866,7 @@ TEST_CASE("tcp/ip")
 {
 	SUBCASE("IPv4")
 	{
-		IPv4* ip = IPv4::create("127.0.0.1");
+		IP* ip = IPv4::create("127.0.0.1");
 		uint16_t port = 65535;
 
 		TCPClient* tcp = TCPClient::create(ip, port);
@@ -877,7 +885,7 @@ uint16_t TCP_::port(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/port")
 {
-	IPv4* ip = IPv4::create("127.0.0.1");
+	IP* ip = IPv4::create("127.0.0.1");
 	uint16_t port = 65535;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -897,7 +905,7 @@ int TCP_::socket(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/socket")
 {
-	IPv4* ip = IPv4::create("127.0.0.1");
+	IP* ip = IPv4::create("127.0.0.1");
 	uint16_t port = 65535;
 
 	SUBCASE("IPv4 Not Connected")
@@ -945,7 +953,7 @@ std::vector<uint8_t> TCP::read(const size_t max_bytes
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/read")
 {
-	IPv4* ip = IPv4::create(Test_IP);
+	IP* ip = IPv4::create(Test_IP);
 	uint16_t port = 80;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -987,7 +995,7 @@ ssize_t TCP::write(std::string_view data
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/write/string_view")
 {
-	IPv4* ip = IPv4::create(Test_IP);
+	IP* ip = IPv4::create(Test_IP);
 	uint16_t port = 80;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -1020,7 +1028,7 @@ ssize_t TCP::write(std::vector<char8_t> data
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/write/vector/char8_t")
 {
-	IPv4* ip = IPv4::create(Test_IP);
+	IP* ip = IPv4::create(Test_IP);
 	uint16_t port = 80;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -1054,7 +1062,7 @@ ssize_t TCP::write(std::vector<int8_t> data
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/write/vector/int8_t")
 {
-	IPv4* ip = IPv4::create(Test_IP);
+	IP* ip = IPv4::create(Test_IP);
 	uint16_t port = 80;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -1088,7 +1096,7 @@ ssize_t TCP::write(std::vector<uint8_t> data
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/write/vector/uint8_t")
 {
-	IPv4* ip = IPv4::create(Test_IP);
+	IP* ip = IPv4::create(Test_IP);
 	uint16_t port = 80;
 
 	TCPClient* tcp = TCPClient::create(ip, port);
@@ -1167,7 +1175,7 @@ TEST_CASE("tcp/create")
 
 	SUBCASE("Valid IP")
 	{
-		IPv4* ip = IPv4::create("127.0.0.1");
+		IP* ip = IPv4::create("127.0.0.1");
 
 		TCPClient* tcp = TCPClient::create(ip, port);
 		CHECK(tcp != nullptr);
@@ -1214,7 +1222,7 @@ TEST_CASE("tcp/connect")
 {
 	SUBCASE("IPv4")
 	{
-		IPv4* ip = IPv4::create(Test_IP);
+		IP* ip = IPv4::create(Test_IP);
 		uint16_t port = 80;
 
 		TCPClient* tcp = TCPClient::create(ip, port);
@@ -1247,12 +1255,24 @@ TCPServer* TCPServer::create(IP*& ip
 	, const uint16_t port
 	) noexcept
 {
+	std::error_code error;
+
+	return TCPServer::create(ip, port, error);
+}
+
+
+TCPServer* TCPServer::create(IP*& ip
+	, const uint16_t   port
+	, std::error_code& error
+	) noexcept
+{
 	if(ip == nullptr)
 	{
+		error = Error_Invalid_IP;
 		return nullptr;
 	}
 
-	TCPServer* tcp = new TCPServer(ip, port);
+	TCPServer* tcp = TCPServer::create(*ip, port, error);
 
 	ip = nullptr;
 
@@ -1260,16 +1280,29 @@ TCPServer* TCPServer::create(IP*& ip
 }
 
 
-TCPServer* TCPServer::create(const IP* ip
+TCPServer* TCPServer::create(const IP& ip
 	, const uint16_t port
 	) noexcept
 {
-	if(ip == nullptr)
-	{
-		return nullptr;
-	}
+	std::error_code error;
 
-	TCPServer* tcp = new TCPServer(ip->copy(), port);
+	return TCPServer::create(ip, port, error);
+}
+
+
+TCPServer* TCPServer::create(const IP& ip
+	, const uint16_t   port
+	, std::error_code& error
+	) noexcept
+{
+	TCPServer* tcp = new TCPServer(ip.copy(), port);
+	error = tcp->init();
+
+	if(error != Error_None)
+	{
+		delete tcp;
+		tcp = nullptr;
+	}
 
 	return tcp;
 }
@@ -1277,42 +1310,90 @@ TCPServer* TCPServer::create(const IP* ip
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/server/create")
 {
-	uint16_t port = 65535;
+	const uint16_t  port  = 65535;
+	std::error_code error = {};
 
-	SUBCASE("Invalid IP")
+	SUBCASE("IP Invalid")
 	{
-		TCPServer* tcp = TCPServer::create(nullptr, port);
-		CHECK(tcp == nullptr);
+		IP* ip = nullptr;
+		TCPServer* tcp = TCPServer::create(ip, port, error);
+		CHECK(tcp   == nullptr);
+		CHECK(error == Error_Invalid_IP);
+	}
+
+	SUBCASE("IP Take-Ownership")
+	{
+		IP* ip = IPv4::create("127.0.0.1");
+
+		TCPServer* tcp = TCPServer::create(ip, port, error);
+		CHECK(tcp   != nullptr);
+		CHECK(ip    == nullptr);
+		CHECK(error == Error_None);
 		delete tcp;
 	}
 
-	SUBCASE("Valid IP")
+	SUBCASE("IP Make Copy")
 	{
-		IPv4* ip = IPv4::create("127.0.0.1");
+		IP* ip = IPv4::create("127.0.0.1");
 
-		TCPServer* tcp = TCPServer::create(ip, port);
-		CHECK(tcp != nullptr);
+		TCPServer* tcp = TCPServer::create(*ip, port, error);
+		CHECK(tcp   != nullptr);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
+		delete tcp;
 
+		delete ip;
+	}
+
+	SUBCASE("IP Adddress Invalid")
+	{
+		IP*      ip   = IPv4::create("10.10.10.10");
+		uint16_t port = 9999;
+
+		TCPServer* tcp = TCPServer::create(ip, port, error);
+		CHECK(tcp           == nullptr);
+		CHECK(error.value() == EADDRNOTAVAIL);
+		delete tcp;
+	}
+
+	SUBCASE("Port Invalid")
+	{
+		IP*      ip   = IPv4::create("127.0.0.1");
+		uint16_t port = 1;
+
+		TCPServer* tcp = TCPServer::create(ip, port, error);
+		CHECK(tcp           == nullptr);
+		CHECK(error.value() == EACCES);
+		delete tcp;
+	}
+
+	SUBCASE("TCPServer Valid")
+	{
+		IP*      ip   = IPv4::create("127.0.0.1");
+		uint16_t port = 9999;
+
+		TCPServer* tcp = TCPServer::create(ip, port, error);
+		CHECK(error == Error_None);
 		delete tcp;
 	}
 }
 #endif // }}}
 
 
-TCP* TCPServer::waitForConnection(
+std::error_code TCPServer::init(
 	) noexcept
 {
+	if(socket_ >= 0)
+	{
+		close(socket_);
+	}
+
+	errno = 0;
+	socket_ = ::socket(ip_->family(), type_, protocol_);
+
 	if(socket_ < 0)
 	{
-		// TODO : Add error handling
-		socket_ = ::socket(ip_->family(), type_, protocol_);
-
-		if(socket_ < 0)
-		{
-			return nullptr;
-		}
-
-		printf("Created Socket\n");
+		return std::error_code(errno, std::system_category());
 	}
 
 	addr_.sin_family = ip_->family();
@@ -1321,18 +1402,53 @@ TCP* TCPServer::waitForConnection(
 
 	int retval = 0;
 
+	errno = 0;
 	retval = ::bind(socket_, (struct sockaddr*)&addr_, sizeof(addr_));
 	if(retval < 0)
 	{
-		return nullptr;
+		close(socket_);
+		socket_ = -1;
+
+		return std::error_code(errno, std::system_category());
 	}
-	printf("Bind'ed Socket\n");
+
+
+	return Error_None;
+}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+// Tested via TCPServer::create()
+#endif // }}}
+
+
+TCP* TCPServer::waitForConnection(
+	) noexcept
+{
+	std::error_code error;
+
+	return this->waitForConnection(error);
+}
+
+
+TCP* TCPServer::waitForConnection(std::error_code& error
+	) noexcept
+{
+	if(socket_ < 0)
+	{
+		error = init();
+
+		if(error)
+		{
+			return nullptr;
+		}
+	}
 
 	listen(socket_, 3); // "3" should be a variable
 
 
 	printf("Accept...\n");
 	size_t socklen = sizeof(struct sockaddr_in);
+	int retval = 0;
 	retval = accept(socket_, (struct sockaddr*)&addr_, (socklen_t*)&socklen);
 
 	if(retval < 0)
@@ -1348,9 +1464,9 @@ TCP* TCPServer::waitForConnection(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/waitforconnection")
+TEST_CASE("tcp/server/waitforconnection")
 {
-	IPv4* ip = IPv4::create("0.0.0.0");
+	IP* ip = IPv4::create("0.0.0.0");
 	uint16_t port = 9999;
 
 	TCPServer* tcp = TCPServer::create(ip, port);

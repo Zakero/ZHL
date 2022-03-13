@@ -316,7 +316,7 @@ namespace zakero::network
 	};
 
 // }}}
-// {{{ TCP Client
+	// {{{ TCP Client
 
 	class TCPClient
 		: public TCP
@@ -324,16 +324,18 @@ namespace zakero::network
 		public:
 			virtual ~TCPClient() noexcept;
 
-			[[nodiscard]] static TCPClient*    create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPClient*    create(const IP*, const uint16_t) noexcept;
+			[[nodiscard]] static TCPClient* create(IP*&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPClient* create(IP*&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPClient* create(const IP&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPClient* create(const IP&, const uint16_t, std::error_code&) noexcept;
 
-			[[]]          bool                 connect() noexcept;
+			[[]]          bool              connect() noexcept;
 
 		private:
 			TCPClient(IP*, uint16_t) noexcept;
 	};
 
-// }}}
+	// }}}
 	// {{{ TCP Server
 
 	class TCPServer
@@ -344,8 +346,6 @@ namespace zakero::network
 
 			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t) noexcept;
 			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t, std::error_code&) noexcept;
-			[[nodiscard]] static TCPServer* create(IPv4*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer* create(IPv4*&, const uint16_t, std::error_code&) noexcept;
 			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t) noexcept;
 			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t, std::error_code&) noexcept;
 
@@ -1238,12 +1238,24 @@ TCPClient* TCPClient::create(IP*& ip
 	, const uint16_t port
 	) noexcept
 {
+	std::error_code error;
+
+	return TCPClient::create(ip, port, error);
+}
+
+
+TCPClient* TCPClient::create(IP*& ip
+	, const uint16_t   port
+	, std::error_code& error
+	) noexcept
+{
 	if(ip == nullptr)
 	{
+		error = Error_Invalid_IP;
 		return nullptr;
 	}
 
-	TCPClient* tcp = new TCPClient(ip, port);
+	TCPClient* tcp = TCPClient::create(*ip, port, error);
 
 	ip = nullptr;
 
@@ -1251,28 +1263,35 @@ TCPClient* TCPClient::create(IP*& ip
 }
 
 
-TCPClient* TCPClient::create(const IP* ip
+TCPClient* TCPClient::create(const IP& ip
 	, const uint16_t port
 	) noexcept
 {
-	if(ip == nullptr)
-	{
-		return nullptr;
-	}
+	std::error_code error;
 
-	TCPClient* tcp = new TCPClient(ip->copy(), port);
+	return TCPClient::create(ip, port, error);
+}
+
+
+TCPClient* TCPClient::create(const IP& ip
+	, const uint16_t   port
+	, std::error_code& error
+	) noexcept
+{
+	TCPClient* tcp = new TCPClient(ip.copy(), port);
 
 	return tcp;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/create")
+TEST_CASE("tcp/client/create")
 {
 	uint16_t port = 65535;
 
 	SUBCASE("Invalid IP")
 	{
-		TCPClient* tcp = TCPClient::create(nullptr, port);
+		IP* ip = nullptr;
+		TCPClient* tcp = TCPClient::create(ip, port);
 		CHECK(tcp == nullptr);
 		delete tcp;
 	}

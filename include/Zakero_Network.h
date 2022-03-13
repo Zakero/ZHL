@@ -156,32 +156,41 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_NETWORK__ERROR_DATA \
-	X(Error_None                  ,  0 , "No Error"                                                                                        ) \
-	X(Error_Unknown               ,  1 , "An unknown error has occurred"                                                                   ) \
-	X(Error_IPv4_Invalid_Notation ,  2 , "The IPv4 numbers-and-dots notation was not valid"                                                ) \
-	X(Error_Address_Family        ,  3 , "The specified network host does not have any network addresses in the requested address family." ) \
-	X(Error_Try_Again_Later       ,  4 , "The name server returned a temporary failure indication. Try again later."                       ) \
-	X(Error_Bad_Hints             ,  5 , "The provided hint flags were invalid."                                                           ) \
-	X(Error_Failure               ,  6 , "The name server returned a permanent failure indication."                                        ) \
-	X(Error_Family                ,  7 , "The requested address family is not supported."                                                  ) \
-	X(Error_Out_Of_Memory         ,  8 , "Out of memory."                                                                                  ) \
-	X(Error_No_Data               ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
-	X(Error_No_Name               , 10 , "The provided name is not known."                                                                 ) \
-	X(Error_Invalid_Service       , 11 , "The requested service is not available for the requested socket type."                           ) \
-	X(Error_Invalid_Socket_Type   , 12 , "The requested socket type is not supported."                                                     ) \
-	X(Error_Invalid_IP            , 13 , "The provided IP object is not valid."                                                            ) \
-	X(Error_Permission_Denied     , 14 , "The address or port is protected."                                                               ) \
-	X(Error_Port_Busy             , 15 , "The requested port is being used."                                                               ) \
-	X(Error_Invalid_Socket_FD     , 16 , "The socket file descriptor is not valid."                                                        ) \
-	X(Error_Socket_Busy           , 17 , "The socket is already bound."                                                                    ) \
-	X(Error_Invalid_Socket        , 18 , "The socket is invalid."                                                                          ) \
-	X(Error_Invalid_Address       , 19 , "The requested address is not valid."                                                             ) \
-	X(Error_Bad_Pointer           , 20 , "An internal pointer has become corrupted."                                                       ) \
-	X(Error_Too_Many_Links        , 21 , "Too many links were encountered resolving an address."                                           ) \
-	X(Error_Address_Too_Long      , 22 , "The address is too long."                                                                        ) \
-	X(Error_Invalid_Socket_Path   , 23 , "Part of the socket path does not exist."                                                         ) \
-	X(Error_Invalid_Socket_Dir    , 24 , "Part of the socket path is not a directory."                                                     ) \
-	X(Error_Socket_Read_Only      , 25 , "The socket inode is read-only."                                                                  ) \
+	X(Error_None                    ,  0 , "No Error"                                                                                        ) \
+	X(Error_Unknown                 ,  1 , "An unknown error has occurred"                                                                   ) \
+	X(Error_IPv4_Invalid_Notation   ,  2 , "The IPv4 numbers-and-dots notation was not valid"                                                ) \
+	X(Error_Address_Family          ,  3 , "The specified network host does not have any network addresses in the requested address family." ) \
+	X(Error_Try_Again_Later         ,  4 , "The name server returned a temporary failure indication. Try again later."                       ) \
+	X(Error_Bad_Hints               ,  5 , "The provided hint flags were invalid."                                                           ) \
+	X(Error_Failure                 ,  6 , "The name server returned a permanent failure indication."                                        ) \
+	X(Error_Family                  ,  7 , "The requested address family is not supported."                                                  ) \
+	X(Error_Out_Of_Memory           ,  8 , "Out of memory."                                                                                  ) \
+	X(Error_No_Data                 ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
+	X(Error_No_Name                 , 10 , "The provided name is not known."                                                                 ) \
+	X(Error_Invalid_Service         , 11 , "The requested service is not available for the requested socket type."                           ) \
+	X(Error_Invalid_Socket_Type     , 12 , "The requested socket type is not supported."                                                     ) \
+	X(Error_Invalid_IP              , 13 , "The provided IP object is not valid."                                                            ) \
+	X(Error_Permission_Denied       , 14 , "The address or port is protected."                                                               ) \
+	X(Error_Port_Busy               , 15 , "The requested port is being used."                                                               ) \
+	X(Error_Invalid_Socket_FD       , 16 , "The socket file descriptor is not valid."                                                        ) \
+	X(Error_Socket_Busy             , 17 , "The socket is already bound."                                                                    ) \
+	X(Error_Invalid_Socket          , 18 , "The socket is invalid."                                                                          ) \
+	X(Error_Invalid_Address         , 19 , "The requested address is not valid."                                                             ) \
+	X(Error_Bad_Pointer             , 20 , "An internal pointer has become corrupted."                                                       ) \
+	X(Error_Too_Many_Links          , 21 , "Too many links were encountered resolving an address."                                           ) \
+	X(Error_Address_Too_Long        , 22 , "The address is too long."                                                                        ) \
+	X(Error_Invalid_Socket_Path     , 23 , "Part of the socket path does not exist."                                                         ) \
+	X(Error_Invalid_Socket_Dir      , 24 , "Part of the socket path is not a directory."                                                     ) \
+	X(Error_Socket_Read_Only        , 25 , "The socket inode is read-only."                                                                  ) \
+	X(Error_Not_Supported           , 26 , "The request operation is not supported."                                                         ) \
+	X(Error_No_Connection_Available , 27 , "The request operation is not supported."                                                         ) \
+	X(Error_Connection_Aborted      , 28 , "A connection has been aborted."                                                                  ) \
+	X(Error_Address_Not_Writable    , 29 , "Data is now in a writable part of the user address space."                                       ) \
+	X(Error_Interrupted             , 30 , "Interrupted before a connection arrived."                                                        ) \
+	X(Error_Not_Listening           , 31 , "The socket is not listening for connections."                                                    ) \
+	X(Error_No_More_Process_FD      , 32 , "No more file descriptors are available for the process."                                         ) \
+	X(Error_No_More_System_FD       , 33 , "No more file descriptors are available for the system."                                         ) \
+	X(Error_Protocol                , 34 , "Protocol error."                                                                                ) \
 // }}}
 
 
@@ -266,9 +275,10 @@ namespace zakero::network
 		public:
 			virtual ~TCP_() noexcept;
 
-			[[nodiscard]] const IP& ip() const noexcept;
-			[[nodiscard]] uint16_t  port() const noexcept;
-			[[nodiscard]] int       socket() const noexcept;
+			[[nodiscard]] const IP&   ip() const noexcept;
+			[[nodiscard]] uint16_t    port() const noexcept;
+			[[nodiscard]] int         socket() const noexcept;
+			[[nodiscard]] std::string string() const noexcept;
 
 		protected:
 			IP*                ip_;                       // Server
@@ -286,6 +296,7 @@ namespace zakero::network
 // }}}
 // {{{ TCP (Base)
 
+			class TCPServer;
 	class TCP
 		: public TCP_
 	{
@@ -300,7 +311,6 @@ namespace zakero::network
 			[[]]          ssize_t              write(std::vector<uint8_t>) const noexcept;
 
 		protected:
-			class TCPServer;
 			friend TCPServer;
 			TCP(IP*, uint16_t) noexcept;
 	};
@@ -425,6 +435,34 @@ namespace
 #endif
 #endif // }}}
 
+	std::error_code accept_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			// Posix
+			case EAGAIN:       return Error_No_Connection_Available;
+			case EBADF:        return Error_Invalid_Socket_FD;
+			case ECONNABORTED: return Error_Connection_Aborted;
+			case EFAULT:       return Error_Address_Not_Writable;
+			case EINTR:        return Error_Interrupted;
+			case EINVAL:       return Error_Not_Listening;
+			case EMFILE:       return Error_No_More_Process_FD;
+			case ENFILE:       return Error_No_More_System_FD;
+			case ENOBUFS:      return Error_Out_Of_Memory;
+			case ENOMEM:       return Error_Out_Of_Memory;
+			case ENOTSOCK:     return Error_Invalid_Socket;
+			case EOPNOTSUPP:   return Error_Not_Supported;
+			case EPROTO:       return Error_Protocol;
+			case EPERM:        return Error_Permission_Denied;
+			default:
+				return std::error_code(error, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+
 	std::error_code bind_error_code(const int error
 		) noexcept
 	{
@@ -450,6 +488,7 @@ namespace
 		return Error_Unknown;
 	}
 
+
 	std::error_code eai_error_code(const int eai
 		, const int err
 		) noexcept
@@ -468,6 +507,22 @@ namespace
 			case EAI_SOCKTYPE:   return Error_Invalid_Socket_Type;
 			case EAI_SYSTEM:
 				return std::error_code(err, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+
+	std::error_code listen_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			case EADDRINUSE:     return Error_Port_Busy;
+			case EBADF:          return Error_Invalid_Socket_FD;
+			case ENOTSOCK:       return Error_Invalid_Socket;
+			default:
+				return std::error_code(error, std::system_category());
 		}
 
 		return Error_Unknown;
@@ -952,6 +1007,14 @@ TEST_CASE("tcp/socket")
 	}
 }
 #endif // }}}
+
+std::string TCP_::string(
+	) const noexcept
+{
+	std::string s = ip_->string() + ":" + std::to_string(port_);
+
+	return s;
+}
 
 // }}}
 // {{{ TCP (Base)
@@ -1445,13 +1508,26 @@ std::error_code TCPServer::init(
 	retval = ::bind(socket_, (struct sockaddr*)&addr_, sizeof(addr_));
 	if(retval < 0)
 	{
-		int err = errno;
+		retval = errno;
 
 		close(socket_);
 		socket_ = -1;
 
-		errno = err;
-		return bind_error_code(err);
+		errno = retval;
+		return bind_error_code(retval);
+	}
+
+	errno = 0;
+	retval = listen(socket_, 3); // "3" should be a variable
+	if(retval < 0)
+	{
+		retval = errno;
+
+		close(socket_);
+		socket_ = -1;
+
+		errno = retval;
+		return listen_error_code(retval);
 	}
 
 	return Error_None;
@@ -1484,24 +1560,32 @@ TCP* TCPServer::waitForConnection(std::error_code& error
 		}
 	}
 
-	listen(socket_, 3); // "3" should be a variable
-
-
-	printf("Accept...\n");
-	size_t socklen = sizeof(struct sockaddr_in);
+	struct sockaddr_in client_socket;
+	size_t socklen = sizeof(client_socket);
 	int retval = 0;
-	retval = accept(socket_, (struct sockaddr*)&addr_, (socklen_t*)&socklen);
+	errno = 0;
+	retval = accept(socket_
+		, (struct sockaddr*)&client_socket
+		, (socklen_t*)&socklen);
 
 	if(retval < 0)
 	{
-		printf("Accept failed\n");
-	}
-	else
-	{
-		printf("Connection accepted\n");
+		error = accept_error_code(errno);
+		return nullptr;
 	}
 
-	return nullptr;
+	IP* client_ip = IPv4::create(inet_ntoa(client_socket.sin_addr));
+	if(client_ip == nullptr)
+	{
+		error = Error_Unknown;
+		return nullptr;
+	}
+
+	error = Error_None;
+
+	TCP* client = new TCP(client_ip, client_socket.sin_port);
+
+	return client;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
@@ -1512,13 +1596,18 @@ TEST_CASE("tcp/server/waitforconnection")
 
 	TCPServer* tcp = TCPServer::create(ip, port);
 
-	/*
 	MESSAGE("Run any one of the following commands:");
 	MESSAGE("> telnet localhost ", port);
 	MESSAGE("> ftp localhost ", port);
-	tcp->waitForConnection();
-	*/
 
+	std::error_code error;
+	TCP* client = tcp->waitForConnection(error);
+	
+	CHECK(client != nullptr);
+	CHECK(error == Error_None);
+	MESSAGE("client: ", client->string());
+
+	delete client;
 	delete tcp;
 }
 #endif // }}}

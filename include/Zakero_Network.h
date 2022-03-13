@@ -342,20 +342,20 @@ namespace zakero::network
 		public:
 			virtual ~TCPServer() noexcept;
 
-			[[nodiscard]] static TCPServer*    create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer*    create(IP*&, const uint16_t, std::error_code&) noexcept;
-			[[nodiscard]] static TCPServer*    create(IPv4*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer*    create(IPv4*&, const uint16_t, std::error_code&) noexcept;
-			[[nodiscard]] static TCPServer*    create(const IP&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer*    create(const IP&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer* create(IPv4*&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer* create(IPv4*&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t, std::error_code&) noexcept;
 
-			[[nodiscard]] TCP*                 waitForConnection() noexcept;
-			[[nodiscard]] TCP*                 waitForConnection(std::error_code&) noexcept;
+			[[nodiscard]] TCP*              waitForConnection() noexcept;
+			[[nodiscard]] TCP*              waitForConnection(std::error_code&) noexcept;
 
 		private:
 			TCPServer(IP*, uint16_t) noexcept;
 
-			[[nodiscard]] std::error_code      init() noexcept;
+			[[nodiscard]] std::error_code   init() noexcept;
 	};
 
 	// }}}
@@ -381,6 +381,10 @@ namespace zakero::network
 // {{{ Implementation
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST
+#include <thread>
+#endif
 
 // {{{ Macros
 // {{{ Macros : Doxygen
@@ -1591,24 +1595,48 @@ TCP* TCPServer::waitForConnection(std::error_code& error
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/server/waitforconnection")
 {
-	IP* ip = IPv4::create("0.0.0.0");
+	bool made_connection = false;
+	bool server_ready    = false;
+
+	auto thread = std::jthread([&]()
+	{
+		IP*             ip           = IPv4::create("0.0.0.0");
+		uint16_t        port         = 9999;
+		std::error_code server_error = {};
+
+		TCPServer* server = TCPServer::create(ip, port);
+		server_ready = true;
+		TCP* client = server->waitForConnection(server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+
+		if(client != nullptr)
+		{
+			made_connection = true;
+		}
+
+		delete client;
+		delete server;
+	});
+
+	IP* ip = IPv4::create("127.0.0.1");
 	uint16_t port = 9999;
 
-	TCPServer* tcp = TCPServer::create(ip, port);
+	TCPClient* client = TCPClient::create(ip, port);
 
-	MESSAGE("Run any one of the following commands:");
-	MESSAGE("> telnet localhost ", port);
-	MESSAGE("> ftp localhost ", port);
+	do
+	{
+		sleep(1);
+	} while(server_ready == false);
+	client->connect();
 
-	std::error_code error;
-	TCP* client = tcp->waitForConnection(error);
-	
-	CHECK(client != nullptr);
-	CHECK(error == Error_None);
-	MESSAGE("client: ", client->string());
+	thread.join();
 
 	delete client;
-	delete tcp;
+
+	CHECK(made_connection == true);
 }
 #endif // }}}
 

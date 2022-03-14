@@ -1,3 +1,9 @@
+/* Tasks
+ * For testing only, create a test TCPServer for "connect and delete" clients
+ * TCP_Base needs to be able to create a socket
+ * TCP must call TCP_Base::create_socket()
+ * Rewrite all tests to use the test TCPServer
+ */
 /******************************************************************************
  * Copyright 2021-2022 Andrew Moore
  * 
@@ -124,6 +130,7 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <chrono>
 
 // POSIX
 #include <sys/socket.h>
@@ -156,41 +163,45 @@
  *    The text that will be used by `std::error_code.message()`
  */
 #define ZAKERO_NETWORK__ERROR_DATA \
-	X(Error_None                    ,  0 , "No Error"                                                                                        ) \
-	X(Error_Unknown                 ,  1 , "An unknown error has occurred"                                                                   ) \
-	X(Error_IPv4_Invalid_Notation   ,  2 , "The IPv4 numbers-and-dots notation was not valid"                                                ) \
-	X(Error_Address_Family          ,  3 , "The specified network host does not have any network addresses in the requested address family." ) \
-	X(Error_Try_Again_Later         ,  4 , "The name server returned a temporary failure indication. Try again later."                       ) \
-	X(Error_Bad_Hints               ,  5 , "The provided hint flags were invalid."                                                           ) \
-	X(Error_Failure                 ,  6 , "The name server returned a permanent failure indication."                                        ) \
-	X(Error_Family                  ,  7 , "The requested address family is not supported."                                                  ) \
-	X(Error_Out_Of_Memory           ,  8 , "Out of memory."                                                                                  ) \
-	X(Error_No_Data                 ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
-	X(Error_No_Name                 , 10 , "The provided name is not known."                                                                 ) \
-	X(Error_Invalid_Service         , 11 , "The requested service is not available for the requested socket type."                           ) \
-	X(Error_Invalid_Socket_Type     , 12 , "The requested socket type is not supported."                                                     ) \
-	X(Error_Invalid_IP              , 13 , "The provided IP object is not valid."                                                            ) \
-	X(Error_Permission_Denied       , 14 , "The address or port is protected."                                                               ) \
-	X(Error_Port_Busy               , 15 , "The requested port is being used."                                                               ) \
-	X(Error_Invalid_Socket_FD       , 16 , "The socket file descriptor is not valid."                                                        ) \
-	X(Error_Socket_Busy             , 17 , "The socket is already bound."                                                                    ) \
-	X(Error_Invalid_Socket          , 18 , "The socket is invalid."                                                                          ) \
-	X(Error_Invalid_Address         , 19 , "The requested address is not valid."                                                             ) \
-	X(Error_Bad_Pointer             , 20 , "An internal pointer has become corrupted."                                                       ) \
-	X(Error_Too_Many_Links          , 21 , "Too many links were encountered resolving an address."                                           ) \
-	X(Error_Address_Too_Long        , 22 , "The address is too long."                                                                        ) \
-	X(Error_Invalid_Socket_Path     , 23 , "Part of the socket path does not exist."                                                         ) \
-	X(Error_Invalid_Socket_Dir      , 24 , "Part of the socket path is not a directory."                                                     ) \
-	X(Error_Socket_Read_Only        , 25 , "The socket inode is read-only."                                                                  ) \
-	X(Error_Not_Supported           , 26 , "The request operation is not supported."                                                         ) \
-	X(Error_No_Connection_Available , 27 , "The request operation is not supported."                                                         ) \
-	X(Error_Connection_Aborted      , 28 , "A connection has been aborted."                                                                  ) \
-	X(Error_Address_Not_Writable    , 29 , "Data is now in a writable part of the user address space."                                       ) \
-	X(Error_Interrupted             , 30 , "Interrupted before a connection arrived."                                                        ) \
-	X(Error_Not_Listening           , 31 , "The socket is not listening for connections."                                                    ) \
-	X(Error_No_More_Process_FD      , 32 , "No more file descriptors are available for the process."                                         ) \
-	X(Error_No_More_System_FD       , 33 , "No more file descriptors are available for the system."                                         ) \
-	X(Error_Protocol                , 34 , "Protocol error."                                                                                ) \
+	X(Error_None                     ,  0 , "No Error"                                                                                        ) \
+	X(Error_Unknown                  ,  1 , "An unknown error has occurred"                                                                   ) \
+	X(Error_IPv4_Invalid_Notation    ,  2 , "The IPv4 numbers-and-dots notation was not valid"                                                ) \
+	X(Error_Address_Family           ,  3 , "The specified network host does not have any network addresses in the requested address family." ) \
+	X(Error_Try_Again_Later          ,  4 , "The name server returned a temporary failure indication. Try again later."                       ) \
+	X(Error_Bad_Hints                ,  5 , "The provided hint flags were invalid."                                                           ) \
+	X(Error_Failure                  ,  6 , "The name server returned a permanent failure indication."                                        ) \
+	X(Error_Family                   ,  7 , "The requested address family is not supported."                                                  ) \
+	X(Error_Out_Of_Memory            ,  8 , "Out of memory."                                                                                  ) \
+	X(Error_No_Data                  ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
+	X(Error_No_Name                  , 10 , "The provided name is not known."                                                                 ) \
+	X(Error_Invalid_Service          , 11 , "The requested service is not available for the requested socket type."                           ) \
+	X(Error_Invalid_Socket_Type      , 12 , "The requested socket type is not supported."                                                     ) \
+	X(Error_Invalid_IP               , 13 , "The provided IP object is not valid."                                                            ) \
+	X(Error_Permission_Denied        , 14 , "The address or port is protected."                                                               ) \
+	X(Error_Port_Busy                , 15 , "The requested port is being used."                                                               ) \
+	X(Error_Invalid_Socket_FD        , 16 , "The socket file descriptor is not valid."                                                        ) \
+	X(Error_Socket_Busy              , 17 , "The socket is already bound."                                                                    ) \
+	X(Error_Invalid_Socket           , 18 , "The socket is invalid."                                                                          ) \
+	X(Error_Invalid_Address          , 19 , "The requested address is not valid."                                                             ) \
+	X(Error_Bad_Pointer              , 20 , "An internal pointer has become corrupted."                                                       ) \
+	X(Error_Too_Many_Links           , 21 , "Too many links were encountered resolving an address."                                           ) \
+	X(Error_Address_Too_Long         , 22 , "The address is too long."                                                                        ) \
+	X(Error_Invalid_Socket_Path      , 23 , "Part of the socket path does not exist."                                                         ) \
+	X(Error_Invalid_Socket_Dir       , 24 , "Part of the socket path is not a directory."                                                     ) \
+	X(Error_Socket_Read_Only         , 25 , "The socket inode is read-only."                                                                  ) \
+	X(Error_Not_Supported            , 26 , "The request operation is not supported."                                                         ) \
+	X(Error_No_Connection_Available  , 27 , "The request operation is not supported."                                                         ) \
+	X(Error_Connection_Aborted       , 28 , "A connection has been aborted."                                                                  ) \
+	X(Error_Address_Not_Writable     , 29 , "Data is now in a writable part of the user address space."                                       ) \
+	X(Error_Interrupted              , 30 , "Interrupted before a connection arrived."                                                        ) \
+	X(Error_Not_Listening            , 31 , "The socket is not listening for connections."                                                    ) \
+	X(Error_No_More_Process_FD       , 32 , "No more file descriptors are available for the process."                                         ) \
+	X(Error_No_More_System_FD        , 33 , "No more file descriptors are available for the system."                                          ) \
+	X(Error_Protocol                 , 34 , "Protocol error."                                                                                 ) \
+	X(Error_Invalid_Address_Family   , 35 , "The specified address family is not supported."                                                  ) \
+	X(Error_Invalid_Protocol         , 36 , "The specified protocol is not supported."                                                        ) \
+	X(Error_Protocol_Domain_Mismatch , 37 , "The specified protocol is not supported within the current domain."                              ) \
+	X(Error_Timeout                  , 38 , "The timeout value has been exceeded."                                                            ) \
 // }}}
 
 
@@ -268,12 +279,12 @@ namespace zakero::network
 	// }}}
 	// }}}
 	// {{{ TCP
-// {{{ TCP (Private)
+// {{{ TCP Base
 
-	class TCP_
+	class TCP_Base
 	{
 		public:
-			virtual ~TCP_() noexcept;
+			virtual ~TCP_Base() noexcept;
 
 			[[nodiscard]] const IP&   ip() const noexcept;
 			[[nodiscard]] uint16_t    port() const noexcept;
@@ -281,29 +292,28 @@ namespace zakero::network
 			[[nodiscard]] std::string string() const noexcept;
 
 		protected:
-			IP*                ip_;                       // Server
-			uint16_t           port_;                     // Server
-			int                type_       = SOCK_STREAM; // Server
-			int                protocol_   = 0;           // Server
-			struct sockaddr_in addr_       = { 0 };       // Server
-			int                socket_     = -1;          // Server
-			int                recv_flags_ = 0;
-			int                send_flags_ = 0;
+			IP*                ip_;
+			uint16_t           port_;
+			int                type_     = SOCK_STREAM;
+			int                protocol_ = 0;
+			struct sockaddr_in addr_     = { 0 };
+			int                socket_   = -1;
 
-			TCP_(IP*, uint16_t) noexcept;
+			TCP_Base(IP*, uint16_t) noexcept;
+			//[[nodiscard]] std::error_code create_socket() noexcept; // Create socket
 	};
 
 // }}}
-// {{{ TCP (Base)
+// {{{ TCP
 
-			class TCPServer;
+	class TCPServer;
 	class TCP
-		: public TCP_
+		: public TCP_Base
 	{
 		public:
 			virtual ~TCP() noexcept;
 
-			[[]]          std::vector<uint8_t> read(const size_t) const noexcept;
+			[[nodiscard]] std::vector<uint8_t> read(const size_t) const noexcept;
 
 			[[]]          ssize_t              write(std::string_view) const noexcept;
 			[[]]          ssize_t              write(std::vector<char8_t>) const noexcept;
@@ -311,6 +321,9 @@ namespace zakero::network
 			[[]]          ssize_t              write(std::vector<uint8_t>) const noexcept;
 
 		protected:
+			int recv_flags_ = 0;
+			int send_flags_ = 0;
+
 			friend TCPServer;
 			TCP(IP*, uint16_t) noexcept;
 	};
@@ -324,38 +337,37 @@ namespace zakero::network
 		public:
 			virtual ~TCPClient() noexcept;
 
-			[[nodiscard]] static TCPClient* create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPClient* create(IP*&, const uint16_t, std::error_code&) noexcept;
-			[[nodiscard]] static TCPClient* create(const IP&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPClient* create(const IP&, const uint16_t, std::error_code&) noexcept;
-
-			[[]]          bool              connect() noexcept;
+			[[nodiscard]] static TCPClient* create(IP*, const uint16_t) noexcept;
+			[[nodiscard]] static TCPClient* create(IP*, const uint16_t, std::error_code&) noexcept;
 
 		private:
 			TCPClient(IP*, uint16_t) noexcept;
+
+			[[]] std::error_code connect() noexcept;
 	};
 
 	// }}}
 	// {{{ TCP Server
 
 	class TCPServer
-		: public TCP_
+		: public TCP_Base
 	{
 		public:
 			virtual ~TCPServer() noexcept;
 
-			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer* create(IP*&, const uint16_t, std::error_code&) noexcept;
-			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t) noexcept;
-			[[nodiscard]] static TCPServer* create(const IP&, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCPServer* create(IP*, const uint16_t) noexcept;
+			[[nodiscard]] static TCPServer* create(IP*, const uint16_t, std::error_code&) noexcept;
 
-			[[nodiscard]] TCP*              waitForConnection() noexcept;
-			[[nodiscard]] TCP*              waitForConnection(std::error_code&) noexcept;
+			[[nodiscard]] TCP*              acceptConnection() noexcept;
+			[[nodiscard]] TCP*              acceptConnection(const int32_t) noexcept;
+			[[nodiscard]] TCP*              acceptConnection(std::error_code&) noexcept;
+			[[nodiscard]] TCP*              acceptConnection(const int32_t, std::error_code&) noexcept;
 
 		private:
-			TCPServer(IP*, uint16_t) noexcept;
+			static constexpr int32_t default_timeout_ms = -1;
 
-			[[nodiscard]] std::error_code   init() noexcept;
+			TCPServer(IP*, uint16_t) noexcept;
+			[[nodiscard]] std::error_code listen() noexcept;
 	};
 
 	// }}}
@@ -437,6 +449,46 @@ namespace
 #else
 	const std::string Test_IP = "140.82.112.3"; // github.com
 #endif
+
+	std::jthread create_tcpserver_thread(IP* ip
+		, const uint16_t port
+		, int32_t        timeout_ms
+		) noexcept
+	{
+		using namespace std::chrono_literals;
+
+		bool ready = false;
+
+		auto thread = std::jthread([&]()
+		{
+			std::error_code error  = {};
+			TCPServer*      server = TCPServer::create(ip, port, error);
+			if(error)
+			{
+				FAIL("TCPServer Error: ", error.message());
+			}
+
+			ready = true;
+
+			TCP* client = server->acceptConnection(timeout_ms, error);
+			if(error)
+			{
+				FAIL("TCPServer Error: ", error.message());
+			}
+
+			delete client;
+			delete server;
+		});
+
+		while(ready == false)
+		{
+			std::this_thread::sleep_for(50ms);
+		}
+
+		std::this_thread::sleep_for(50ms);
+
+		return thread;
+	}
 #endif // }}}
 
 	std::error_code accept_error_code(const int error
@@ -525,6 +577,44 @@ namespace
 			case EADDRINUSE:     return Error_Port_Busy;
 			case EBADF:          return Error_Invalid_Socket_FD;
 			case ENOTSOCK:       return Error_Invalid_Socket;
+			default:
+				return std::error_code(error, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+
+	std::error_code select_error_code(const int error
+		) noexcept
+	{
+		switch(errno)
+		{
+			case EBADF:  return Error_Invalid_Socket;
+			case EINTR:  return Error_Interrupted;
+			case EINVAL: return Error_Unknown;
+			case ENOMEM: return Error_Out_Of_Memory;
+			default:
+				return std::error_code(error, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+
+	std::error_code socket_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			case EACCES:          return Error_Permission_Denied;
+			case EAFNOSUPPORT:    return Error_Invalid_Address_Family;
+			case EINVAL:          return Error_Invalid_Protocol;
+			case EMFILE:          return Error_No_More_Process_FD;
+			case ENFILE:          return Error_No_More_System_FD;
+			case ENOBUFS:         return Error_Out_Of_Memory;
+			case ENOMEM:          return Error_Out_Of_Memory;
+			case EPROTONOSUPPORT: return Error_Protocol_Domain_Mismatch;
 			default:
 				return std::error_code(error, std::system_category());
 		}
@@ -915,10 +1005,9 @@ TEST_CASE("ipv4/version")
 
 
 // }}}
-// {{{ TCP
-// {{{ TCP (Private)
+// {{{ TCP Base
 
-TCP_::TCP_(IP* ip
+TCP_Base::TCP_Base(IP* ip
 	, uint16_t port
 	) noexcept
 	: ip_(ip)
@@ -927,7 +1016,7 @@ TCP_::TCP_(IP* ip
 }
 
 
-TCP_::~TCP_(
+TCP_Base::~TCP_Base(
 	) noexcept
 {
 	if(socket_ >= 0)
@@ -943,46 +1032,50 @@ TCP_::~TCP_(
 	protocol_   = 0;
 	addr_       = { 0 };
 	socket_     = -1;
-	recv_flags_ = { 0 };
-	send_flags_ = { 0 };
 }
 
 
 /**
  * \brief Access the IP object.
  */
-const IP& TCP_::ip(
+const IP& TCP_Base::ip(
 	) const noexcept
 {
 	return *ip_;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/ip")
+TEST_CASE("tcp/base/ip")
 {
+	IP*      ip   = IPv4::create("127.0.0.1");
+	uint16_t port = 65535;
+
+	auto thread = create_tcpserver_thread(ip->copy(), port, -1);
+
 	SUBCASE("IPv4")
 	{
-		IP* ip = IPv4::create("127.0.0.1");
-		uint16_t port = 65535;
-
 		TCPClient* tcp = TCPClient::create(ip, port);
+		CHECK(tcp != nullptr);
 		CHECK(tcp->ip().version() == 4);
+		delete tcp;
 	}
 }
 #endif // }}}
 
 
-uint16_t TCP_::port(
+uint16_t TCP_Base::port(
 	) const noexcept
 {
 	return port_;
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/port")
+TEST_CASE("tcp/base/port")
 {
-	IP* ip = IPv4::create("127.0.0.1");
+	IP*      ip   = IPv4::create("127.0.0.1");
 	uint16_t port = 65535;
+
+	auto thread = create_tcpserver_thread(ip->copy(), port, -1);
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 	CHECK(tcp->port() == port);
@@ -992,7 +1085,7 @@ TEST_CASE("tcp/port")
 #endif // }}}
 
 
-int TCP_::socket(
+int TCP_Base::socket(
 	) const noexcept
 {
 	return socket_;
@@ -1012,7 +1105,7 @@ TEST_CASE("tcp/socket")
 }
 #endif // }}}
 
-std::string TCP_::string(
+std::string TCP_Base::string(
 	) const noexcept
 {
 	std::string s = ip_->string() + ":" + std::to_string(port_);
@@ -1021,12 +1114,12 @@ std::string TCP_::string(
 }
 
 // }}}
-// {{{ TCP (Base)
+// {{{ TCP
 
 TCP::TCP(IP* ip
 	, uint16_t port
 	) noexcept
-	: TCP_(ip, port)
+	: TCP_Base(ip, port)
 {
 }
 
@@ -1034,6 +1127,8 @@ TCP::TCP(IP* ip
 TCP::~TCP(
 	) noexcept
 {
+	recv_flags_ = { 0 };
+	send_flags_ = { 0 };
 }
 
 
@@ -1062,7 +1157,7 @@ TEST_CASE("tcp/read")
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 
-	tcp->connect();
+	//tcp->connect();
 	tcp->write("GET / HTTP/1.1\r\n\r\n");
 
 	std::vector<uint8_t> data = tcp->read(256);
@@ -1104,7 +1199,7 @@ TEST_CASE("tcp/write/string_view")
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 
-	tcp->connect();
+	//tcp->connect();
 
 	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
 	ssize_t bytes = tcp->write(message);
@@ -1137,7 +1232,7 @@ TEST_CASE("tcp/write/vector/char8_t")
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 
-	tcp->connect();
+	//tcp->connect();
 
 	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
 	std::vector<char8_t> data(std::begin(message), std::end(message));
@@ -1171,7 +1266,7 @@ TEST_CASE("tcp/write/vector/int8_t")
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 
-	tcp->connect();
+	//tcp->connect();
 
 	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
 	std::vector<int8_t> data(std::begin(message), std::end(message));
@@ -1205,7 +1300,7 @@ TEST_CASE("tcp/write/vector/uint8_t")
 
 	TCPClient* tcp = TCPClient::create(ip, port);
 
-	tcp->connect();
+	//tcp->connect();
 
 	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
 	std::vector<uint8_t> data(std::begin(message), std::end(message));
@@ -1234,7 +1329,7 @@ TCPClient::~TCPClient(
 }
 
 
-TCPClient* TCPClient::create(IP*& ip
+TCPClient* TCPClient::create(IP* ip
 	, const uint16_t port
 	) noexcept
 {
@@ -1244,7 +1339,7 @@ TCPClient* TCPClient::create(IP*& ip
 }
 
 
-TCPClient* TCPClient::create(IP*& ip
+TCPClient* TCPClient::create(IP* ip
 	, const uint16_t   port
 	, std::error_code& error
 	) noexcept
@@ -1255,71 +1350,114 @@ TCPClient* TCPClient::create(IP*& ip
 		return nullptr;
 	}
 
-	TCPClient* tcp = TCPClient::create(*ip, port, error);
+	TCPClient* tcp = new TCPClient(ip, port);
 
-	ip = nullptr;
-
-	return tcp;
-}
-
-
-TCPClient* TCPClient::create(const IP& ip
-	, const uint16_t port
-	) noexcept
-{
-	std::error_code error;
-
-	return TCPClient::create(ip, port, error);
-}
-
-
-TCPClient* TCPClient::create(const IP& ip
-	, const uint16_t   port
-	, std::error_code& error
-	) noexcept
-{
-	TCPClient* tcp = new TCPClient(ip.copy(), port);
+	error = tcp->connect();
+	if(error != Error_None)
+	{
+		delete tcp;
+		tcp = nullptr;
+	}
 
 	return tcp;
 }
+
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/client/create")
 {
-	uint16_t port = 65535;
+	IP*             server_ip    = IPv4::create("127.0.0.1");
+	const uint16_t  port         = 65535;
+	std::error_code error        = {};
+	TCPServer*      server       = TCPServer::create(server_ip->copy(), port, error);
+	bool            server_ready = false;
+
+	if(error)
+	{
+		FAIL("TCPServer Error: ", error.message());
+	}
+
+	auto thread = std::jthread([&]()
+	{
+		server_ready = true;
+
+		TCP* client = server->acceptConnection(error);
+		if(error)
+		{
+			FAIL("TCPServer Error: ", error.message());
+		}
+
+		delete client;
+	});
 
 	SUBCASE("Invalid IP")
 	{
 		IP* ip = nullptr;
-		TCPClient* tcp = TCPClient::create(ip, port);
-		CHECK(tcp == nullptr);
-		delete tcp;
+		TCPClient* tcp = TCPClient::create(ip, port, error);
+		CHECK(tcp   == nullptr);
+		CHECK(error == Error_Invalid_IP);
 	}
 
-	SUBCASE("Valid IP")
+	/*
+	SUBCASE("No Server")
+	{
+		IP* ip = IPv4::create("127.0.0.1");
+		TCPClient* tcp = TCPClient::create(ip, port - 1, error);
+		CHECK(tcp   == nullptr);
+		CHECK(error == Error_Invalid_IP);
+	}
+
+	SUBCASE("IP Take-Ownership")
 	{
 		IP* ip = IPv4::create("127.0.0.1");
 
-		TCPClient* tcp = TCPClient::create(ip, port);
-		CHECK(tcp != nullptr);
-
+		TCPClient* tcp = TCPClient::create(ip, port, error);
+		CHECK(tcp   != nullptr);
+		CHECK(ip    == nullptr);
+		CHECK(error == Error_None);
 		delete tcp;
 	}
+
+	SUBCASE("IP Make Copy")
+	{
+		IP* ip = IPv4::create("127.0.0.1");
+
+		TCPClient* tcp = TCPClient::create(*ip, port, error);
+		CHECK(tcp   != nullptr);
+		CHECK(ip    != nullptr);
+		CHECK(error == Error_None);
+		delete tcp;
+
+		delete ip;
+	}
+
+	SUBCASE("TCPClient Valid")
+	{
+		IP*      ip   = IPv4::create("127.0.0.1");
+		uint16_t port = 9999;
+
+		TCPClient* tcp = TCPClient::create(ip, port, error);
+		CHECK(error == Error_None);
+		delete tcp;
+	}
+	*/
+
+	delete server;
 }
 #endif // }}}
 
 
-bool TCPClient::connect(
+std::error_code TCPClient::connect(
 	) noexcept
 {
 	if(socket_ < 0)
 	{
-		// TODO : Add error handling
+		errno = 0;
 		socket_ = ::socket(ip_->family(), type_, protocol_);
 
 		if(socket_ < 0)
 		{
-			return false;
+			return socket_error_code(errno);
 		}
 	}
 
@@ -1333,12 +1471,13 @@ bool TCPClient::connect(
 
 	if(retval < 0)
 	{
-		return false;
+		return Error_Unknown;
 	}
 
-	return true;
+	return Error_None;
 }
 
+#if 0
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 #if 1 // Disable if no external internet access
 TEST_CASE("tcp/connect")
@@ -1356,6 +1495,7 @@ TEST_CASE("tcp/connect")
 }
 #endif
 #endif // }}}
+#endif
 
 // }}}
 // {{{ TCP Server
@@ -1363,7 +1503,7 @@ TEST_CASE("tcp/connect")
 TCPServer::TCPServer(IP* ip
 	, uint16_t port
 	) noexcept
-	: TCP_(ip, port)
+	: TCP_Base(ip, port)
 {
 }
 
@@ -1374,7 +1514,7 @@ TCPServer::~TCPServer(
 }
 
 
-TCPServer* TCPServer::create(IP*& ip
+TCPServer* TCPServer::create(IP* ip
 	, const uint16_t port
 	) noexcept
 {
@@ -1384,7 +1524,7 @@ TCPServer* TCPServer::create(IP*& ip
 }
 
 
-TCPServer* TCPServer::create(IP*& ip
+TCPServer* TCPServer::create(IP* ip
 	, const uint16_t   port
 	, std::error_code& error
 	) noexcept
@@ -1395,32 +1535,9 @@ TCPServer* TCPServer::create(IP*& ip
 		return nullptr;
 	}
 
-	TCPServer* tcp = TCPServer::create(*ip, port, error);
+	TCPServer* tcp = new TCPServer(ip, port);
 
-	ip = nullptr;
-
-	return tcp;
-}
-
-
-TCPServer* TCPServer::create(const IP& ip
-	, const uint16_t port
-	) noexcept
-{
-	std::error_code error;
-
-	return TCPServer::create(ip, port, error);
-}
-
-
-TCPServer* TCPServer::create(const IP& ip
-	, const uint16_t   port
-	, std::error_code& error
-	) noexcept
-{
-	TCPServer* tcp = new TCPServer(ip.copy(), port);
-	error = tcp->init();
-
+	error = tcp->listen();
 	if(error != Error_None)
 	{
 		delete tcp;
@@ -1453,19 +1570,6 @@ TEST_CASE("tcp/server/create")
 		CHECK(ip    == nullptr);
 		CHECK(error == Error_None);
 		delete tcp;
-	}
-
-	SUBCASE("IP Make Copy")
-	{
-		IP* ip = IPv4::create("127.0.0.1");
-
-		TCPServer* tcp = TCPServer::create(*ip, port, error);
-		CHECK(tcp   != nullptr);
-		CHECK(ip    != nullptr);
-		CHECK(error == Error_None);
-		delete tcp;
-
-		delete ip;
 	}
 
 	SUBCASE("IP Adddress Invalid")
@@ -1505,7 +1609,7 @@ TEST_CASE("tcp/server/create")
 #endif // }}}
 
 
-std::error_code TCPServer::init(
+std::error_code TCPServer::listen(
 	) noexcept
 {
 	if(socket_ >= 0)
@@ -1541,7 +1645,7 @@ std::error_code TCPServer::init(
 	}
 
 	errno = 0;
-	retval = listen(socket_, 3); // "3" should be a variable
+	retval = ::listen(socket_, 3); // "3" should be a variable
 	if(retval < 0)
 	{
 		retval = errno;
@@ -1561,35 +1665,86 @@ std::error_code TCPServer::init(
 #endif // }}}
 
 
-TCP* TCPServer::waitForConnection(
+TCP* TCPServer::acceptConnection(
 	) noexcept
 {
 	std::error_code error;
 
-	return this->waitForConnection(error);
+	return this->acceptConnection(default_timeout_ms, error);
 }
 
 
-TCP* TCPServer::waitForConnection(std::error_code& error
+TCP* TCPServer::acceptConnection(const int32_t timeout
 	) noexcept
 {
-	if(socket_ < 0)
-	{
-		error = init();
+	std::error_code error;
 
-		if(error)
-		{
-			return nullptr;
-		}
+	return this->acceptConnection(timeout, error);
+}
+
+
+TCP* TCPServer::acceptConnection(std::error_code& error
+	) noexcept
+{
+	return this->acceptConnection(default_timeout_ms, error);
+}
+
+
+TCP* TCPServer::acceptConnection(const int32_t timeout_ms
+	, std::error_code& error
+	) noexcept
+{
+	struct timeval timeout;
+
+	if(timeout_ms == 0)
+	{
+		timeout =
+		{	.tv_sec  = 0
+		,	.tv_usec = 0
+		};
+	}
+	if(timeout_ms < 0)
+	{
+		timeout =
+		{	.tv_sec  = std::numeric_limits<time_t>::max()
+		,	.tv_usec = 0
+		/*
+		{	.tv_sec  = std::numeric_limits<time_t>::max()
+		,	.tv_usec = std::numeric_limits<suseconds_t>::max()
+		*/
+		};
+	}
+	else // > 0
+	{
+		timeout =
+		{	.tv_sec  = timeout_ms / 1000
+		,	.tv_usec = (timeout_ms % 1000) * 1000
+		};
+	}
+
+	fd_set socket_fds;
+	FD_ZERO(&socket_fds);
+	FD_SET(socket_, &socket_fds);
+
+	errno = 0;
+	int retval = select(socket_ + 1, &socket_fds, nullptr, nullptr, &timeout);
+
+	if(retval < 0)
+	{
+		error = select_error_code(errno);
+		return nullptr;
+	}
+
+	if(retval == 0)
+	{
+		error = Error_Timeout;
+		return nullptr;
 	}
 
 	struct sockaddr_in client_socket;
 	size_t socklen = sizeof(client_socket);
-	int retval = 0;
 	errno = 0;
-	retval = accept(socket_
-		, (struct sockaddr*)&client_socket
-		, (socklen_t*)&socklen);
+	retval = accept(socket_, (struct sockaddr*)&client_socket, (socklen_t*)&socklen);
 
 	if(retval < 0)
 	{
@@ -1612,20 +1767,20 @@ TCP* TCPServer::waitForConnection(std::error_code& error
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/server/waitforconnection")
+TEST_CASE("tcp/server/acceptconnection")
 {
-	bool made_connection = false;
-	bool server_ready    = false;
+	IP*            ip              = IPv4::create("127.0.0.1");
+	const uint16_t port            = 65535;
+	bool           made_connection = false;
+	bool           server_ready    = false;
 
 	auto thread = std::jthread([&]()
 	{
-		IP*             ip           = IPv4::create("0.0.0.0");
-		uint16_t        port         = 9999;
 		std::error_code server_error = {};
 
-		TCPServer* server = TCPServer::create(ip, port);
+		TCPServer* server = TCPServer::create(ip->copy(), port);
 		server_ready = true;
-		TCP* client = server->waitForConnection(server_error);
+		TCP* client = server->acceptConnection(-1, server_error);
 		if(server_error)
 		{
 			FAIL("TCPServer Error: ", server_error.message());
@@ -1640,16 +1795,15 @@ TEST_CASE("tcp/server/waitforconnection")
 		delete server;
 	});
 
-	IP* ip = IPv4::create("127.0.0.1");
-	uint16_t port = 9999;
-
-	TCPClient* client = TCPClient::create(ip, port);
-
 	do
 	{
 		sleep(1);
 	} while(server_ready == false);
-	client->connect();
+
+	std::error_code error = {};
+	TCPClient* client = TCPClient::create(ip, port, error);
+	CHECK(client != nullptr);
+	CHECK(error  == Error_None);
 
 	thread.join();
 
@@ -1659,7 +1813,6 @@ TEST_CASE("tcp/server/waitforconnection")
 }
 #endif // }}}
 
-// }}}
 // }}}
 // {{{ UDP
 

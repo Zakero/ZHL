@@ -125,11 +125,16 @@
 #include <system_error>
 #include <vector>
 #include <chrono>
+#include <set>
 
 // POSIX
+#include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <unistd.h>
 
 // Linux
 
@@ -166,7 +171,7 @@
 	X(Error_Failure                  ,  6 , "The name server returned a permanent failure indication."                                        ) \
 	X(Error_Family                   ,  7 , "The requested address family is not supported."                                                  ) \
 	X(Error_Out_Of_Memory            ,  8 , "Out of memory."                                                                                  ) \
-	X(Error_No_Data                  ,  9 , "The  specified  network  host  exists, but does not have any network addresses defined."         ) \
+	X(Error_No_Data                  ,  9 , "The specified network host exists, but does not have any network addresses defined."             ) \
 	X(Error_No_Name                  , 10 , "The provided name is not known."                                                                 ) \
 	X(Error_Invalid_Service          , 11 , "The requested service is not available for the requested socket type."                           ) \
 	X(Error_Invalid_Socket_Type      , 12 , "The requested socket type is not supported."                                                     ) \
@@ -187,7 +192,7 @@
 	X(Error_No_Connection_Available  , 27 , "The request operation is not supported."                                                         ) \
 	X(Error_Connection_Aborted       , 28 , "A connection has been aborted."                                                                  ) \
 	X(Error_Address_Not_Writable     , 29 , "Data is now in a writable part of the user address space."                                       ) \
-	X(Error_Interrupted              , 30 , "Interrupted before a connection arrived."                                                        ) \
+	X(Error_Connection_Interrupted   , 30 , "Interrupted before a connection arrived."                                                        ) \
 	X(Error_Not_Listening            , 31 , "The socket is not listening for connections."                                                    ) \
 	X(Error_No_More_Process_FD       , 32 , "No more file descriptors are available for the process."                                         ) \
 	X(Error_No_More_System_FD        , 33 , "No more file descriptors are available for the system."                                          ) \
@@ -202,6 +207,10 @@
 	X(Error_Connection_Failed        , 42 , "The connection could not be immediately completed."                                              ) \
 	X(Error_Connection_In_Progress   , 43 , "A previous connection attempt is still in progress."                                             ) \
 	X(Error_No_Network               , 44 , "No networks are detected."                                                                       ) \
+	X(Error_No_Data_Available        , 45 , "No data is available."                                                                           ) \
+	X(Error_Connection_Closed        , 46 , "The peer has closed the connection."                                                             ) \
+	X(Error_Data_Interrupted         , 47 , "Receiving data was interrupted."                                                                 ) \
+	X(Error_Not_Connected            , 48 , "The socket is not connected."                                                                    ) \
 // }}}
 
 
@@ -314,6 +323,7 @@ namespace zakero::network
 			virtual ~TCP() noexcept;
 
 			[[nodiscard]] std::vector<uint8_t> read(const size_t) const noexcept;
+			[[nodiscard]] std::vector<uint8_t> read(const size_t, std::error_code&) const noexcept;
 
 			[[]]          ssize_t              write(std::string_view) const noexcept;
 			[[]]          ssize_t              write(std::vector<char8_t>) const noexcept;
@@ -322,12 +332,12 @@ namespace zakero::network
 
 		protected:
 			int recv_flags_ = 0;
-			int send_flags_ = 0;
+			int send_flags_ = MSG_NOSIGNAL;
 
 			TCP(IP*, const uint16_t) noexcept;
 
 			friend TCPServer;
-			[[nodiscard]] static TCP* create(IP*, const uint16_t, std::error_code&) noexcept;
+			[[nodiscard]] static TCP* create(IP*, const uint16_t, const int, std::error_code&) noexcept;
 	};
 
 	// }}}
@@ -455,7 +465,7 @@ namespace
 			case EBADF:        return Error_Invalid_Socket_FD;
 			case ECONNABORTED: return Error_Connection_Aborted;
 			case EFAULT:       return Error_Address_Not_Writable;
-			case EINTR:        return Error_Interrupted;
+			case EINTR:        return Error_Connection_Interrupted;
 			case EINVAL:       return Error_Not_Listening;
 			case EMFILE:       return Error_No_More_Process_FD;
 			case ENFILE:       return Error_No_More_System_FD;
@@ -515,7 +525,7 @@ namespace
 			case ECONNREFUSED:   return Error_No_Listeners;
 			case EFAULT:         return Error_Address_Not_Writable;
 			case EINPROGRESS:    return Error_Connection_In_Progress;
-			case EINTR:          return Error_Interrupted;
+			case EINTR:          return Error_Connection_Interrupted;
 			case EISCONN:        return Error_Connection_Exists;
 			case ENETUNREACH:    return Error_No_Network;
 			case ENOTSOCK:       return Error_Invalid_Socket;
@@ -530,7 +540,7 @@ namespace
 
 
 	std::error_code eai_error_code(const int eai
-		, const int err
+		, const int error
 		) noexcept
 	{
 		switch(eai)
@@ -546,7 +556,7 @@ namespace
 			case EAI_SERVICE:    return Error_Invalid_Service;
 			case EAI_SOCKTYPE:   return Error_Invalid_Socket_Type;
 			case EAI_SYSTEM:
-				return std::error_code(err, std::system_category());
+				return std::error_code(error, std::system_category());
 		}
 
 		return Error_Unknown;
@@ -569,13 +579,34 @@ namespace
 	}
 
 
+	std::error_code recv_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			case EAGAIN:     return Error_No_Connection_Available;
+			case EBADF:      return Error_Invalid_Socket_FD;
+			case ECONNRESET: return Error_Connection_Closed;
+			case EINTR:      return Error_Data_Interrupted;
+			case ENOTCONN:   return Error_Not_Connected;
+			case ENOTSOCK:   return Error_Invalid_Socket;
+			case EOPNOTSUPP: return Error_Not_Supported;
+			case ETIMEDOUT:  return Error_Timeout;
+			case ENOBUFS:    return Error_Out_Of_Memory;
+			case ENOMEM:     return Error_Out_Of_Memory;
+		}
+
+		return Error_Unknown;
+	}
+
+
 	std::error_code select_error_code(const int error
 		) noexcept
 	{
-		switch(errno)
+		switch(error)
 		{
 			case EBADF:  return Error_Invalid_Socket;
-			case EINTR:  return Error_Interrupted;
+			case EINTR:  return Error_Connection_Interrupted;
 			case EINVAL: return Error_Unknown;
 			case ENOMEM: return Error_Out_Of_Memory;
 			default:
@@ -1090,6 +1121,7 @@ TCP::~TCP(
 
 TCP* TCP::create(IP* ip
 	, const uint16_t   port
+	, const int        socket
 	, std::error_code& error
 	) noexcept
 {
@@ -1100,13 +1132,7 @@ TCP* TCP::create(IP* ip
 	}
 
 	TCP* tcp = new TCP(ip, port);
-
-	error = tcp->create_socket();
-	if(error != Error_None)
-	{
-		delete tcp;
-		tcp = nullptr;
-	}
+	tcp->socket_ = socket;
 
 	return tcp;
 }
@@ -1119,17 +1145,36 @@ TCP* TCP::create(IP* ip
 std::vector<uint8_t> TCP::read(const size_t max_bytes
 	) const noexcept
 {
+	std::error_code error;
+
+	return TCP::read(max_bytes, error);
+}
+
+
+std::vector<uint8_t> TCP::read(const size_t max_bytes
+	, std::error_code& error
+	) const noexcept
+{
 	std::vector<uint8_t> data(max_bytes, 0);
 
+	errno = 0;
 	ssize_t bytes = recv(socket_, (void*)data.data(), max_bytes, recv_flags_);
+
+	if(bytes == 0)
+	{
+		error = Error_None;
+		return {};
+	}
 
 	if(bytes < 0)
 	{
+		error = recv_error_code(errno);
 		return {};
 	}
 
 	data.resize(bytes);
 
+	error = Error_None;
 	return data;
 }
 
@@ -1169,19 +1214,15 @@ TEST_CASE("tcp/read")
 ssize_t TCP::write(std::string_view data
 	) const noexcept
 {
-printf("--- 1.0 --- data: %s\n", data.data());
-printf("--- 1.0 --- size: %lu\n", data.size());
-printf("--- 1.0 --- sock: %d\n", socket_);
-	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
-printf("--- 1.0 --- bytes: %ld\n", bytes);
+	errno = 0;
+	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-printf("--- 1.1 -----------------\n");
+		printf("%d %s\n", errno, strerror(errno));
 		return bytes;
 	}
 
-printf("--- 1.2 -----------------\n");
 	return bytes;
 }
 
@@ -1210,16 +1251,13 @@ TEST_CASE("tcp/write/string_view")
 ssize_t TCP::write(std::vector<char8_t> data
 	) const noexcept
 {
-printf("--- 2.0 -----------------\n");
-	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-printf("--- 2.1 -----------------\n");
 		return bytes;
 	}
 
-printf("--- 2.2 -----------------\n");
 	return bytes;
 }
 
@@ -1249,16 +1287,13 @@ TEST_CASE("tcp/write/vector/char8_t")
 ssize_t TCP::write(std::vector<int8_t> data
 	) const noexcept
 {
-printf("--- 3.0 -----------------\n");
-	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-printf("--- 3.1 -----------------\n");
 		return bytes;
 	}
 
-printf("--- 3.2 -----------------\n");
 	return bytes;
 }
 
@@ -1288,16 +1323,13 @@ TEST_CASE("tcp/write/vector/int8_t")
 ssize_t TCP::write(std::vector<uint8_t> data
 	) const noexcept
 {
-printf("--- 4.0 -----------------\n");
-	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-printf("--- 4.1 -----------------\n");
 		return bytes;
 	}
 
-printf("--- 4.2 -----------------\n");
 	return bytes;
 }
 
@@ -1450,13 +1482,13 @@ std::error_code TCPClient::connect(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/client/read")
 {
-#if 1
 	using namespace std::chrono_literals;
 
-	IP*            ip           = IPv4::create("127.0.0.1");
-	const uint16_t port         = 65439;
-	bool           server_ready = false;
-	TCP*           server_side  = nullptr;
+	const std::string message      = "Hello, World!";
+	IP*               ip           = IPv4::create("127.0.0.1");
+	const uint16_t    port         = 65500;
+	bool              server_ready = false;
+	TCP*              server_side  = nullptr;
 
 	auto thread = std::jthread([&, ip, port]()
 	{
@@ -1474,15 +1506,10 @@ TEST_CASE("tcp/client/read")
 		{
 			FAIL("TCPServer Error: ", server_error.message());
 		}
-	CHECK(server_side != nullptr);
+		REQUIRE(server_side != nullptr);
 
-printf("Waiting to write\n");
-		sleep(1);
+		server_side->write(message);
 
-		std::string string = "x";
-		server_side->write(string);
-
-printf("Kill Server\n");
 		delete server;
 	});
 
@@ -1493,34 +1520,21 @@ printf("Kill Server\n");
 
 	std::this_thread::sleep_for(50ms);
 
-	std::error_code error = {};
-	TCPClient* client = TCPClient::create(ip, port, error);
+	std::error_code error  = {};
+	TCPClient*      client = TCPClient::create(ip, port, error);
 	CHECK(client != nullptr);
 	CHECK(error  == Error_None);
 
+	std::vector<uint8_t> data = client->read(1024, error);
+	CHECK(error == Error_None);
 
-printf("Ready to read\n");
-	std::vector<uint8_t> data = client->read(1024);
-	CHECK(data[0] == 'x');
+	std::string string(std::begin(data), std::end(data));
+	CHECK(string == message);
+	CHECK(string.size() == message.size());
 
-
+	thread.join();
 	delete client;
 	delete server_side;
-	thread.join();
-
-#else
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
-
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
-	ssize_t bytes = tcp->write(message);
-
-	CHECK(bytes > 0);
-
-	delete tcp;
-#endif
 }
 #endif // }}}
 
@@ -1721,12 +1735,14 @@ TCP* TCPServer::acceptConnection(const int32_t timeout_ms
 		};
 	}
 
+	int retval = 0;
+
 	fd_set socket_fds;
 	FD_ZERO(&socket_fds);
 	FD_SET(socket_, &socket_fds);
 
 	errno = 0;
-	int retval = select(socket_ + 1, &socket_fds, nullptr, nullptr, &timeout);
+	retval = select(socket_ + 1, &socket_fds, nullptr, nullptr, &timeout);
 
 	if(retval < 0)
 	{
@@ -1740,18 +1756,19 @@ TCP* TCPServer::acceptConnection(const int32_t timeout_ms
 		return nullptr;
 	}
 
-	struct sockaddr_in client_socket;
-	size_t socklen = sizeof(client_socket);
+	struct sockaddr_in sock_info = {};
+	size_t             sock_len  = sizeof(sock_info);
+	int                sock_fd   = -1;
 	errno = 0;
-	retval = accept(socket_, (struct sockaddr*)&client_socket, (socklen_t*)&socklen);
+	sock_fd = accept(socket_, (struct sockaddr*)&sock_info, (socklen_t*)&sock_len);
 
-	if(retval < 0)
+	if(sock_fd < 0)
 	{
 		error = accept_error_code(errno);
 		return nullptr;
 	}
 
-	IP* client_ip = IPv4::create(inet_ntoa(client_socket.sin_addr));
+	IP* client_ip = IPv4::create(inet_ntoa(sock_info.sin_addr));
 	if(client_ip == nullptr)
 	{
 		error = Error_Unknown;
@@ -1760,7 +1777,7 @@ TCP* TCPServer::acceptConnection(const int32_t timeout_ms
 
 	error = Error_None;
 
-	TCP* client = TCP::create(client_ip, client_socket.sin_port, error);
+	TCP* client = TCP::create(client_ip, sock_info.sin_port, sock_fd, error);
 
 	return client;
 }

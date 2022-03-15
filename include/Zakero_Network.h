@@ -1169,13 +1169,19 @@ TEST_CASE("tcp/read")
 ssize_t TCP::write(std::string_view data
 	) const noexcept
 {
+printf("--- 1.0 --- data: %s\n", data.data());
+printf("--- 1.0 --- size: %lu\n", data.size());
+printf("--- 1.0 --- sock: %d\n", socket_);
 	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
+printf("--- 1.0 --- bytes: %ld\n", bytes);
 
 	if(bytes < 0)
 	{
+printf("--- 1.1 -----------------\n");
 		return bytes;
 	}
 
+printf("--- 1.2 -----------------\n");
 	return bytes;
 }
 
@@ -1204,13 +1210,16 @@ TEST_CASE("tcp/write/string_view")
 ssize_t TCP::write(std::vector<char8_t> data
 	) const noexcept
 {
+printf("--- 2.0 -----------------\n");
 	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
+printf("--- 2.1 -----------------\n");
 		return bytes;
 	}
 
+printf("--- 2.2 -----------------\n");
 	return bytes;
 }
 
@@ -1240,13 +1249,16 @@ TEST_CASE("tcp/write/vector/char8_t")
 ssize_t TCP::write(std::vector<int8_t> data
 	) const noexcept
 {
+printf("--- 3.0 -----------------\n");
 	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
+printf("--- 3.1 -----------------\n");
 		return bytes;
 	}
 
+printf("--- 3.2 -----------------\n");
 	return bytes;
 }
 
@@ -1276,13 +1288,16 @@ TEST_CASE("tcp/write/vector/int8_t")
 ssize_t TCP::write(std::vector<uint8_t> data
 	) const noexcept
 {
+printf("--- 4.0 -----------------\n");
 	ssize_t bytes = send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
+printf("--- 4.1 -----------------\n");
 		return bytes;
 	}
 
+printf("--- 4.2 -----------------\n");
 	return bytes;
 }
 
@@ -1435,25 +1450,39 @@ std::error_code TCPClient::connect(
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/client/read")
 {
+#if 1
 	using namespace std::chrono_literals;
 
 	IP*            ip           = IPv4::create("127.0.0.1");
-	const uint16_t port         = 65530;
+	const uint16_t port         = 65439;
 	bool           server_ready = false;
 	TCP*           server_side  = nullptr;
 
-	auto thread = std::jthread([&]()
+	auto thread = std::jthread([&, ip, port]()
 	{
 		std::error_code server_error = {};
 
-		TCPServer* server = TCPServer::create(ip->copy(), port);
+		TCPServer* server = TCPServer::create(ip->copy(), port, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+
 		server_ready = true;
 		server_side = server->acceptConnection(-1, server_error);
 		if(server_error)
 		{
 			FAIL("TCPServer Error: ", server_error.message());
 		}
+	CHECK(server_side != nullptr);
 
+printf("Waiting to write\n");
+		sleep(1);
+
+		std::string string = "x";
+		server_side->write(string);
+
+printf("Kill Server\n");
 		delete server;
 	});
 
@@ -1469,16 +1498,29 @@ TEST_CASE("tcp/client/read")
 	CHECK(client != nullptr);
 	CHECK(error  == Error_None);
 
-	thread.join();
 
-	CHECK(server_side != nullptr);
+printf("Ready to read\n");
+	std::vector<uint8_t> data = client->read(1024);
+	CHECK(data[0] == 'x');
 
-	SUBCASE("Write String")
-	{
-	}
 
 	delete client;
 	delete server_side;
+	thread.join();
+
+#else
+	IP* ip = IPv4::create(Test_IP);
+	uint16_t port = 80;
+
+	TCPClient* tcp = TCPClient::create(ip, port);
+
+	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
+	ssize_t bytes = tcp->write(message);
+
+	CHECK(bytes > 0);
+
+	delete tcp;
+#endif
 }
 #endif // }}}
 

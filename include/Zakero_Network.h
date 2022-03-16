@@ -376,7 +376,8 @@ namespace zakero::network
 			[[nodiscard]] TCP*              acceptConnection(const int32_t, std::error_code&) noexcept;
 
 		private:
-			static constexpr int32_t default_timeout_ms = -1;
+			static constexpr int32_t default_timeout_ = -1;
+			static constexpr int     default_backlog_ = 5;
 
 			TCPServer(IP*, uint16_t) noexcept;
 			[[nodiscard]] std::error_code listen() noexcept;
@@ -1065,8 +1066,9 @@ std::error_code TCP_Base::create_socket(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-// Tested via TCPClient::create() and TCPServer::create()
+// Tested via "tcp/client/create"
 #endif // }}}
+
 
 /**
  * \brief Access the IP object.
@@ -1138,7 +1140,7 @@ TCP* TCP::create(IP* ip
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-// Tested via TCPServer::create()
+// Tested via "tcp/server/acceptConnection"
 #endif // }}}
 
 
@@ -1179,37 +1181,9 @@ std::vector<uint8_t> TCP::read(const size_t max_bytes
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-// Tested via TCPClient::create() and TCPServer::create()
+// Tested in "tcp/client/read"
 #endif // }}}
-#if 0
-#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/read")
-{
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
 
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	//tcp->connect();
-	tcp->write("GET / HTTP/1.1\r\n\r\n");
-
-	std::vector<uint8_t> data = tcp->read(256);
-
-	CHECK(data.empty() == false);
-
-	/*
-	std::string string = {};
-	for(uint8_t ch : data)
-	{
-		string.push_back(ch);
-	}
-	std::cout << "Message:" << string << "\n";
-	*/
-
-	delete tcp;
-}
-#endif // }}}
-#endif
 
 ssize_t TCP::write(std::string_view data
 	) const noexcept
@@ -1226,26 +1200,9 @@ ssize_t TCP::write(std::string_view data
 	return bytes;
 }
 
-#if 0
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/string_view")
-{
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
-
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	//tcp->connect();
-
-	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
-	ssize_t bytes = tcp->write(message);
-
-	CHECK(bytes > 0);
-
-	delete tcp;
-}
+// Tested in "tcp/client/read"
 #endif // }}}
-#endif
 
 
 ssize_t TCP::write(std::vector<char8_t> data
@@ -1261,27 +1218,9 @@ ssize_t TCP::write(std::vector<char8_t> data
 	return bytes;
 }
 
-#if 0
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/char8_t")
-{
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
-
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	//tcp->connect();
-
-	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
-	std::vector<char8_t> data(std::begin(message), std::end(message));
-	ssize_t bytes = tcp->write(data);
-
-	CHECK(bytes > 0);
-
-	delete tcp;
-}
+// Tested in "tcp/client/write (char8_t)"
 #endif // }}}
-#endif
 
 
 ssize_t TCP::write(std::vector<int8_t> data
@@ -1297,27 +1236,9 @@ ssize_t TCP::write(std::vector<int8_t> data
 	return bytes;
 }
 
-#if 0
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/int8_t")
-{
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
-
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	//tcp->connect();
-
-	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
-	std::vector<int8_t> data(std::begin(message), std::end(message));
-	ssize_t bytes = tcp->write(data);
-
-	CHECK(bytes > 0);
-
-	delete tcp;
-}
+// Tested in "tcp/client/write (int8_t)"
 #endif // }}}
-#endif
 
 
 ssize_t TCP::write(std::vector<uint8_t> data
@@ -1333,27 +1254,9 @@ ssize_t TCP::write(std::vector<uint8_t> data
 	return bytes;
 }
 
-#if 0
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-TEST_CASE("tcp/write/vector/uint8_t")
-{
-	IP* ip = IPv4::create(Test_IP);
-	uint16_t port = 80;
-
-	TCPClient* tcp = TCPClient::create(ip, port);
-
-	//tcp->connect();
-
-	std::string_view message = "GET / HTTP/1.1\r\n\r\n";
-	std::vector<uint8_t> data(std::begin(message), std::end(message));
-	ssize_t bytes = tcp->write(data);
-
-	CHECK(bytes > 0);
-
-	delete tcp;
-}
+// Tested in "tcp/client/write (uint8_t)"
 #endif // }}}
-#endif
 
 // }}}
 // {{{ TCP Client
@@ -1447,15 +1350,7 @@ TEST_CASE("tcp/client/create")
 
 	SUBCASE("TCPClient IPv4 Valid")
 	{
-		IP*      ip   = IPv4::create("127.0.0.1");
-		uint16_t port = 65535;
-
-		TCPClient* tcp = TCPClient::create(ip, port, error);
-		CHECK(error               == Error_None);
-		CHECK(tcp->ip().version() == 4);
-		CHECK(tcp->port()         == port);
-		CHECK(tcp->socket()       != -1);
-		delete tcp;
+		// Tested by TCPServer::acceptConnection()
 	}
 }
 #endif // }}}
@@ -1480,13 +1375,17 @@ std::error_code TCPClient::connect(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+// Tested via "tcp/client/create"
+#endif // }}}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
 TEST_CASE("tcp/client/read")
 {
 	using namespace std::chrono_literals;
 
 	const std::string message      = "Hello, World!";
 	IP*               ip           = IPv4::create("127.0.0.1");
-	const uint16_t    port         = 65500;
+	const uint16_t    port         = 65534;
 	bool              server_ready = false;
 	TCP*              server_side  = nullptr;
 
@@ -1531,6 +1430,198 @@ TEST_CASE("tcp/client/read")
 	std::string string(std::begin(data), std::end(data));
 	CHECK(string == message);
 	CHECK(string.size() == message.size());
+
+	thread.join();
+	delete client;
+	delete server_side;
+}
+#endif // }}}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/client/write (char8_t)")
+{
+	using namespace std::chrono_literals;
+
+	const std::vector<char8_t> message =
+	{ 'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!'
+	};
+
+	IP*            ip           = IPv4::create("127.0.0.1");
+	const uint16_t port         = 65534;
+	bool           server_ready = false;
+	TCP*           server_side  = nullptr;
+
+	auto thread = std::jthread([&, ip, port]()
+	{
+		std::error_code server_error = {};
+
+		TCPServer* server = TCPServer::create(ip->copy(), port, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+
+		server_ready = true;
+		server_side = server->acceptConnection(-1, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+		REQUIRE(server_side != nullptr);
+
+		server_side->write(message);
+
+		delete server;
+	});
+
+	do
+	{
+		std::this_thread::sleep_for(50ms);
+	} while(server_ready == false);
+
+	std::this_thread::sleep_for(50ms);
+
+	std::error_code error  = {};
+	TCPClient*      client = TCPClient::create(ip, port, error);
+	CHECK(client != nullptr);
+	CHECK(error  == Error_None);
+
+	std::vector<uint8_t> data = client->read(1024, error);
+	CHECK(error == Error_None);
+	CHECK(data.size() == message.size());
+
+	for(size_t i = 0; i < data.size(); i++)
+	{
+		CHECK((uint8_t)data[i] == (uint8_t)message[i]);
+	}
+
+	thread.join();
+	delete client;
+	delete server_side;
+}
+#endif // }}}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/client/write (int8_t)")
+{
+	using namespace std::chrono_literals;
+
+	const std::vector<int8_t> message =
+	{ 'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!'
+	};
+
+	IP*            ip           = IPv4::create("127.0.0.1");
+	const uint16_t port         = 65534;
+	bool           server_ready = false;
+	TCP*           server_side  = nullptr;
+
+	auto thread = std::jthread([&, ip, port]()
+	{
+		std::error_code server_error = {};
+
+		TCPServer* server = TCPServer::create(ip->copy(), port, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+
+		server_ready = true;
+		server_side = server->acceptConnection(-1, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+		REQUIRE(server_side != nullptr);
+
+		server_side->write(message);
+
+		delete server;
+	});
+
+	do
+	{
+		std::this_thread::sleep_for(50ms);
+	} while(server_ready == false);
+
+	std::this_thread::sleep_for(50ms);
+
+	std::error_code error  = {};
+	TCPClient*      client = TCPClient::create(ip, port, error);
+	CHECK(client != nullptr);
+	CHECK(error  == Error_None);
+
+	std::vector<uint8_t> data = client->read(1024, error);
+	CHECK(error == Error_None);
+	CHECK(data.size() == message.size());
+
+	for(size_t i = 0; i < data.size(); i++)
+	{
+		CHECK((uint8_t)data[i] == (uint8_t)message[i]);
+	}
+
+	thread.join();
+	delete client;
+	delete server_side;
+}
+#endif // }}}
+
+#ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
+TEST_CASE("tcp/client/write (uint8_t)")
+{
+	using namespace std::chrono_literals;
+
+	const std::vector<uint8_t> message =
+	{ 'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!'
+	};
+
+	IP*            ip           = IPv4::create("127.0.0.1");
+	const uint16_t port         = 65534;
+	bool           server_ready = false;
+	TCP*           server_side  = nullptr;
+
+	auto thread = std::jthread([&, ip, port]()
+	{
+		std::error_code server_error = {};
+
+		TCPServer* server = TCPServer::create(ip->copy(), port, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+
+		server_ready = true;
+		server_side = server->acceptConnection(-1, server_error);
+		if(server_error)
+		{
+			FAIL("TCPServer Error: ", server_error.message());
+		}
+		REQUIRE(server_side != nullptr);
+
+		server_side->write(message);
+
+		delete server;
+	});
+
+	do
+	{
+		std::this_thread::sleep_for(50ms);
+	} while(server_ready == false);
+
+	std::this_thread::sleep_for(50ms);
+
+	std::error_code error  = {};
+	TCPClient*      client = TCPClient::create(ip, port, error);
+	CHECK(client != nullptr);
+	CHECK(error  == Error_None);
+
+	std::vector<uint8_t> data = client->read(1024, error);
+	CHECK(error == Error_None);
+	CHECK(data.size() == message.size());
+
+	for(size_t i = 0; i < data.size(); i++)
+	{
+		CHECK((uint8_t)data[i] == (uint8_t)message[i]);
+	}
 
 	thread.join();
 	delete client;
@@ -1643,7 +1734,7 @@ TEST_CASE("tcp/server/create")
 	{
 		IP* ip = IPv4::create("127.0.0.1");
 
-		TCPServer* tcp = TCPServer::create(ip, port - 1, error);
+		TCPServer* tcp = TCPServer::create(ip, port, error);
 		CHECK(error == Error_None);
 		delete tcp;
 	}
@@ -1668,7 +1759,7 @@ std::error_code TCPServer::listen(
 	}
 
 	errno = 0;
-	retval = ::listen(socket_, 3); // "3" should be a variable
+	retval = ::listen(socket_, default_backlog_);
 	if(retval < 0)
 	{
 		return listen_error_code(errno);
@@ -1678,7 +1769,7 @@ std::error_code TCPServer::listen(
 }
 
 #ifdef ZAKERO_NETWORK_IMPLEMENTATION_TEST // {{{
-// Tested via TCPServer::create()
+// Tested via "tcp/server/create"
 #endif // }}}
 
 
@@ -1687,7 +1778,7 @@ TCP* TCPServer::acceptConnection(
 {
 	std::error_code error;
 
-	return this->acceptConnection(default_timeout_ms, error);
+	return this->acceptConnection(default_timeout_, error);
 }
 
 
@@ -1703,7 +1794,7 @@ TCP* TCPServer::acceptConnection(const int32_t timeout
 TCP* TCPServer::acceptConnection(std::error_code& error
 	) noexcept
 {
-	return this->acceptConnection(default_timeout_ms, error);
+	return this->acceptConnection(default_timeout_, error);
 }
 
 
@@ -1771,6 +1862,7 @@ TCP* TCPServer::acceptConnection(const int32_t timeout_ms
 	IP* client_ip = IPv4::create(inet_ntoa(sock_info.sin_addr));
 	if(client_ip == nullptr)
 	{
+		close(sock_fd);
 		error = Error_Unknown;
 		return nullptr;
 	}
@@ -1821,8 +1913,11 @@ TEST_CASE("tcp/server/acceptconnection")
 
 	std::error_code error = {};
 	TCPClient* client = TCPClient::create(ip, port, error);
-	CHECK(client != nullptr);
-	CHECK(error  == Error_None);
+	CHECK(error                  == Error_None);
+	CHECK(client                 != nullptr);
+	CHECK(client->ip().version() == 4);
+	CHECK(client->port()         == port);
+	CHECK(client->socket()       != -1);
 	delete client;
 
 	thread.join();

@@ -63,8 +63,10 @@ std::jthread create_tcpserver_thread(zakero::network::IP* ip
 	return thread;
 }
 
+/*
 std::jthread server_connect_and_delete =
 	create_tcpserver_thread(zakero::network::IPv4::create("127.0.0.1"), 65535, 100);
+	*/
 
 
 int main(int argc, char** argv)
@@ -90,7 +92,7 @@ int main(int argc, char** argv)
 	}
 
 	// --- Misc Stuff --- ///
-	server_connect_and_delete.request_stop();
+	//server_connect_and_delete.request_stop();
 
 	// --- Done --- ///
 	return result;

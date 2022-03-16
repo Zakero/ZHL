@@ -209,8 +209,13 @@
 	X(Error_No_Network               , 44 , "No networks are detected."                                                                       ) \
 	X(Error_No_Data_Available        , 45 , "No data is available."                                                                           ) \
 	X(Error_Connection_Closed        , 46 , "The peer has closed the connection."                                                             ) \
-	X(Error_Data_Interrupted         , 47 , "Receiving data was interrupted."                                                                 ) \
+	X(Error_Data_Interrupted         , 47 , "Data transmission was interrupted."                                                              ) \
 	X(Error_Not_Connected            , 48 , "The socket is not connected."                                                                    ) \
+	X(Error_Would_Block              , 49 , "The requested operation would block."                                                            ) \
+	X(Error_Data_Too_Large           , 50 , "The data is too large to be sent."                                                               ) \
+	X(Error_Address_Missing          , 51 , "The socket does not have a peer address."                                                        ) \
+	X(Error_Pipe_Broken              , 52 , "The socket can not write due to a broken pipe."                                                  ) \
+	X(Error_Network_Down             , 53 , "The network interface in down."                                                                  ) \
 // }}}
 
 
@@ -325,10 +330,14 @@ namespace zakero::network
 			[[nodiscard]] std::vector<uint8_t> read(const size_t) const noexcept;
 			[[nodiscard]] std::vector<uint8_t> read(const size_t, std::error_code&) const noexcept;
 
-			[[]]          ssize_t              write(std::string_view) const noexcept;
-			[[]]          ssize_t              write(std::vector<char8_t>) const noexcept;
-			[[]]          ssize_t              write(std::vector<int8_t>) const noexcept;
-			[[]]          ssize_t              write(std::vector<uint8_t>) const noexcept;
+			[[]]          ssize_t              write(const std::string_view) const noexcept;
+			[[]]          ssize_t              write(const std::string_view, std::error_code&) const noexcept;
+			[[]]          ssize_t              write(const std::vector<char8_t>) const noexcept;
+			[[]]          ssize_t              write(const std::vector<char8_t>, std::error_code&) const noexcept;
+			[[]]          ssize_t              write(const std::vector<int8_t>) const noexcept;
+			[[]]          ssize_t              write(const std::vector<int8_t>, std::error_code&) const noexcept;
+			[[]]          ssize_t              write(const std::vector<uint8_t>) const noexcept;
+			[[]]          ssize_t              write(const std::vector<uint8_t>, std::error_code&) const noexcept;
 
 		protected:
 			int recv_flags_ = 0;
@@ -585,7 +594,7 @@ namespace
 	{
 		switch(error)
 		{
-			case EAGAIN:     return Error_No_Connection_Available;
+			case EAGAIN:     return Error_No_Data_Available;
 			case EBADF:      return Error_Invalid_Socket_FD;
 			case ECONNRESET: return Error_Connection_Closed;
 			case EINTR:      return Error_Data_Interrupted;
@@ -610,6 +619,33 @@ namespace
 			case EINTR:  return Error_Connection_Interrupted;
 			case EINVAL: return Error_Unknown;
 			case ENOMEM: return Error_Out_Of_Memory;
+			default:
+				return std::error_code(error, std::system_category());
+		}
+
+		return Error_Unknown;
+	}
+
+
+	std::error_code send_error_code(const int error
+		) noexcept
+	{
+		switch(error)
+		{
+			case EAGAIN:       return Error_Would_Block;
+			case EBADF:        return Error_Invalid_Socket_FD;
+			case ECONNRESET:   return Error_Connection_Closed;
+			case EDESTADDRREQ: return Error_Address_Missing;
+			case EINTR:        return Error_Connection_Interrupted;
+			case EMSGSIZE:     return Error_Data_Too_Large;
+			case ENOTCONN:     return Error_Not_Connected;
+			case EOPNOTSUPP:   return Error_Not_Supported;
+			case EPIPE:        return Error_Pipe_Broken;
+			case EACCES:       return Error_Permission_Denied;
+			case ENETDOWN:     return Error_Network_Down;
+			case ENETUNREACH:  return Error_No_Network;
+			case ENOBUFS:      return Error_Out_Of_Memory;
+			case ENOMEM:       return Error_Out_Of_Memory;
 			default:
 				return std::error_code(error, std::system_category());
 		}
@@ -1160,7 +1196,7 @@ std::vector<uint8_t> TCP::read(const size_t max_bytes
 	std::vector<uint8_t> data(max_bytes, 0);
 
 	errno = 0;
-	ssize_t bytes = recv(socket_, (void*)data.data(), max_bytes, recv_flags_);
+	ssize_t bytes = ::recv(socket_, (void*)data.data(), max_bytes, recv_flags_);
 
 	if(bytes == 0)
 	{
@@ -1188,14 +1224,26 @@ std::vector<uint8_t> TCP::read(const size_t max_bytes
 ssize_t TCP::write(std::string_view data
 	) const noexcept
 {
+	std::error_code error;
+
+	return this->write(data, error);
+}
+
+
+ssize_t TCP::write(std::string_view data
+	, std::error_code& error
+	) const noexcept
+{
 	errno = 0;
 	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-		printf("%d %s\n", errno, strerror(errno));
-		return bytes;
+		error = send_error_code(errno);
+		return 0;
 	}
+
+	error = Error_None;
 
 	return bytes;
 }
@@ -1208,12 +1256,25 @@ ssize_t TCP::write(std::string_view data
 ssize_t TCP::write(std::vector<char8_t> data
 	) const noexcept
 {
+	std::error_code error;
+
+	return this->write(data, error);
+}
+
+
+ssize_t TCP::write(std::vector<char8_t> data
+	, std::error_code& error
+	) const noexcept
+{
 	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-		return bytes;
+		error = send_error_code(errno);
+		return 0;
 	}
+
+	error = Error_None;
 
 	return bytes;
 }
@@ -1226,12 +1287,25 @@ ssize_t TCP::write(std::vector<char8_t> data
 ssize_t TCP::write(std::vector<int8_t> data
 	) const noexcept
 {
+	std::error_code error;
+
+	return this->write(data, error);
+}
+
+
+ssize_t TCP::write(std::vector<int8_t> data
+	, std::error_code& error
+	) const noexcept
+{
 	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-		return bytes;
+		error = send_error_code(errno);
+		return 0;
 	}
+
+	error = Error_None;
 
 	return bytes;
 }
@@ -1244,12 +1318,25 @@ ssize_t TCP::write(std::vector<int8_t> data
 ssize_t TCP::write(std::vector<uint8_t> data
 	) const noexcept
 {
+	std::error_code error;
+
+	return this->write(data, error);
+}
+
+
+ssize_t TCP::write(std::vector<uint8_t> data
+	, std::error_code& error
+	) const noexcept
+{
 	ssize_t bytes = ::send(socket_, (void*)data.data(), data.size(), send_flags_);
 
 	if(bytes < 0)
 	{
-		return bytes;
+		error = send_error_code(errno);
+		return 0;
 	}
+
+	error = Error_None;
 
 	return bytes;
 }

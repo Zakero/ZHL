@@ -6,7 +6,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#ifndef Zakero_Ini_h
+#if !defined(Zakero_Ini_h) || defined(ZAKERO_INI_IMPLEMENTATION)
 #define Zakero_Ini_h
 
 /**

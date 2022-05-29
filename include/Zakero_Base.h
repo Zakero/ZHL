@@ -496,7 +496,18 @@ namespace zakero
 		, const Type&                               value  ///< The value to look for
 		) noexcept
 	{
-		return (std::find(std::begin(vector), std::end(vector), value) != std::end(vector));
+		for(const auto& element : vector)
+		{
+			if(element == value)
+			{
+				return true;
+			}
+		}
+
+		return false;
+		// A GCC update broke the following code.
+		// Keep the code in-case this is a GCC bug.
+		//return (std::find(std::begin(vector), std::end(vector), value) != std::end(vector));
 	}
 
 
@@ -702,7 +713,7 @@ namespace zakero
 		,	"1"
 		};
 
-		return (vectorContains(v, tolower(std::string(str))));
+		return (vectorContains(v, zakero::tolower(std::string(str))));
 	}
 
 

@@ -100,7 +100,11 @@
  * ~~~
  * \endparhow
  *
- * \parversion{zakero_memorypool}
+ * \parversion{zakero_ini}
+ * __0.2.2__
+ * - Bug Fix: A blank line was inserted at the top of a written file.
+ * - Sector names and Property names are now sorted when being written.
+ *
  * __0.2.1__
  * - The comment character is now configurable.
  * - Error logging can be disabled separate from debugging error checks.
@@ -127,6 +131,7 @@
  */
 
 // C++
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -797,46 +802,69 @@ std::string to_string(const Ini& ini ///< The INI data
 
 	if(ini.contains(""))
 	{
-		const std::unordered_map<std::string, std::string>& global_properties = ini.at("");
+		const Section& global_properties = ini.at("");
 
 		if(global_properties.empty() == false)
 		{
-			add_blank_line = true;
-		}
-		else
-		{
-			for(auto& property_iter : global_properties)
+			for(const auto& property_iter : global_properties)
 			{
 				buffer	<< property_iter.first
 					<< "="
 					<< property_iter.second
 					<< std::endl;
 			}
+
+			add_blank_line = true;
 		}
 	}
 
-	for(auto& section_iter : ini)
+	std::vector<std::string> section_list = {};
+
+	for(const auto& section_iter : ini)
 	{
-		if(section_iter.first == "")
+		const std::string& section_name = section_iter.first;
+
+		if(section_name == "")
 		{
+			// An empty key is a global property
+			// which has already been done.
 			continue;
 		}
 
+		section_list.push_back(section_name);
+	}
+
+	std::sort(section_list.begin(), section_list.end());
+
+	for(std::string& section_name : section_list)
+	{
 		if(add_blank_line)
 		{
 			buffer << std::endl;
 		}
 
 		buffer	<< "["
-			<< section_iter.first
+			<< section_name
 			<< "]"
 			<< std::endl;
 
-		for(auto& property_iter : section_iter.second)
+		std::vector<std::string> property_list = {};
+		const Section& section = ini.at(section_name);
+
+		for(const auto& property_iter : section)
 		{
-			buffer	<< property_iter.first
+			const std::string& property_name = property_iter.first;
+
+			property_list.push_back(property_name);
+		}
+
+		std::sort(property_list.begin(), property_list.end());
+
+		for(std::string& property_name : property_list)
+		{
+			buffer	<< property_name
 				<< "="
-				<< property_iter.second
+				<< section.at(property_name)
 				<< std::endl;
 		}
 

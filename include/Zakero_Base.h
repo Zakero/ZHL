@@ -22,6 +22,7 @@
  *
  * \parversion{zakero_base}
  * __v0.9.5__
+ * - Added join()
  * - Added mapKeys()
  * - Added split()
  *
@@ -629,6 +630,53 @@ namespace zakero
 
 
 	/**
+	 * \brief Join a collection of strings into a single string.
+	 *
+	 * The provided vector of strings will be concatenated into a single 
+	 * string with the delimiter inserted between each string.
+	 *
+	 * \par "Example"
+	 * \parblock
+	 * \code
+	 * std::vector<std::string> list = { "foo", "bar", "blah" };
+	 * std::string str = zakero::join(list, ":");
+	 * // str = "foo:bar:blah";
+	 * \endcode
+	 * \endparblock
+	 *
+	 * \return A string.
+	 */
+	[[nodiscard]]
+	inline std::string join(std::vector<std::string> vector_string ///< The strings to join
+		, const std::string_view delimiter ///< The delimiter to use
+		) noexcept
+	{
+		if(vector_string.empty())
+		{
+			return {};
+		}
+
+		size_t len = 0;
+		for(const std::string& str : vector_string)
+		{
+			len += str.size() + 1;
+		}
+
+		std::string retval = {};
+		retval.reserve(len);
+
+		for(const std::string& str : vector_string)
+		{
+			retval += str + std::string(delimiter);
+		}
+
+		retval.resize(len - 1);
+
+		return retval;
+	}
+
+
+	/**
 	 * \brief Split a string into smaller strings.
 	 *
 	 * Using this method will provide an easy way to split a string into 
@@ -652,6 +700,11 @@ namespace zakero
 		, const std::string_view                             delimiter ///< The delimiter to use
 		) noexcept
 	{
+		if(string.empty())
+		{
+			return {};
+		}
+
 		std::vector<std::string> retval = {};
 
 		std::string::size_type start = 0;

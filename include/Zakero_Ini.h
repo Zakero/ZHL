@@ -102,8 +102,10 @@
  *
  * \parversion{zakero_ini}
  * __0.2.2__
+ * - Bug Fix: Sections are added even if empty.
  * - Bug Fix: A blank line was inserted at the top of a written file.
- * - Sector names and Property names are now sorted when being written.
+ * - Section names and Property names are now sorted when being written.
+ * - Duplicate Sections will be merged, the key/value to keep is the latest.
  *
  * __0.2.1__
  * - The comment character is now configurable.
@@ -440,6 +442,12 @@ std::error_code parse(const std::string_view string  ///< The string to parse
 			if(*iter == ']')
 			{
 				section = std::string(start, iter);
+				
+				if(ini.contains(section) == false)
+				{
+					ini[section] = {};
+				}
+
 				++iter;
 			}
 		}

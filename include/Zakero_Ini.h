@@ -460,14 +460,13 @@ std::error_code parse(const std::string_view string  ///< The string to parse
 
 			while(iter != string.end()
 				&& *iter != '='
-				&& *iter != ':'
 				&& *iter != '\n'
 				)
 			{
 				++iter;
 			}
 
-			if(*iter == '=' || *iter == ':')
+			if(*iter == '=')
 			{
 				auto temp = iter;
 				--temp;

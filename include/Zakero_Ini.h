@@ -230,7 +230,7 @@ namespace zakero::ini
 	[[]]          void            csvAdd(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
-	[[nodiscard]] int             csvCount(zakero::ini::Ini&, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] size_t          csvCount(zakero::ini::Ini&, const std::string_view, const std::string_view) noexcept;
 	[[nodiscard]] bool            csvContains(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[nodiscard]] int             csvIndexOf(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[nodiscard]] std::string     csvAt(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;

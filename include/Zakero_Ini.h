@@ -22,7 +22,7 @@
  * can be found here.
  *
  * \pardeps{zakero_ini}
- * - None
+ * - Zakero_Base.h
  * \endpardeps
  *
  * \partldr{zakero_ini}
@@ -101,6 +101,9 @@
  * \endparhow
  *
  * \parversion{zakero_ini}
+ * __0.3.0__
+ * - INI values can now be treated as CSV data.
+ *
  * __0.2.2__
  * - Bug Fix: Sections are added even if empty.
  * - Bug Fix: A blank line was inserted at the top of a written file.
@@ -142,6 +145,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "Zakero_Base.h"
 
 
 /******************************************************************************
@@ -221,6 +226,15 @@ namespace zakero::ini
 	[[]]          std::error_code read(const std::filesystem::path, const char, zakero::ini::Ini&) noexcept;
 
 	[[]]          std::error_code write(const zakero::ini::Ini&, std::filesystem::path) noexcept;
+
+	[[]]          void            csvAdd(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
+	[[nodiscard]] int             csvCount(zakero::ini::Ini&, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] bool            csvContains(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] int             csvIndexOf(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] std::string     csvAt(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
+	[[]]          void            csvSet(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t, const std::string_view) noexcept;
 
 	[[nodiscard]] std::string     to_string(const zakero::ini::Ini&) noexcept;
 }
@@ -791,6 +805,513 @@ std::error_code write(const Ini& ini  ///< The data to write
 }
 
 // }}} zakero::ini::write()
+// {{{ zakero::ini::csv
+
+/**
+ * \brief Add a value to CSV formatted data.
+ *
+ * The provided \p value will be added to the value of the \p key.
+ *
+ * \examplecode
+ * zakero::ini::Ini ini = {};
+ *
+ * zakero::ini::csvAdd(ini, "section", "key", "foo");
+ * // [section]
+ * // key=foo
+ *
+ * zakero::ini::csvAdd(ini, "section", "key", "bar");
+ * // [section]
+ * // key=foo,bar
+ * \endexamplecode
+ */
+void csvAdd(zakero::ini::Ini& ini        ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const std::string_view value   ///< The Value
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	/**
+	 * \internal
+	 * While just appending the value to the CSV would be faster, the goal 
+	 * here was to keep the same "code pattern" as the other csv*() 
+	 * functions.
+	 */
+
+	const std::string val(value);
+	std::string& csv = ini[std::string(section)][std::string(key)];
+	std::vector<std::string> vector = zakero::split(csv, ",");
+
+	vector.push_back(val);
+	csv = zakero::join(vector, ",");
+}
+
+
+/**
+ * \brief Remove a value from CSV formatted data.
+ *
+ * Removes the requested \p value from the CSV formatted data.
+ * If the \p value does not exist, then nothing will happen.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar
+ *
+ * zakero::ini::csvRemove(ini, "section", "key", "foo");
+ * // [section]
+ * // key=bar
+ * \endexamplecode
+ */
+void csvRemove(zakero::ini::Ini& ini     ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const std::string_view value   ///< The Value
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	const std::string val(value);
+	std::string& csv = ini[std::string(section)][std::string(key)];
+	std::vector<std::string> vector = zakero::split(csv, ",");
+
+	if(zakero::vectorContains(vector, val) == false)
+	{
+		return;
+	}
+
+	zakero::vectorErase(vector, val);
+	csv = zakero::join(vector, ",");
+}
+
+
+/**
+ * \brief Remove a value from CSV formatted data.
+ *
+ * Removes a value from the CSV formatted data at the specified \p index.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * zakero::ini::csvRemove(ini, "section", "key", 1);
+ * // [section]
+ * // key=foo,xyzzy
+ * \endexamplecode
+ */
+void csvRemove(zakero::ini::Ini& ini     ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const size_t index             ///< The index of the Value
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	std::string& csv = ini[std::string(section)][std::string(key)];
+
+	std::vector<std::string> vector = zakero::split(csv, ",");
+
+	vector.erase(vector.begin() + index);
+
+	csv = zakero::join(vector, ",");
+}
+
+
+/**
+ * \brief Count the number of values in CSV formatted data.
+ *
+ * The number of items in the CSV formatted data will be returned.
+ *
+ * \return The number of items.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * size_t count = zakero::ini::csvCount(ini, "section", "key");
+ * // count == 3
+ * \endexamplecode
+ */
+size_t csvCount(const zakero::ini::Ini& ini    ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	const std::string& csv = ini
+		.at(std::string(section))
+		.at(std::string(key));
+
+	if(csv.empty())
+	{
+		return 0;
+	}
+	
+	size_t count = 1;
+
+	for(size_t i = 0; i < csv.size(); i++)
+	{
+		if(csv[i] == ',')
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+
+/**
+ * \brief Check if the CSV formatted data contains a value.
+ *
+ * The CSV data located at the \p section and \p key will be checked if it 
+ * contains the specified \p value.
+ *
+ * \retval true  The value was found
+ * \retval false The value was not found
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * bool found = zakero::ini::csvContains(ini, "section", "key", "foo");
+ * // found == true
+ * \endexamplecode
+ */
+bool csvContains(zakero::ini::Ini& ini   ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const std::string_view value   ///< The Value
+	) noexcept
+{
+	// ???
+	// vector v = split(csv, ",")
+	// bool b = contains(v, value)
+	// return b
+	// ???
+
+	if(ini.contains(std::string(section)) == false)
+	{
+		return false;
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		return false;
+	}
+
+	const std::string_view csv = ini
+		.at(std::string(section))
+		.at(std::string(key));
+
+	if(csv.size() < value.size())
+	{
+		return false;
+	}
+
+	if(csv.starts_with(value))
+	{
+		if(csv.size() == value.size())
+		{
+			return true;
+		}
+
+		if(csv[value.size()] == ',')
+		{
+			return true;
+		}
+	}
+	
+	if(csv.ends_with(value))
+	{
+		if(csv[csv.size() - value.size() - 1] == ',')
+		{
+			return true;
+		}
+	}
+
+	size_t location = 0;
+	while(true)
+	{
+		location = csv.find(value, location + value.size());
+		if(location == csv.npos)
+		{
+			return false;
+		}
+
+		if((csv[location - 1] == ',')
+			&& (csv[location + value.size()] == ',')
+			)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+/**
+ * \brief Get the index of a value in CSV formatted data.
+ *
+ * The CSV data located at \p section and \p key will be searched for the 
+ * requested \p value. If the value is found, the index of the value is 
+ * returned.
+ *
+ * \return The index of the value or `-1` if the value was not found.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * int index = zakero::ini::csvContains(ini, "section", "key", "xyzzy");
+ * // index == 2
+ * \endexamplecode
+ */
+int csvIndexOf(zakero::ini::Ini& ini     ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const std::string_view value   ///< The Value
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	const std::string_view csv = ini
+		.at(std::string(section))
+		.at(std::string(key));
+	
+	std::vector<std::string> vector = zakero::split(csv, ",");
+
+	int index = 0;
+
+	for(const std::string& csv_value : vector)
+	{
+		if(csv_value == value)
+		{
+			return index;
+		}
+
+		index++;
+	}
+
+	return -1;
+}
+
+
+/**
+ * \brief Get a Value from CSV formatted data.
+ *
+ * The value located at the specified \p index will be returned.
+ *
+ * \return The value.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * std::string str = zakero::ini::csvAt(ini, "section", "key", 0);
+ * // str == "foo"
+ * \endexamplecode
+ */
+std::string csvAt(zakero::ini::Ini& ini  ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const size_t           index   ///< The index
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	const std::string& csv = ini.at(std::string(section)).at(std::string(key));
+
+	const std::vector<std::string> vector = zakero::split(csv, ",");
+
+	return vector.at(index);
+}
+
+
+/**
+ * \brief Set a value at a location in CSV formatted data.
+ *
+ * The data at the provided \p index will be replaced with the specified \p 
+ * value.
+ *
+ * \examplecode
+ * // ini contains:
+ * // [section]
+ * // key=foo,bar,xyzzy
+ *
+ * zakero::ini::csvSet(ini, "section", "key", 2, "UUDDLRLRBA");
+ * // [section]
+ * // key=foo,bar,UUDDLRLRBA
+ * \endexamplecode
+ */
+void csvSet(zakero::ini::Ini& ini        ///< The INI data
+	, const std::string_view section ///< The Section Name
+	, const std::string_view key     ///< The Key
+	, const size_t           index   ///< The index
+	, const std::string_view value   ///< The new Value
+	) noexcept
+{
+#if ZAKERO_INI_DEBUG_ENABLED // {{{
+	if(ini.contains(std::string(section)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: ini does not contain section"
+			<< '\n'
+			;
+		#endif
+	}
+
+	if(ini.at(std::string(section)).contains(std::string(key)) == false)
+	{
+		#if ZAKERO_INI_ERROR_STREAM_ENABLED
+		ZAKERO_INI_ERROR_STREAM << ZAKERO__INI
+			<< "Invalid Parameter: The ini section does not contain key"
+			<< '\n'
+			;
+		#endif
+	}
+#endif // }}}
+
+	std::string& csv = ini[std::string(section)][std::string(key)];
+
+	std::vector<std::string> vector = zakero::split(csv, ",");
+
+	vector[index] = std::string(value);
+
+	csv = zakero::join(vector, ",");
+}
+
+
+// }}}
 // {{{ zakero::ini::to_string()
 
 /**

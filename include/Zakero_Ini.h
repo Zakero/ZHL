@@ -230,10 +230,10 @@ namespace zakero::ini
 	[[]]          void            csvAdd(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
 	[[]]          void            csvRemove(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
-	[[nodiscard]] size_t          csvCount(zakero::ini::Ini&, const std::string_view, const std::string_view) noexcept;
-	[[nodiscard]] bool            csvContains(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
-	[[nodiscard]] int             csvIndexOf(zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
-	[[nodiscard]] std::string     csvAt(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
+	[[nodiscard]] size_t          csvCount(const zakero::ini::Ini&, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] bool            csvContains(const zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] int             csvIndexOf(const zakero::ini::Ini&, const std::string_view, const std::string_view, const std::string_view) noexcept;
+	[[nodiscard]] std::string     csvAt(const zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t) noexcept;
 	[[]]          void            csvSet(zakero::ini::Ini&, const std::string_view, const std::string_view, const size_t, const std::string_view) noexcept;
 
 	[[nodiscard]] std::string     to_string(const zakero::ini::Ini&) noexcept;
@@ -995,9 +995,9 @@ void csvRemove(zakero::ini::Ini& ini     ///< The INI data
  * // count == 3
  * \endexamplecode
  */
-size_t csvCount(const zakero::ini::Ini& ini    ///< The INI data
-	, const std::string_view section ///< The Section Name
-	, const std::string_view key     ///< The Key
+size_t csvCount(const zakero::ini::Ini& ini ///< The INI data
+	, const std::string_view section    ///< The Section Name
+	, const std::string_view key        ///< The Key
 	) noexcept
 {
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
@@ -1063,10 +1063,10 @@ size_t csvCount(const zakero::ini::Ini& ini    ///< The INI data
  * // found == true
  * \endexamplecode
  */
-bool csvContains(zakero::ini::Ini& ini   ///< The INI data
-	, const std::string_view section ///< The Section Name
-	, const std::string_view key     ///< The Key
-	, const std::string_view value   ///< The Value
+bool csvContains(const zakero::ini::Ini& ini ///< The INI data
+	, const std::string_view section     ///< The Section Name
+	, const std::string_view key         ///< The Key
+	, const std::string_view value       ///< The Value
 	) noexcept
 {
 	// ???
@@ -1154,10 +1154,10 @@ bool csvContains(zakero::ini::Ini& ini   ///< The INI data
  * // index == 2
  * \endexamplecode
  */
-int csvIndexOf(zakero::ini::Ini& ini     ///< The INI data
-	, const std::string_view section ///< The Section Name
-	, const std::string_view key     ///< The Key
-	, const std::string_view value   ///< The Value
+int csvIndexOf(const zakero::ini::Ini& ini ///< The INI data
+	, const std::string_view section   ///< The Section Name
+	, const std::string_view key       ///< The Key
+	, const std::string_view value     ///< The Value
 	) noexcept
 {
 #if ZAKERO_INI_DEBUG_ENABLED // {{{
@@ -1220,10 +1220,10 @@ int csvIndexOf(zakero::ini::Ini& ini     ///< The INI data
  * // str == "foo"
  * \endexamplecode
  */
-std::string csvAt(zakero::ini::Ini& ini  ///< The INI data
-	, const std::string_view section ///< The Section Name
-	, const std::string_view key     ///< The Key
-	, const size_t           index   ///< The index
+std::string csvAt(const zakero::ini::Ini& ini ///< The INI data
+	, const std::string_view section      ///< The Section Name
+	, const std::string_view key          ///< The Key
+	, const size_t           index        ///< The index
 	) noexcept
 {
 #if ZAKERO_INI_DEBUG_ENABLED // {{{

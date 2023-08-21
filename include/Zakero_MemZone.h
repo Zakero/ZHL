@@ -218,6 +218,107 @@
 // }}}
 
 // {{{ Declaration : C
+
+extern "C"
+{
+
+#define X(name_, value_, mesg_) \
+	#define Zakero_MemZone_ ## name_ value_
+ZAKERO_MEMZONE__ERROR_DATA
+#undef X
+
+enum Zakero_MemZone_Block_Flag
+{	Zakero_MemZone_Block_Flag_Allocated     = 0x0000'0000'0000'0001
+,	Zakero_MemZone_Block_Flag_In_Use        = 0x0000'0000'0000'0010
+,	Zakero_MemZone_Block_Flag_Clear_On_Free = 0x0000'0000'0000'0100
+}
+
+enum Zakero_MemZone_Defrag_Level
+{	Zakero_MemZone_Defrag_Level_0 = 0 // No automatic defrag
+,	Zakero_MemZone_Defrag_Level_1 = 1 // Defrag when memory is free'ed
+,	Zakero_MemZone_Defrag_Level_2 = 2 // and when memory is released
+,	Zakero_MemZone_Defrag_Level_3 = 3 // and when memory is acquired
+,	Zakero_MemZone_Defrag_Level_4 = 4 // and when memory is allocated
+}
+
+
+struct Zakero_MemZone_BlockHeader
+{
+	uint64_t                    id;
+	uint64_t                    flag;
+	Zakero_MemZone_BlockHeader* next;
+	Zakero_MemZone_BlockHeader* prev;
+	size_t                      size;
+	uint8_t[]                   data;
+}
+
+
+struct Zakero_MemZone
+{
+	uint8_t* memory;
+	int      fd;
+}
+
+
+int Zakero_MemZone_Init(Zakero_MemZone& //memzone
+	)
+{
+	return Zakero_MemZone_Error_None;
+}
+
+/*
+int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
+	, size_t    size
+	, uint64_t& id
+	)
+int Zakero_MemZone_Free(Zakero_MemZone& memzone
+	, uint64_t id
+	)
+void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
+	, uint64_t id
+	)
+void Zakero_MemZone_Release(Zakero_MemZone& memzone
+	, uint64_t id
+	)
+size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
+	, uint64_t id
+	)
+size_t Zakero_MemZone_Realloc(Zakero_MemZone& memzone
+	, uint64_t id
+	, size_t size
+	)
+size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
+	)
+size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
+	)
+size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
+	)
+size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
+	)
+uint64_t Zakero_MemZone_Defrag(Zakero_MemZone& memzone
+	)
+block_clear
+block_init
+block_move
+block_merge
+block_split
+block_swap
+block_find_id
+block_find_free
+block_next
+block_prev
+block_size
+block_is_free
+block_id
+block_id_set
+block_allocated
+block_allocated_set
+block_acquired
+block_acquired_set
+ */
+
+} // extern "C"
+
 // }}}
 // {{{ Declaration : C++
 namespace zakero

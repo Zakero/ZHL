@@ -242,6 +242,21 @@ enum Zakero_MemZone_Defrag_Level
 ,	Zakero_MemZone_Defrag_Level_4 = 4 // and when memory is allocated
 };
 
+// {{enum(name=Zakero_MemZone_Expand)
+//   {{enum_member(name=Zakero_MemZone_Expand_None, value=0)
+//     This instance of MemZone is not allowed to expand.
+//   }}
+//   {{enum_member(name=Zakero_MemZone_Expand_Auto, value=1)
+//     This instance of MemZone will automatically expand if needed.
+//     All allocated memory must be in a released state, otherwise
+//     expansion will fail.
+//   }}
+// }}
+enum Zakero_MemZone_Expand
+{	Zakero_MemZone_Expand_None
+,	Zakero_MemZone_Expand_Auto
+};
+
 enum Zakero_MemZone_Mode
 {	Zakero_MemZone_Mode_FD
 ,	Zakero_MemZone_Mode_Alloc

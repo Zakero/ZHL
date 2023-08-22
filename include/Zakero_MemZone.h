@@ -249,18 +249,24 @@ struct Zakero_MemZone_BlockHeader
 	Zakero_MemZone_BlockHeader* next;
 	Zakero_MemZone_BlockHeader* prev;
 	size_t                      size;
-	uint8_t[]                   data;
+};
+
+struct Zakero_MemZone_Block
+{
+	struct Zakero_MemZone_BlockHeader header;
+	uint8_t[]                         data;
 }
 
 
 struct Zakero_MemZone
 {
-	uint8_t* memory;
-	int      fd;
+	uint8_t* memory = nullptr;
+	int      fd     = -1;
 }
 
 
 int Zakero_MemZone_Init(Zakero_MemZone& //memzone
+	, Zakero_MemZone_Mode //mode
 	)
 {
 	return Zakero_MemZone_Error_None;

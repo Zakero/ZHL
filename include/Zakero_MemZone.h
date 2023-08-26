@@ -214,7 +214,15 @@
  * Error Codes used internally.
  */
 #define ZAKERO_MEMZONE__ERROR_DATA \
-	X(Error_None                  , 0 , "No Error"                                                     ) \
+	X(Error_None                   , 0 , "No Error"                              ) \
+	X(Error_Init_Failure_Name      , 1 , "Failed to initialize the MemZone name" ) \
+	X(Error_Init_Failure_FD        , 2 , "Failed to initialize the MemZone name" ) \
+	X(Error_Invalid_Parameter_Name , 3 , "The 'name' parameter is not valid"     ) \
+	X(Error_Invalid_Parameter_Size , 4 , "The 'size' parameter is not valid"     ) \
+
+#define ZAKERO_KILOBYTE(val_) (val_ * 1024)
+#define ZAKERO_MEGABYTE(val_) (ZAKERO_KILOBYTE(val_) * 1024)
+#define ZAKERO_GIGABYTE(val_) (ZAKERO_MEGABYTE(val_) * 1024)
 
 // }}}
 
@@ -259,7 +267,8 @@ enum Zakero_MemZone_Expand
 
 enum Zakero_MemZone_Mode
 {	Zakero_MemZone_Mode_FD
-,	Zakero_MemZone_Mode_Alloc
+,	Zakero_MemZone_Mode_RAM
+,	Zakero_MemZone_Mode_SHM
 };
 
 
@@ -281,18 +290,23 @@ struct Zakero_MemZone_Block
 struct Zakero_MemZone
 {
 	uint8_t* memory = nullptr;
+	char*    name   = nullptr;
 	int      fd     = -1;
 };
 
 
-int Zakero_MemZone_Init(Zakero_MemZone& //memzone
-	, Zakero_MemZone_Mode //mode
-	)
-{
-	return Zakero_MemZone_Error_None;
-}
-
+int  Zakero_MemZone_Init(const char*, const Zakero_MemZone_Mode, const size_t, Zakero_MemZone&) noexcept;
+void Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
+	
 /*
+int Zakero_MemZone_Init_From(Zakero_MemZone& //memzone
+	, const Zakero_MemZone& //memzone
+	) noexcept;
+
+int Zakero_MemZone_Init_From_FD(Zakero_MemZone& //memzone
+	, const int //fd
+	) noexcept;
+
 int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	, size_t    size
 	, uint64_t& id
@@ -431,7 +445,128 @@ namespace zakero
 
 // }}}
 
-// {{{ Implementation : C
+// {{{ Implementation : C -
+// {{{ Implementation : C : Private : FD -
+
+#ifdef __linux__
+static int fd_create_(const char* name
+	) noexcept
+{
+	int fd = memfd_create(name, 0);
+
+	return fd;
+}
+#else
+#	error Need more code...
+#endif
+
+// }}}
+
+int Zakero_MemZone_Init(const char* name
+	, const Zakero_MemZone_Mode mode
+	, const size_t              size
+	, Zakero_MemZone&           memzone
+	) noexcept
+{
+	if(name == nullptr
+		|| strlen(name) == 0
+		)
+	{
+		return Zakero_MemZone_Error_Invalid_Parameter_Name;
+	}
+
+	if(size == 0)
+	{
+		return Zakero_MemZone_Error_Invalid_Parameter_Size;
+	}
+
+	memzone.name = strdup(name);
+	if(memzone.name == nullptr)
+	{
+		return Zakero_MemZone_Error_Init_Failure_Name;
+	}
+
+	if(mode == Zakero_MemZone_Mode_FD)
+	{
+		memzone.fd = fd_create_(memzone.name);
+		if(memzone.fd == -1)
+		{
+			Zakero_MemZone_Destroy(memzone);
+			return Zakero_MemZone_Error_Init_Failure_FD;
+		}
+	}
+
+	return Zakero_MemZone_Error_None;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+TEST_CASE("c/init/fd")
+{
+	const char*    name = "MemZone_c_init_fd";
+	Zakero_MemZone memzone;
+	int            error = 0;
+
+	SUBCASE("Invalid Name: Null") // {{{
+	{
+		error = Zakero_MemZone_Init(nullptr
+			, Zakero_MemZone_Mode_FD
+			, ZAKERO_MEGABYTE(1)
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
+	} // }}}
+
+	SUBCASE("Invalid Name: Empty") // {{{
+	{
+		error = Zakero_MemZone_Init(""
+			, Zakero_MemZone_Mode_FD
+			, ZAKERO_MEGABYTE(1)
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
+	} // }}}
+
+	SUBCASE("Invalid Size: 0") // {{{
+	{
+		error = Zakero_MemZone_Init(name
+			, Zakero_MemZone_Mode_FD
+			, 0 // Size
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
+	} // }}}
+
+	error = Zakero_MemZone_Init(name
+		, Zakero_MemZone_Mode_FD
+		, ZAKERO_MEGABYTE(1)
+		, memzone
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(strcmp(memzone.name, name) == 0);
+	CHECK(memzone.fd != -1);
+	//CHECK(memzone.memory != nullptr);
+
+	SUBCASE("Already initialized")
+	{
+	}
+}
+TEST_CASE("c/init/ram")
+{
+}
+TEST_CASE("c/init/shm")
+{
+}
+#endif // }}}
+
+void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
+	) noexcept
+{
+}
+	
 // }}}
 // {{{ Implementation : C++
 namespace zakero

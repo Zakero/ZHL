@@ -4,6 +4,7 @@ g++ -std=c++20 -Wall -Werror -o Zakero_MemZone Zakero_MemZone.cpp && ./Zakero_Me
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "../doctest.h"
 
+#define ZAKERO_MEMZONE_DEBUG_ENABLED
 #define ZAKERO_MEMZONE_IMPLEMENTATION
 #define ZAKERO_MEMZONE_IMPLEMENTATION_TEST
 #include "../../include/Zakero_MemZone.h"

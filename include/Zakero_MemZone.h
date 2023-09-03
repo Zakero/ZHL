@@ -219,6 +219,7 @@
 	X(Error_Init_Failure_FD        , 2 , "Failed to initialize the MemZone name" ) \
 	X(Error_Invalid_Parameter_Name , 3 , "The 'name' parameter is not valid"     ) \
 	X(Error_Invalid_Parameter_Size , 4 , "The 'size' parameter is not valid"     ) \
+	X(Error_Invalid_Parameter_Mode , 5 , "The 'mode' parameter is not valid"     ) \
 
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
 #define ZAKERO_MEGABYTE(val_) (ZAKERO_KILOBYTE(val_) * 1024)
@@ -403,7 +404,6 @@ namespace zakero
 	// }}}
 }
 // }}}
-
 // {{{ Implementation
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION
@@ -443,12 +443,34 @@ namespace zakero
  */
 #define ZAKERO_MEMZONE__ERROR(err_) std::error_code(err_, MemZoneErrorCategory);
 
+#ifdef ZAKERO_MEMZONE_DEBUG_ENABLED
+/**
+ * \brief A flag to determine if debugging is disabled or enabled.
+ */
+#define ZAKERO_MEMZONE_DEBUG_IS_ENABLED true
+#define ZAKERO_MEMZONE_LOG_ERROR(fmt_, ...) \
+{ \
+	fprintf(stderr, "%s:%u:%s:", __FILE__, __LINE__, __PRETTY_FUNCTION__); \
+	fprintf(stderr, fmt_ __VA_OPT__(,) __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+	fflush(stderr); \
+} \
+
+#else
+/**
+ * \brief A flag to determine if debugging is disabled or enabled.
+ */
+#define ZAKERO_MEMZONE_DEBUG_IS_ENABLED false
+#define ZAKERO_MEMZONE_LOG_ERROR(fmt_, ...) {}
+#endif // ZAKERO_MEMZONE_DEBUG_ENABLED
+
 // }}}
 
 // {{{ Implementation : C -
 // {{{ Implementation : C : Private : FD -
 
 #ifdef __linux__
+
 static int fd_create_(const char* name
 	) noexcept
 {
@@ -456,6 +478,39 @@ static int fd_create_(const char* name
 
 	return fd;
 }
+
+static bool mode_is_supported_(const Zakero_MemZone_Mode
+	) noexcept
+{
+	return true;
+}
+
+#elif __HAIKU__
+
+static int fd_create_(const char* //name
+	) noexcept
+{
+	return -1;
+}
+
+static bool mode_is_supported_(const Zakero_MemZone_Mode mode
+	) noexcept
+{
+	switch(mode)
+	{
+		case Zakero_MemZone_Mode_FD:
+			return false;
+
+		case Zakero_MemZone_Mode_RAM:
+			return true;
+
+		case Zakero_MemZone_Mode_SHM:
+			return false;
+	};
+
+	return false;
+}
+
 #else
 #	error Need more code...
 #endif
@@ -468,22 +523,35 @@ int Zakero_MemZone_Init(const char* name
 	, Zakero_MemZone&           memzone
 	) noexcept
 {
-	if(name == nullptr
-		|| strlen(name) == 0
-		)
+	if(name == nullptr)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not NULL");
+		return Zakero_MemZone_Error_Invalid_Parameter_Name;
+	}
+
+	if(strlen(name) == 0)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not be empty");
 		return Zakero_MemZone_Error_Invalid_Parameter_Name;
 	}
 
 	if(size == 0)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'size' must be greater than 0");
 		return Zakero_MemZone_Error_Invalid_Parameter_Size;
 	}
 
 	memzone.name = strdup(name);
 	if(memzone.name == nullptr)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Failed to allocate memory for the name");
 		return Zakero_MemZone_Error_Init_Failure_Name;
+	}
+
+	if(mode_is_supported_(mode) == false)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'mode' has unsupported value");
+		return Zakero_MemZone_Error_Invalid_Parameter_Mode;
 	}
 
 	if(mode == Zakero_MemZone_Mode_FD)
@@ -500,11 +568,10 @@ int Zakero_MemZone_Init(const char* name
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-TEST_CASE("c/init/fd")
+TEST_CASE("/c/init/") // {{{
 {
-	const char*    name = "MemZone_c_init_fd";
-	Zakero_MemZone memzone;
-	int            error = 0;
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
 
 	SUBCASE("Invalid Name: Null") // {{{
 	{
@@ -516,28 +583,55 @@ TEST_CASE("c/init/fd")
 
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
 	} // }}}
-
 	SUBCASE("Invalid Name: Empty") // {{{
 	{
 		error = Zakero_MemZone_Init(""
-			, Zakero_MemZone_Mode_FD
+			, Zakero_MemZone_Mode_RAM
 			, ZAKERO_MEGABYTE(1)
 			, memzone
 			);
 
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
 	} // }}}
-
 	SUBCASE("Invalid Size: 0") // {{{
 	{
-		error = Zakero_MemZone_Init(name
-			, Zakero_MemZone_Mode_FD
+		error = Zakero_MemZone_Init("test"
+			, Zakero_MemZone_Mode_RAM
 			, 0 // Size
 			, memzone
 			);
 
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
 	} // }}}
+#if __HAIKU__ // {{{
+	SUBCASE("Invalid Mode: Zakero_MemZone_Mode_FD") // {{{
+	{
+		error = Zakero_MemZone_Init("test"
+			, Zakero_MemZone_Mode_FD
+			, ZAKERO_MEGABYTE(1)
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Mode);
+	} // }}}
+	SUBCASE("Invalid Mode: Zakero_MemZone_Mode_SHM") // {{{
+	{
+		error = Zakero_MemZone_Init("test"
+			, Zakero_MemZone_Mode_SHM
+			, ZAKERO_MEGABYTE(1)
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Mode);
+	} // }}}
+#endif // }}}
+} // }}}
+TEST_CASE("/c/init/fd/") // {{{
+{
+#if __linux__
+	const char*    name    = "MemZone_c_init_fd";
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
 
 	error = Zakero_MemZone_Init(name
 		, Zakero_MemZone_Mode_FD
@@ -553,13 +647,14 @@ TEST_CASE("c/init/fd")
 	SUBCASE("Already initialized")
 	{
 	}
-}
-TEST_CASE("c/init/ram")
+#endif
+} // }}}
+TEST_CASE("/c/init/ram/") // {{{
 {
-}
-TEST_CASE("c/init/shm")
+} // }}}
+TEST_CASE("/c/init/shm/") // {{{
 {
-}
+} // }}}
 #endif // }}}
 
 void Zakero_MemZone_Destroy(Zakero_MemZone& memzone

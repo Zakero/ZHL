@@ -1,5 +1,5 @@
 /*
-g++ -std=c++20 -Wall -Werror -o Zakero_MemZone Zakero_MemZone.cpp && ./Zakero_MemZone
+g++ -std=c++23 -Wall -Werror -o Zakero_MemZone Zakero_MemZone.cpp && ./Zakero_MemZone
  */
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "../doctest.h"

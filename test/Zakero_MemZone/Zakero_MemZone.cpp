@@ -5,6 +5,7 @@ g++ -std=c++23 -Wall -Werror -o Zakero_MemZone Zakero_MemZone.cpp && ./Zakero_Me
 #include "../doctest.h"
 
 #define ZAKERO_MEMZONE_DEBUG_ENABLED
+#define ZAKERO_MEMZONE_VALIDATE_ENABLED
 #define ZAKERO_MEMZONE_IMPLEMENTATION
 #define ZAKERO_MEMZONE_IMPLEMENTATION_TEST
 #include "../../include/Zakero_MemZone.h"

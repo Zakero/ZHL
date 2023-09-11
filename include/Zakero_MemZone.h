@@ -920,7 +920,12 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	(void)size;
 	(void)id;
 
-	return 0;
+	// Find first available unused block that can hold the requested size
+	// If no block availalbe, try to (force) defrag
+	// If needed, split the available block
+	// If not defragged, defrap based on config
+
+	return Zakero_MemZone_Error_None;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{

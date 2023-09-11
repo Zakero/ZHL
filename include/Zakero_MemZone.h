@@ -300,6 +300,7 @@ struct Zakero_MemZone
 
 [[]]          int    Zakero_MemZone_Init(const Zakero_MemZone_Mode, const size_t, Zakero_MemZone&) noexcept;
 [[]]          void   Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
+[[nodiscard]] int    Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
 [[nodiscard]] size_t Zakero_MemZone_Available_Largest(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;
@@ -314,10 +315,6 @@ int Zakero_MemZone_Init_From_FD(Zakero_MemZone& //memzone
 	, const int //fd
 	) noexcept;
 
-int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
-	, size_t    size
-	, uint64_t& id
-	)
 int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	, uint64_t id
 	)
@@ -910,6 +907,46 @@ TEST_CASE("/c/destroy/ram/") // {{{
 } // }}}
 TEST_CASE("/c/destroy/shm/") // {{{
 {
+} // }}}
+
+#endif // }}}
+
+int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
+	, size_t    size
+	, uint64_t& id
+	) noexcept
+{
+	(void)memzone;
+	(void)size;
+	(void)id;
+
+	return 0;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/allocate/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+	uint64_t       id      = 0;
+
+	error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, memzone
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(1)
+		, id
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id    != 0);
+
+	Zakero_MemZone_Destroy(memzone);
 } // }}}
 
 #endif // }}}

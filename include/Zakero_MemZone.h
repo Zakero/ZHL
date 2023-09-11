@@ -301,7 +301,10 @@ struct Zakero_MemZone
 [[]]          int    Zakero_MemZone_Init(const Zakero_MemZone_Mode, const size_t, Zakero_MemZone&) noexcept;
 [[]]          void   Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t Zakero_MemZone_Available_Largest(Zakero_MemZone&) noexcept;
-	
+[[nodiscard]] size_t Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
+[[nodiscard]] size_t Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;
+[[nodiscard]] size_t Zakero_MemZone_Used_Total(Zakero_MemZone&) noexcept;
+
 /*
 int Zakero_MemZone_Init_From(Zakero_MemZone& //memzone
 	, const Zakero_MemZone& //memzone
@@ -330,12 +333,6 @@ size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 size_t Zakero_MemZone_Realloc(Zakero_MemZone& memzone
 	, uint64_t id
 	, size_t size
-	)
-size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
-	)
-size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
-	)
-size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	)
 uint64_t Zakero_MemZone_Defrag(Zakero_MemZone& memzone
 	)
@@ -479,7 +476,9 @@ namespace zakero
 #endif // ZAKERO_MEMZONE_VAIDATE_ENABLED
 // }}}
 // {{{ Implementation : C -
+
 constexpr size_t zakero_memzone_block_sizeof_ = sizeof(Zakero_MemZone_Block);
+
 // {{{ Implementation : C : block_is_allocated_() -
 
 inline bool block_is_allocated_(const Zakero_MemZone_Block& block
@@ -658,39 +657,6 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 
 	memzone.size = size;
 
-	if(mode == Zakero_MemZone_Mode_FD)
-	{
-		/*
-		if(name == nullptr)
-		{
-			ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not NULL");
-			return Zakero_MemZone_Error_Invalid_Parameter_Name;
-		}
-
-		if(strlen(name) == 0)
-		{
-			ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not be empty");
-			return Zakero_MemZone_Error_Invalid_Parameter_Name;
-		}
-
-		memzone.name = strdup(name);
-		if(memzone.name == nullptr)
-		{
-			ZAKERO_MEMZONE_LOG_ERROR("Failed to allocate memory for the name");
-			return Zakero_MemZone_Error_Init_Failure_Name;
-		}
-		*/
-
-		init_fd_(memzone);
-		if(memzone.fd == -1)
-		{
-			Zakero_MemZone_Destroy(memzone);
-			return Zakero_MemZone_Error_Init_Failure_FD;
-		}
-
-		return Zakero_MemZone_Error_None;
-	}
-
 	switch(mode)
 	{
 		case Zakero_MemZone_Mode_RAM:
@@ -702,6 +668,36 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 			break;
 
 		case Zakero_MemZone_Mode_FD:
+			/*
+			if(name == nullptr)
+			{
+				ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not NULL");
+				return Zakero_MemZone_Error_Invalid_Parameter_Name;
+			}
+
+			if(strlen(name) == 0)
+			{
+				ZAKERO_MEMZONE_LOG_ERROR("Parameter 'name' can not be empty");
+				return Zakero_MemZone_Error_Invalid_Parameter_Name;
+			}
+
+			memzone.name = strdup(name);
+			if(memzone.name == nullptr)
+			{
+				ZAKERO_MEMZONE_LOG_ERROR("Failed to allocate memory for the name");
+				return Zakero_MemZone_Error_Init_Failure_Name;
+			}
+			*/
+
+			init_fd_(memzone);
+			if(memzone.fd == -1)
+			{
+				Zakero_MemZone_Destroy(memzone);
+				return Zakero_MemZone_Error_Init_Failure_FD;
+			}
+
+			break;
+
 		case Zakero_MemZone_Mode_SHM:
 			return Zakero_MemZone_Error_Invalid_Parameter_Mode;
 			break;
@@ -718,6 +714,7 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
 TEST_CASE("/c/init/") // {{{
 {
 	Zakero_MemZone memzone = {};
@@ -833,6 +830,7 @@ TEST_CASE("/c/init/ram/") // {{{
 TEST_CASE("/c/init/shm/") // {{{
 {
 } // }}}
+
 #endif // }}}
 
 void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
@@ -866,6 +864,7 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
 TEST_CASE("/c/destroy/fd/") // {{{
 {
 #if __linux__
@@ -912,6 +911,7 @@ TEST_CASE("/c/destroy/ram/") // {{{
 TEST_CASE("/c/destroy/shm/") // {{{
 {
 } // }}}
+
 #endif // }}}
 
 size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
@@ -941,6 +941,7 @@ size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
 TEST_CASE("/c/availalbe/largest/") // {{{
 {
 	Zakero_MemZone memzone = {};
@@ -959,6 +960,154 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
+
+#endif // }}}
+
+size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	Zakero_MemZone_Block* block  = (Zakero_MemZone_Block*)memzone.memory;
+	size_t                retval = 0;
+
+	do
+	{
+		if(block_is_allocated_(*block) == false)
+		{
+			retval += block->size;
+		}
+
+		block = block->next;
+	} while(block != nullptr);
+
+	return retval;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/availalbe/total/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, memzone
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	size_t available = Zakero_MemZone_Available_Total(memzone);
+
+	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_));
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	Zakero_MemZone_Block* block  = (Zakero_MemZone_Block*)memzone.memory;
+	size_t                retval = 0;
+
+	do
+	{
+		if(block_is_allocated_(*block) == true)
+		{
+			retval = std::max(retval, block->size);
+		}
+
+		block = block->next;
+	} while(block != nullptr);
+
+	return retval;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/used/largest/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, memzone
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	size_t used = Zakero_MemZone_Used_Largest(memzone);
+
+	CHECK(used == 0);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	Zakero_MemZone_Block* block  = (Zakero_MemZone_Block*)memzone.memory;
+	size_t                retval = 0;
+
+	do
+	{
+		if(block_is_allocated_(*block) == true)
+		{
+			retval += block->size;
+		}
+
+		block = block->next;
+	} while(block != nullptr);
+
+	return retval;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/used/total/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, memzone
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	size_t used = Zakero_MemZone_Used_Total(memzone);
+
+	CHECK(used == 0);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
 #endif // }}}
 
 // }}}

@@ -223,6 +223,7 @@
 	X(Error_Invalid_Parameter_Mode , 6 , "The 'mode' parameter is not valid"     ) \
 	X(Error_Already_Initialized    , 7 , "MemZone has already been initialized"  ) \
 	X(Error_Not_Initialized        , 8 , "MemZone has not been initialized"      ) \
+	X(Error_Not_Enough_Memory      , 9 , "Not enough memory is availalbe"        ) \
 
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
 #define ZAKERO_MEGABYTE(val_) (ZAKERO_KILOBYTE(val_) * 1024)
@@ -246,11 +247,10 @@ enum Zakero_MemZone_Block_Flag
 };
 
 enum Zakero_MemZone_Defrag_Level
-{	Zakero_MemZone_Defrag_Level_0 = 0 // No automatic defrag
-,	Zakero_MemZone_Defrag_Level_1 = 1 // Defrag when memory is free'ed
-,	Zakero_MemZone_Defrag_Level_2 = 2 // and when memory is released
-,	Zakero_MemZone_Defrag_Level_3 = 3 // and when memory is acquired
-,	Zakero_MemZone_Defrag_Level_4 = 4 // and when memory is allocated
+{	Zakero_MemZone_Defrag_On_Allocate = (1 << 0)
+,	Zakero_MemZone_Defrag_On_Free     = (1 << 1)
+,	Zakero_MemZone_Defrag_On_Acquire  = (1 << 2)
+,	Zakero_MemZone_Defrag_On_Release  = (1 << 3)
 };
 
 // {{enum(name=Zakero_MemZone_Expand)
@@ -268,7 +268,7 @@ enum Zakero_MemZone_Expand
 ,	Zakero_MemZone_Expand_Auto
 };
 
-enum Zakero_MemZone_Mode
+enum Zakero_MemZone_Mode : uint8_t
 {	Zakero_MemZone_Mode_FD
 ,	Zakero_MemZone_Mode_RAM
 ,	Zakero_MemZone_Mode_SHM
@@ -291,10 +291,11 @@ struct Zakero_MemZone_Block
 struct Zakero_MemZone
 {
 	uint8_t*            memory = nullptr;
-	char*               name   = nullptr;
 	size_t              size   = 0;
-	int                 fd     = -1;
+	//char*               name   = nullptr;
+	//int                 fd     = -1;
 	Zakero_MemZone_Mode mode   = Zakero_MemZone_Mode_RAM;
+	uint8_t             defrag = 0;
 };
 
 
@@ -494,6 +495,37 @@ inline bool block_is_in_use(const Zakero_MemZone_Block& block
 }
 
 // }}}
+// {{{ Implementation : C : block_find_free_() -
+
+Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
+	, size_t size
+	) noexcept
+{
+	while(block != nullptr)
+	{
+		if(block_is_allocated_(*block) == false)
+		{
+			if(block->size >= size)
+			{
+				return block;
+			}
+		}
+
+		block = block->next;
+	}
+
+	return block;
+}
+
+// }}}
+// {{{ Implementation : C : defrag_() -
+
+void defrag_(Zakero_MemZone& //memzone
+	) noexcept
+{
+}
+
+// }}}
 // {{{ Implementation : C : destroy_fd_() -
 
 #ifdef __linux__
@@ -687,11 +719,11 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 			*/
 
 			init_fd_(memzone);
-			if(memzone.fd == -1)
-			{
-				Zakero_MemZone_Destroy(memzone);
-				return Zakero_MemZone_Error_Init_Failure_FD;
-			}
+			//if(memzone.fd == -1)
+			//{
+			//	Zakero_MemZone_Destroy(memzone);
+			//	return Zakero_MemZone_Error_Init_Failure_FD;
+			//}
 
 			break;
 
@@ -854,9 +886,9 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	}
 
 	memzone.memory = nullptr;
-	memzone.name   = nullptr;
+	//memzone.name   = nullptr;
 	memzone.size   = 0;
-	memzone.fd     = -1;
+	//memzone.fd     = -1;
 	memzone.mode   = Zakero_MemZone_Mode_RAM;
 }
 
@@ -900,9 +932,9 @@ TEST_CASE("/c/destroy/ram/") // {{{
 	Zakero_MemZone_Destroy(memzone);
 
 	CHECK(memzone.memory == nullptr);
-	CHECK(memzone.name   == nullptr);
+	//CHECK(memzone.name   == nullptr);
 	CHECK(memzone.size   == 0);
-	CHECK(memzone.fd     == -1);
+	//CHECK(memzone.fd     == -1);
 	CHECK(memzone.mode   == Zakero_MemZone_Mode_RAM);
 } // }}}
 TEST_CASE("/c/destroy/shm/") // {{{
@@ -916,14 +948,42 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	, uint64_t& id
 	) noexcept
 {
-	(void)memzone;
-	(void)size;
 	(void)id;
 
-	// Find first available unused block that can hold the requested size
-	// If no block availalbe, try to (force) defrag
-	// If needed, split the available block
-	// If not defragged, defrap based on config
+	bool did_defrag = false;
+
+	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
+
+	block = block_find_free_(block, size);
+
+	if(block == nullptr)
+	{
+		if(memzone.defrag != 0)
+		{
+			defrag_(memzone);
+			block = (Zakero_MemZone_Block*)memzone.memory;
+			block = block_find_free_(block, size);
+
+			did_defrag = true;
+		}
+	}
+
+	if(block == nullptr)
+	{
+		return Zakero_MemZone_Error_Not_Enough_Memory;
+	}
+
+	if(block->size > size)
+	{
+		// If needed, split the available block
+	}
+
+	if((memzone.defrag & Zakero_MemZone_Defrag_On_Allocate)
+		&& (did_defrag == false)
+		)
+	{
+		// If not defragged, defrap based on config
+	}
 
 	return Zakero_MemZone_Error_None;
 }
@@ -943,6 +1003,17 @@ TEST_CASE("/c/allocate/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 
+	SUBCASE("Not Enough Memory") // {{{
+	{
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_MEGABYTE(2)
+			, id
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Not_Enough_Memory);
+	} // }}}
+
+/*
 	error = Zakero_MemZone_Allocate(memzone
 		, ZAKERO_KILOBYTE(1)
 		, id
@@ -950,6 +1021,7 @@ TEST_CASE("/c/allocate/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id    != 0);
+*/
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

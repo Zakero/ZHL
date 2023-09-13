@@ -275,6 +275,8 @@ enum Zakero_MemZone_Mode : uint8_t
 };
 
 
+// Block can contain upto 8 bytes
+// - This is not accounted for!
 struct Zakero_MemZone_Block
 {
 	uint64_t              id;
@@ -477,6 +479,27 @@ namespace zakero
 
 constexpr size_t zakero_memzone_block_sizeof_ = sizeof(Zakero_MemZone_Block);
 
+// {{{ Implementation : C : block_id_next_() -
+
+uint64_t block_id_next_(Zakero_MemZone_Block* block
+	) noexcept
+{
+	uint64_t retval = 0;
+
+	do
+	{
+		if(retval <= block->id)
+		{
+			retval = block->id + 1;
+		}
+
+		block = block->next;
+	} while(block != nullptr);
+
+	return retval;
+}
+
+// }}}
 // {{{ Implementation : C : block_is_allocated_() -
 
 inline bool block_is_allocated_(const Zakero_MemZone_Block& block
@@ -518,11 +541,40 @@ Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
 }
 
 // }}}
+// {{{ Implementation : C : block_split_() -
+
+void block_split_(Zakero_MemZone_Block* block
+	, size_t size
+	) noexcept
+{
+	Zakero_MemZone_Block* new_block = nullptr;
+
+	if(size < 8)
+	{
+		new_block = block + zakero_memzone_block_sizeof_;
+		new_block->size = block->size - zakero_memzone_block_sizeof_;
+	}
+	else
+	{
+		new_block = block + (size - 8);
+		new_block->size = block->size - (size - 8);
+	}
+
+	new_block->id = 0;
+	new_block->flag = 0;
+	new_block->next = block->next;
+	new_block->prev = block;
+
+	block->next = new_block;
+}
+
+// }}}
 // {{{ Implementation : C : defrag_() -
 
 void defrag_(Zakero_MemZone& //memzone
 	) noexcept
 {
+	printf("%s : Not Implemented\n", __PRETTY_FUNCTION__);
 }
 
 // }}}
@@ -737,7 +789,7 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 	block->flag = 0;
 	block->next = nullptr;
 	block->prev = nullptr;
-	block->size = memzone.size - zakero_memzone_block_sizeof_;
+	block->size = memzone.size - zakero_memzone_block_sizeof_ + 8;
 
 	return Zakero_MemZone_Error_None;
 }
@@ -779,6 +831,20 @@ TEST_CASE("/c/init/") // {{{
 			);
 
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
+	} // }}}
+
+	SUBCASE("Minimum Size") // {{{
+	{
+		error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
+			, 40 // Size
+			, memzone
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
+		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
+		CHECK(Zakero_MemZone_Used_Largest(memzone)      == 0);
+		CHECK(Zakero_MemZone_Used_Total(memzone)        == 0);
 	} // }}}
 #if __HAIKU__ // {{{ Invalid Mode
 	SUBCASE("Invalid Mode: Zakero_MemZone_Mode_FD") // {{{
@@ -948,14 +1014,11 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	, uint64_t& id
 	) noexcept
 {
-	(void)id;
-
 	bool did_defrag = false;
 
 	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
 
 	block = block_find_free_(block, size);
-
 	if(block == nullptr)
 	{
 		if(memzone.defrag != 0)
@@ -973,16 +1036,19 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		return Zakero_MemZone_Error_Not_Enough_Memory;
 	}
 
-	if(block->size > size)
+	if((block->size - size) > zakero_memzone_block_sizeof_)
 	{
-		// If needed, split the available block
+		block_split_(block, size);
 	}
+
+	block->id = block_id_next_((Zakero_MemZone_Block*)memzone.memory);
+	id = block->id;
 
 	if((memzone.defrag & Zakero_MemZone_Defrag_On_Allocate)
 		&& (did_defrag == false)
 		)
 	{
-		// If not defragged, defrap based on config
+		defrag_(memzone);
 	}
 
 	return Zakero_MemZone_Error_None;
@@ -1013,7 +1079,6 @@ TEST_CASE("/c/allocate/") // {{{
 		CHECK(error == Zakero_MemZone_Error_Not_Enough_Memory);
 	} // }}}
 
-/*
 	error = Zakero_MemZone_Allocate(memzone
 		, ZAKERO_KILOBYTE(1)
 		, id
@@ -1021,7 +1086,6 @@ TEST_CASE("/c/allocate/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id    != 0);
-*/
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
@@ -1070,7 +1134,7 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 
 	size_t available = Zakero_MemZone_Available_Largest(memzone);
 
-	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_));
+	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_ + 8));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
@@ -1119,7 +1183,7 @@ TEST_CASE("/c/availalbe/total/") // {{{
 
 	size_t available = Zakero_MemZone_Available_Total(memzone);
 
-	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_));
+	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_ + 8));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

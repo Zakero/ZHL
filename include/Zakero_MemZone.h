@@ -308,12 +308,17 @@ struct Zakero_MemZone_Block
 
 struct Zakero_MemZone
 {
-	uint8_t*            memory = nullptr;
-	size_t              size   = 0;
+	uint8_t*            memory  = nullptr;
+	size_t              size    = 0;
+	uint64_t            next_id = 1;
 	//char*               name   = nullptr;
 	//int                 fd     = -1;
+
+	// TODO: vvvv merge into a single uint64_t vvvv
 	Zakero_MemZone_Mode mode   = Zakero_MemZone_Mode_RAM;
 	uint8_t             defrag = 0;
+	bool                auto_expand = false;
+	// TODO: ^^^^ merge into a single uint64_t ^^^^
 };
 
 
@@ -494,6 +499,24 @@ namespace zakero
 
 constexpr size_t zakero_memzone_block_sizeof_ = sizeof(Zakero_MemZone_Block);
 
+// {{{ Implementation : C : block_init_() -
+
+void block_init_(Zakero_MemZone_Block* block
+	, size_t size
+	, Zakero_MemZone_Block* prev
+	, Zakero_MemZone_Block* next
+	) noexcept
+{
+	block->id   = 0;
+	block->flag = 0;
+	block->next = next;
+	block->prev = prev;
+	block->size = size;
+
+	memset(block->data, 0, block->size);
+}
+
+// }}}
 // {{{ Implementation : C : memzone_block_first_() -
 
 Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
@@ -505,24 +528,56 @@ Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
 }
 
 // }}}
-// {{{ Implementation : C : block_id_generate_() -
+// {{{ Implementation : C : memzone_block_last_() -
 
-uint64_t block_id_generate_(Zakero_MemZone_Block* block
+Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 	) noexcept
 {
-	uint64_t retval = 0;
+	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
 
-	do
+	while(block->next != nullptr)
 	{
-		if(retval <= block->id)
-		{
-			retval = block->id + 1;
-		}
-
 		block = block->next;
-	} while(block != nullptr);
+	}
 
-	return retval;
+	return block;
+}
+
+// }}}
+// {{{ Implementation : C : memzone_expand_() -
+
+Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
+	, size_t size
+	) noexcept
+{
+	uint8_t* memory = (uint8_t*)realloc(memzone.memory, memzone.size + size);
+
+	if(memory == nullptr)
+	{
+		return nullptr;
+	}
+
+	memzone.memory = memory;
+
+	Zakero_MemZone_Block* block = memzone_block_last_(memzone);
+	Zakero_MemZone_Block* block_next = block + block->size - 8;
+	block_init_(block_next, size, block, nullptr);
+	block->next = block_next;
+
+	return block_next;
+}
+
+// }}}
+// {{{ Implementation : C : memzone_next_id_() -
+
+uint64_t memzone_next_id_(Zakero_MemZone& memzone
+	) noexcept
+{
+	uint64_t id = memzone.next_id;
+
+	memzone.next_id++;
+
+	return id;
 }
 
 // }}}
@@ -647,24 +702,6 @@ Zakero_MemZone_Block* block_find_last_allocated_(Zakero_MemZone_Block* block
 	}
 
 	return block;
-}
-
-// }}}
-// {{{ Implementation : C : block_init_() -
-
-void block_init_(Zakero_MemZone_Block* block
-	, size_t size
-	, Zakero_MemZone_Block* prev
-	, Zakero_MemZone_Block* next
-	) noexcept
-{
-	block->id   = 0;
-	block->flag = 0;
-	block->next = next;
-	block->prev = prev;
-	block->size = size;
-
-	memset(block->data, 0, block->size);
 }
 
 // }}}
@@ -993,6 +1030,8 @@ static bool mode_is_supported_(const Zakero_MemZone_Mode mode
 
 // }}}
 
+// {{{ Implementation : C : Zakero_MemZone_Init() -
+
 int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 	, const size_t    size
 	, Zakero_MemZone& memzone
@@ -1113,11 +1152,10 @@ TEST_CASE("/c/init/") // {{{
 
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
 	} // }}}
-
 	SUBCASE("Minimum Size") // {{{
 	{
 		error = Zakero_MemZone_Init(Zakero_MemZone_Mode_RAM
-			, 40 // Size
+			, zakero_memzone_block_sizeof_ // Size
 			, memzone
 			);
 
@@ -1209,6 +1247,9 @@ TEST_CASE("/c/init/shm/") // {{{
 
 #endif // }}}
 
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Destroy() -
+
 void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	) noexcept
 {
@@ -1290,6 +1331,9 @@ TEST_CASE("/c/destroy/shm/") // {{{
 
 #endif // }}}
 
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Allocate() -
+
 int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	, size_t    size
 	, uint64_t& id
@@ -1305,17 +1349,28 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	bool did_defrag = false;
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-
 	block = block_find_free_(block, size, Zakero_MemZone_Block_Find_Forward);
+
 	if(block == nullptr)
 	{
-		if(memzone.defrag != 0)
+		if(Zakero_MemZone_Available_Total(memzone) < size)
+		{
+			block = memzone_block_first_(memzone);
+			block = block_find_in_use_(block);
+			if((memzone.auto_expand == true)
+				&& (block == nullptr)
+				)
+			{
+				block = memzone_expand_(memzone, memzone.size + size);
+			}
+		}
+		else if(memzone.defrag != 0)
 		{
 			defrag_(memzone, 0);
-			block = (Zakero_MemZone_Block*)memzone.memory;
-			block = block_find_free_(block, size, Zakero_MemZone_Block_Find_Forward);
-
 			did_defrag = true;
+
+			block = memzone_block_first_(memzone);
+			block = block_find_free_(block, size, Zakero_MemZone_Block_Find_Forward);
 		}
 	}
 
@@ -1329,7 +1384,7 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		block_split_(block, size);
 	}
 
-	block->id = block_id_generate_((Zakero_MemZone_Block*)memzone.memory);
+	block->id = memzone_next_id_(memzone);
 	id = block->id;
 
 	if((memzone.defrag & Zakero_MemZone_Defrag_On_Allocate)
@@ -1382,6 +1437,9 @@ TEST_CASE("/c/allocate/") // {{{
 // TEST_CASE("/c/allocate/defrag-any")
 // TEST_CASE("/c/allocate/defrag-none")
 #endif // }}}
+
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Free() -
 
 int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	, uint64_t id
@@ -1482,6 +1540,9 @@ TEST_CASE("/c/free/") // {{{
 
 #endif // }}}
 
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Defrag() -
+
 void Zakero_MemZone_Defrag(Zakero_MemZone& memzone
 	) noexcept
 {
@@ -1513,6 +1574,9 @@ TEST_CASE("/c/defrag/") // {{{
 } // }}}
 
 #endif // }}}
+
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Available_Largest() -
 
 size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 	) noexcept
@@ -1563,6 +1627,9 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 
 #endif // }}}
 
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Available_Total() -
+
 size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
 	) noexcept
 {
@@ -1611,6 +1678,9 @@ TEST_CASE("/c/availalbe/total/") // {{{
 } // }}}
 
 #endif // }}}
+
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Used_Largest() -
 
 size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
 	) noexcept
@@ -1661,6 +1731,9 @@ TEST_CASE("/c/used/largest/") // {{{
 
 #endif // }}}
 
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Used_Total() -
+
 size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	) noexcept
 {
@@ -1710,6 +1783,7 @@ TEST_CASE("/c/used/total/") // {{{
 
 #endif // }}}
 
+// }}}
 // }}}
 // {{{ Implementation : C++
 namespace zakero

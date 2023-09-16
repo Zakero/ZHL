@@ -533,7 +533,7 @@ void block_init_(Zakero_MemZone_Block* block
 // }}}
 // {{{ Implementation : C : memzone_block_first_() -
 
-Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
+inline Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
 	) noexcept
 {
 	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
@@ -1400,6 +1400,30 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
+TEST_CASE("/c/destroy/ram/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, Zakero_MemZone_Expand_None
+		, 0 // Defrag Disabled
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(memzone.memory != nullptr);
+
+	Zakero_MemZone_Destroy(memzone);
+
+	CHECK(memzone.memory  == nullptr);
+	CHECK(memzone.size    == 0);
+	CHECK(memzone.next_id == 0);
+	CHECK(memzone.mode    == 0);
+	CHECK(memzone.expand  == 0);
+	CHECK(memzone.defrag  == 0);
+} // }}}
 TEST_CASE("/c/destroy/fd/") // {{{
 {
 #if __linux__
@@ -1423,29 +1447,6 @@ TEST_CASE("/c/destroy/fd/") // {{{
 	{
 	}
 #endif
-} // }}}
-TEST_CASE("/c/destroy/ram/") // {{{
-{
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
-
-	error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
-		, Zakero_MemZone_Expand_None
-		, 0 // Defrag Disabled
-		);
-
-	CHECK(error == Zakero_MemZone_Error_None);
-	CHECK(memzone.memory != nullptr);
-
-	Zakero_MemZone_Destroy(memzone);
-
-	CHECK(memzone.memory == nullptr);
-	//CHECK(memzone.name   == nullptr);
-	CHECK(memzone.size   == 0);
-	//CHECK(memzone.fd     == -1);
-	CHECK(memzone.mode   == Zakero_MemZone_Mode_RAM);
 } // }}}
 TEST_CASE("/c/destroy/shm/") // {{{
 {

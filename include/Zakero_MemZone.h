@@ -278,8 +278,8 @@ enum Zakero_MemZone_Expand
 };
 
 enum Zakero_MemZone_Mode : uint8_t
-{	Zakero_MemZone_Mode_FD
-,	Zakero_MemZone_Mode_RAM
+{	Zakero_MemZone_Mode_RAM = 0
+,	Zakero_MemZone_Mode_FD
 ,	Zakero_MemZone_Mode_SHM
 };
 
@@ -311,17 +311,18 @@ struct Zakero_MemZone_Block
 
 struct Zakero_MemZone
 {
-	uint8_t*            memory  = nullptr;
-	size_t              size    = 0;
-	uint64_t            next_id = 1;
-	//char*               name   = nullptr;
-	//int                 fd     = -1;
+	uint8_t* memory  = nullptr;
+	size_t   size    = 0;
+	uint64_t next_id = 0;
 
 	// TODO: vvvv merge into a single uint64_t vvvv
-	Zakero_MemZone_Mode   mode   = Zakero_MemZone_Mode_RAM;
-	Zakero_MemZone_Expand expand = Zakero_MemZone_Expand_None;
-	uint8_t               defrag = 0;
+	uint8_t  mode    = Zakero_MemZone_Mode_RAM;
+	uint8_t  expand  = Zakero_MemZone_Expand_None;
+	uint8_t  defrag  = 0;
 	// TODO: ^^^^ merge into a single uint64_t ^^^^
+
+	//char*  name    = nullptr;
+	//int    fd      = -1;
 };
 
 
@@ -501,7 +502,17 @@ namespace zakero
 // {{{ Implementation : C -
 
 constexpr size_t zakero_memzone_block_sizeof_ = sizeof(Zakero_MemZone_Block);
+constexpr size_t zakero_memzone_sizeof_header_ = sizeof(Zakero_MemZone_Block) - sizeof(uint64_t);
 
+// {{{ Implementation : C : round_to_64bit() -
+
+inline size_t round_to_64bit(size_t size
+	) noexcept
+{
+	return ((size + 7) & ~0x07);
+}
+
+// }}}
 // {{{ Implementation : C : block_init_() -
 
 void block_init_(Zakero_MemZone_Block* block
@@ -547,9 +558,20 @@ Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 }
 
 // }}}
-// {{{ Implementation : C : memzone_expand_() -
+// {{{ Implementation : C : memzone_expand_fd_() -
 
-Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
+Zakero_MemZone_Block* memzone_expand_fd_(Zakero_MemZone& //memzone
+	, size_t //size
+	) noexcept
+{
+	fprintf(stderr, "%s: Not Implemented\n", __PRETTY_FUNCTION__);
+	return nullptr;
+}
+
+// }}}
+// {{{ Implementation : C : memzone_expand_ram_() -
+
+Zakero_MemZone_Block* memzone_expand_ram_(Zakero_MemZone& memzone
 	, size_t size
 	) noexcept
 {
@@ -568,6 +590,17 @@ Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
 	block->next = block_next;
 
 	return block_next;
+}
+
+// }}}
+// {{{ Implementation : C : memzone_expand_shm_() -
+
+Zakero_MemZone_Block* memzone_expand_shm_(Zakero_MemZone& //memzone
+	, size_t //size
+	) noexcept
+{
+	fprintf(stderr, "%s: Not Implemented\n", __PRETTY_FUNCTION__);
+	return nullptr;
 }
 
 // }}}
@@ -1087,9 +1120,9 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 		return Zakero_MemZone_Error_Already_Initialized;
 	}
 
-	if(size < zakero_memzone_block_sizeof_)
+	if(size == 0)
 	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'size' must be greater than %lu", zakero_memzone_block_sizeof_);
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'size' must be greater than 0");
 		return Zakero_MemZone_Error_Invalid_Parameter_Size;
 	}
 
@@ -1100,9 +1133,10 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.size   = size;
-	memzone.expand = expand;
-	memzone.defrag = defrag;
+	memzone.size    = round_to_64bit(size) + zakero_memzone_sizeof_header_;
+	memzone.next_id = 1;
+	memzone.expand  = expand;
+	memzone.defrag  = defrag;
 
 	switch(mode)
 	{
@@ -1167,54 +1201,6 @@ TEST_CASE("/c/init/") // {{{
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 
-#if 0 // Name only applies to FD based memory
-	SUBCASE("Invalid Name: Null") // {{{
-	{
-		error = Zakero_MemZone_Init(nullptr
-			, Zakero_MemZone_Mode_FD
-			, ZAKERO_MEGABYTE(1)
-			, memzone
-			);
-
-		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
-	} // }}}
-	SUBCASE("Invalid Name: Empty") // {{{
-	{
-		error = Zakero_MemZone_Init(""
-			, Zakero_MemZone_Mode_RAM
-			, ZAKERO_MEGABYTE(1)
-			, memzone
-			);
-
-		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Name);
-	} // }}}
-#endif
-	SUBCASE("Invalid Size: 0") // {{{
-	{
-		error = Zakero_MemZone_Init(memzone
-			, Zakero_MemZone_Mode_RAM
-			, 0 // Size
-			, Zakero_MemZone_Expand_None
-			, 0 // Defrag Disabled
-			);
-
-		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
-	} // }}}
-	SUBCASE("Minimum Size") // {{{
-	{
-		error = Zakero_MemZone_Init(memzone
-			, Zakero_MemZone_Mode_RAM
-			, zakero_memzone_block_sizeof_ // Size
-			, Zakero_MemZone_Expand_None
-			, 0 // Defrag Disabled
-			);
-
-		CHECK(error == Zakero_MemZone_Error_None);
-		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
-		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
-		CHECK(Zakero_MemZone_Used_Largest(memzone)      == 0);
-		CHECK(Zakero_MemZone_Used_Total(memzone)        == 0);
-	} // }}}
 #if __HAIKU__ // {{{ Invalid Mode
 	SUBCASE("Invalid Mode: Zakero_MemZone_Mode_FD") // {{{
 	{
@@ -1239,6 +1225,62 @@ TEST_CASE("/c/init/") // {{{
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Mode);
 	} // }}}
 #endif // }}}
+	SUBCASE("Invalid Size: 0") // {{{
+	{
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, 0 // Size
+			, Zakero_MemZone_Expand_None
+			, 0 // Defrag Disabled
+			);
+
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Size);
+	} // }}}
+	SUBCASE("64-bit Rounding: 1 -> 8") // {{{
+	{
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, 1 // Size
+			, Zakero_MemZone_Expand_None
+			, 0 // Defrag Disabled
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
+		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
+		CHECK(Zakero_MemZone_Used_Largest(memzone)      == 0);
+		CHECK(Zakero_MemZone_Used_Total(memzone)        == 0);
+	} // }}}
+	SUBCASE("64-bit Rounding: 7 -> 8") // {{{
+	{
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, 7 // Size
+			, Zakero_MemZone_Expand_None
+			, 0 // Defrag Disabled
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
+		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
+		CHECK(Zakero_MemZone_Used_Largest(memzone)      == 0);
+		CHECK(Zakero_MemZone_Used_Total(memzone)        == 0);
+	} // }}}
+	SUBCASE("64-bit Rounding: 10 -> 16") // {{{
+	{
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, 10 // Size
+			, Zakero_MemZone_Expand_None
+			, 0 // Defrag Disabled
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+		CHECK(Zakero_MemZone_Available_Largest(memzone) == 16);
+		CHECK(Zakero_MemZone_Available_Total(memzone)   == 16);
+		CHECK(Zakero_MemZone_Used_Largest(memzone)      == 0);
+		CHECK(Zakero_MemZone_Used_Total(memzone)        == 0);
+	} // }}}
 	SUBCASE("Already Initialized") // {{{
 	{
 		error = Zakero_MemZone_Init(memzone
@@ -1264,7 +1306,11 @@ TEST_CASE("/c/init/") // {{{
 } // }}}
 TEST_CASE("/c/init/fd/") // {{{
 {
-#if __linux__
+	if(mode_is_supported_(Zakero_MemZone_Mode_FD) == false)
+	{
+		return;
+	}
+
 	//const char*    name    = "MemZone_c_init_fd";
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
@@ -1278,16 +1324,20 @@ TEST_CASE("/c/init/fd/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 	//CHECK(strcmp(memzone.name, name) == 0);
-	CHECK(memzone.fd != -1);
+	//CHECK(memzone.fd != -1);
 	//CHECK(memzone.memory != nullptr);
 
 	SUBCASE("Already initialized")
 	{
 	}
-#endif
 } // }}}
 TEST_CASE("/c/init/ram/") // {{{
 {
+	if(mode_is_supported_(Zakero_MemZone_Mode_RAM) == false)
+	{
+		return;
+	}
+
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 
@@ -1305,6 +1355,11 @@ TEST_CASE("/c/init/ram/") // {{{
 } // }}}
 TEST_CASE("/c/init/shm/") // {{{
 {
+	if(mode_is_supported_(Zakero_MemZone_Mode_SHM) == false)
+	{
+		return;
+	}
+
 } // }}}
 
 #endif // }}}
@@ -1335,11 +1390,12 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 			break;
 	}
 
-	memzone.memory = nullptr;
-	//memzone.name   = nullptr;
-	memzone.size   = 0;
-	//memzone.fd     = -1;
-	memzone.mode   = Zakero_MemZone_Mode_RAM;
+	memzone.memory  = nullptr;
+	memzone.size    = 0;
+	memzone.next_id = 0;
+	memzone.mode    = 0;
+	memzone.expand  = 0;
+	memzone.defrag  = 0;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -1423,11 +1479,23 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		{
 			block = memzone_block_first_(memzone);
 			block = block_find_in_use_(block, Zakero_MemZone_Block_Find_Forward);
+
 			if((memzone.expand != Zakero_MemZone_Expand_None)
 				&& (block == nullptr)
 				)
 			{
-				block = memzone_expand_(memzone, memzone.size + size);
+				switch(memzone.mode)
+				{
+					case Zakero_MemZone_Mode_FD:
+						block = memzone_expand_fd_(memzone, memzone.size + size);
+						break;
+					case Zakero_MemZone_Mode_RAM:
+						block = memzone_expand_ram_(memzone, memzone.size + size);
+						break;
+					case Zakero_MemZone_Mode_SHM:
+						block = memzone_expand_shm_(memzone, memzone.size + size);
+						break;
+				}
 			}
 		}
 		else if(memzone.defrag != 0)
@@ -1694,7 +1762,7 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 
 	size_t available = Zakero_MemZone_Available_Largest(memzone);
 
-	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_ + 8));
+	CHECK(available == ZAKERO_MEGABYTE(1));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
@@ -1748,7 +1816,7 @@ TEST_CASE("/c/availalbe/total/") // {{{
 
 	size_t available = Zakero_MemZone_Available_Total(memzone);
 
-	CHECK(available == (ZAKERO_MEGABYTE(1) - zakero_memzone_block_sizeof_ + 8));
+	CHECK(available == ZAKERO_MEGABYTE(1));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

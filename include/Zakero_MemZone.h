@@ -1066,11 +1066,11 @@ int Zakero_MemZone_Init(const Zakero_MemZone_Mode mode
 	}
 
 	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
-	block->id   = 0;
-	block->flag = 0;
-	block->next = nullptr;
-	block->prev = nullptr;
-	block->size = memzone.size - zakero_memzone_block_sizeof_ + 8;
+	block_init_(block
+		, memzone.size - zakero_memzone_block_sizeof_ + 8
+		, nullptr
+		, nullptr
+		);
 
 	return Zakero_MemZone_Error_None;
 }

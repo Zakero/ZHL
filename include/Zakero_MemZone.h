@@ -280,9 +280,9 @@ enum Zakero_MemZone_Defrag_
 enum Zakero_MemZone_Expand
 {	Zakero_MemZone_Expand_None   = 0
 ,	Zakero_MemZone_Expand_To_Fit = 1
-//,	Zakero_MemZone_Expand_10     = 10
-//,	Zakero_MemZone_Expand_33     = 33
-//,	Zakero_MemZone_Expand_50     = 2
+//,	Zakero_MemZone_Expand_10     = 10 /* 10% extra growth */
+//,	Zakero_MemZone_Expand_33     = 3  /* 33% extra growth */
+//,	Zakero_MemZone_Expand_50     = 2  /* 50% extra growth */
 };
 
 enum Zakero_MemZone_Mode : uint8_t
@@ -300,16 +300,6 @@ struct Zakero_MemZone_Block
 	uint64_t              flag;
 	Zakero_MemZone_Block* next;
 	Zakero_MemZone_Block* prev;
-	union
-	{
-		Zakero_MemZone_Block* next_allocated;
-		Zakero_MemZone_Block* next_free;
-	};
-	union
-	{
-		Zakero_MemZone_Block* prev_allocated;
-		Zakero_MemZone_Block* prev_free;
-	};
 	size_t                size;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -359,9 +349,6 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	, uint64_t id
 	)
 void Zakero_MemZone_Release(Zakero_MemZone& memzone
-	, uint64_t id
-	)
-size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 	, uint64_t id
 	)
 size_t Zakero_MemZone_Realloc(Zakero_MemZone& memzone
@@ -510,7 +497,7 @@ namespace zakero
 // }}}
 // {{{ Implementation : C -
 
-constexpr size_t zakero_memzone_block_sizeof_ = sizeof(Zakero_MemZone_Block);
+constexpr size_t zakero_memzone_sizeof_block_ = sizeof(Zakero_MemZone_Block);
 constexpr size_t zakero_memzone_sizeof_header_ = sizeof(Zakero_MemZone_Block) - sizeof(uint64_t);
 
 // {{{ Implementation : C : round_to_64bit() -
@@ -615,23 +602,50 @@ Zakero_MemZone_Block* block_find_in_use_(Zakero_MemZone_Block* block
 }
 
 // }}}
+// {{{ Implementation : C : block_is_free_() -
+
+inline bool block_is_free_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	return ((block->flag & Zakero_MemZone_Block_Flag_Allocated) == 0);
+}
+
+// }}}
 // {{{ Implementation : C : memzone_expand_ram_() -
 
 Zakero_MemZone_Block* memzone_expand_ram_(Zakero_MemZone& memzone
 	, size_t size
 	) noexcept
 {
-	uint8_t* memory = (uint8_t*)realloc(memzone.memory, memzone.size + size);
+	size_t new_size = memzone.size + size;
+	bool   append   = false;
+
+	Zakero_MemZone_Block* block = memzone_block_last_(memzone);
+	if(block_is_free_(block) == true)
+	{
+		append    = true;
+		new_size -= block->size;
+	}
+
+	uint8_t* memory = (uint8_t*)realloc(memzone.memory, new_size);
 
 	if(memory == nullptr)
 	{
 		return nullptr;
 	}
 
-	memzone.memory = memory;
+	memzone.memory  = memory;
+	memzone.size   += size;
 
-	Zakero_MemZone_Block* block = memzone_block_last_(memzone);
-	Zakero_MemZone_Block* block_next = block + block->size - 8;
+	block = memzone_block_last_(memzone);
+	if(append == true)
+	{
+		block->size = size;
+		return block;
+	}
+
+	Zakero_MemZone_Block* block_next = (Zakero_MemZone_Block*)
+		((uint64_t)block + zakero_memzone_sizeof_block_ + block->size);
 	block_init_(block_next, size, block, nullptr);
 	block->next = block_next;
 
@@ -705,6 +719,26 @@ uint64_t memzone_next_id_(Zakero_MemZone& memzone
 }
 
 // }}}
+// {{{ Implementation : C : block_dump_() -
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+void block_dump_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	printf("---------------------------------------\n");
+	printf("Block: %lu %016lx <- %016lx -> %016lx\n"
+		, block->id
+		, (uint64_t)block->prev
+		, (uint64_t)block
+		, (uint64_t)block->next
+		);
+	printf("Block Flag  : %016lx\n", block->flag);
+	printf("Block Data  : %016lx (%lu)\n", (uint64_t)&block->data, block->size);
+	printf("Block End   : %016lx\n", (uint64_t)(block->data + block->size));
+}
+
+#endif // }}}
+// }}}
 // {{{ Implementation : C : block_is_allocated_() -
 
 inline bool block_is_allocated_(const Zakero_MemZone_Block* block
@@ -714,21 +748,52 @@ inline bool block_is_allocated_(const Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ Implementation : C : block_is_free_() -
-
-inline bool block_is_free_(const Zakero_MemZone_Block* block
-	) noexcept
-{
-	return ((block->flag & Zakero_MemZone_Block_Flag_Allocated) == 0);
-}
-
-// }}}
 // {{{ Implementation : C : block_is_clear_on_free_() -
 
 inline bool block_is_clear_on_free_(const Zakero_MemZone_Block* block
 	) noexcept
 {
 	return (bool)(block->flag & Zakero_MemZone_Block_Flag_Clear_On_Free);
+}
+
+// }}}
+// {{{ Implementation : C : block_find_id_() -
+
+Zakero_MemZone_Block* block_find_id_(Zakero_MemZone_Block* block
+	, uint64_t                  id
+	, Zakero_MemZone_Block_Find direction
+	) noexcept
+{
+	if(direction == Zakero_MemZone_Block_Find_Forward)
+	{
+		while(block != nullptr)
+		{
+			if(block->id == id)
+			{
+				return block;
+			}
+
+			block = block->next;
+		}
+
+		return block;
+	}
+	else if(direction == Zakero_MemZone_Block_Find_Backward)
+	{
+		while(block != nullptr)
+		{
+			if(block->id == id)
+			{
+				return block;
+			}
+
+			block = block->prev;
+		}
+
+		return block;
+	}
+
+	return nullptr;
 }
 
 // }}}
@@ -828,7 +893,7 @@ void block_merge_with_next_(Zakero_MemZone_Block* block
 	Zakero_MemZone_Block* block_next = block->next;
 
 	block->next  = block_next->next;
-	block->size += block_next->size + zakero_memzone_block_sizeof_ - 8;
+	block->size += block_next->size + zakero_memzone_sizeof_block_ - 8;
 }
 
 // }}}
@@ -878,15 +943,15 @@ Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 
 	if(size < 8)
 	{
-		block_next = block + zakero_memzone_block_sizeof_;
-		block_next->size = block->size - zakero_memzone_block_sizeof_;
+		block_next = block + zakero_memzone_sizeof_block_;
+		block_next->size = block->size - zakero_memzone_sizeof_block_;
 
 		block->size = 8;
 	}
 	else
 	{
 		block_next = block + (size - 8);
-		block_next->size = block->size - size - zakero_memzone_block_sizeof_ + 8;
+		block_next->size = block->size - size - zakero_memzone_sizeof_block_ + 8;
 
 		block->size = size;
 	}
@@ -1226,7 +1291,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 
 	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
 	block_init_(block
-		, memzone.size - zakero_memzone_block_sizeof_ + 8
+		, memzone.size - zakero_memzone_sizeof_block_ + 8
 		, nullptr
 		, nullptr
 		);
@@ -1542,14 +1607,19 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		}
 	}
 
-	if((block->size - size) > zakero_memzone_block_sizeof_)
+	if(block == nullptr)
+	{
+		return Zakero_MemZone_Error_Not_Enough_Memory;
+	}
+
+	if((block->size - size) > zakero_memzone_sizeof_block_)
 	{
 		block_split_(block, size);
 	}
 
-	block->id   = memzone_next_id_(memzone);
+	id          = memzone_next_id_(memzone);
+	block->id   = id;
 	block->flag = Zakero_MemZone_Block_Flag_Allocated;
-	id = block->id;
 
 	if(memzone.defrag & Zakero_MemZone_Defrag_On_Allocate)
 	{
@@ -1596,75 +1666,82 @@ TEST_CASE("/c/allocate/") // {{{
 	} // }}}
 
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_KILOBYTE(1)
 		, id
 		);
 
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id    != 0);
+	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
-TEST_CASE("/c/allocate/expand/") // {{{
+TEST_CASE("/c/allocate/expand/to-fit/") // {{{
 {
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 
-	SUBCASE("Expand To Fit") // {{{
-	{
-		error = Zakero_MemZone_Init(memzone
-			, Zakero_MemZone_Mode_RAM
-			, ZAKERO_KILOBYTE(1)
-			, Zakero_MemZone_Expand_To_Fit
-			, 0 // Defrag Disabled
-			);
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_KILOBYTE(1)
+		, Zakero_MemZone_Expand_To_Fit
+		, 0 // Defrag Disabled
+		);
 
-		CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(error == Zakero_MemZone_Error_None);
 
-		uint64_t id_1 = 0;
-		error = Zakero_MemZone_Allocate(memzone
-			, ZAKERO_KILOBYTE(2)
-			, id_1
-			);
+	uint64_t id_1 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(2)
+		, id_1
+		);
 
-		CHECK(error == Zakero_MemZone_Error_None);
-		CHECK(id_1  != 0);
-		CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Used_Total(memzone));
-		CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
-		CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Size_Of(memzone, id_1));
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id_1  != 0);
+	CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Used_Total(memzone));
+	CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
+	CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Size_Of(memzone, id_1));
 
-		error = Zakero_MemZone_Free(memzone, id_1);
+	error = Zakero_MemZone_Free(memzone, id_1);
 
-		error = Zakero_MemZone_Allocate(memzone
-			, ZAKERO_KILOBYTE(1)
-			, id_1
-			);
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(1)
+		, id_1
+		);
 
-		uint64_t id_2 = 0;
-		error = Zakero_MemZone_Allocate(memzone
-			, ZAKERO_KILOBYTE(1)
-			, id_2
-			);
+	uint64_t id_2 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(1)
+		, id_2
+		);
 
-		uint64_t id_3 = 0;
-		error = Zakero_MemZone_Allocate(memzone
-			, ZAKERO_KILOBYTE(1)
-			, id_3
-			);
+	uint64_t id_3 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(1)
+		, id_3
+		);
 
-		CHECK(ZAKERO_KILOBYTE(3) <= Zakero_MemZone_Used_Total(memzone));
-		CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
-		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_1));
-		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_2));
-		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_3));
-	} // }}}
+	CHECK(ZAKERO_KILOBYTE(3) <= Zakero_MemZone_Used_Total(memzone));
+	CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
+	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_1));
+	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_2));
+	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_3));
 
 	Zakero_MemZone_Destroy(memzone);
+} // }}}
+TEST_CASE("/c/allocate/expand/10/") // {{{
+{
+} // }}}
+TEST_CASE("/c/allocate/expand/33/") // {{{
+{
+} // }}}
+TEST_CASE("/c/allocate/expand/50/") // {{{
+{
 } // }}}
 // TEST_CASE("/c/allocate/defrag-trigger")
 // TEST_CASE("/c/allocate/defrag-any")
 // TEST_CASE("/c/allocate/defrag-none")
-// TEST_CASE("/c/allocate/expand-to-fit")
+
 #endif // }}}
 
 // }}}

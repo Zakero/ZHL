@@ -343,11 +343,9 @@ struct Zakero_MemZone
 [[nodiscard]] size_t   Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t   Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t   Zakero_MemZone_Used_Total(Zakero_MemZone&) noexcept;
+[[nodiscard]] size_t   Zakero_MemZone_Size_Of(Zakero_MemZone&, uint64_t) noexcept;
 
 /*
-size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
-	, uint64_t id
-	)
 
 int Zakero_MemZone_Init_From(Zakero_MemZone& //memzone
 	, const Zakero_MemZone& //memzone
@@ -1958,7 +1956,7 @@ size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	}
 #endif
 
-	Zakero_MemZone_Block* block  = (Zakero_MemZone_Block*)memzone.memory;
+	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
 	size_t                retval = 0;
 
 	do
@@ -1995,6 +1993,65 @@ TEST_CASE("/c/used/total/") // {{{
 	size_t used = Zakero_MemZone_Used_Total(memzone);
 
 	CHECK(used == 0);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+// }}}
+// {{{ Implementation : C : Zakero_MemZone_Size_Of() -
+
+size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
+	, uint64_t id
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
+
+	while(block->id != id)
+	{
+		block = block->next;
+
+		if(block == nullptr)
+		{
+			return 0;
+		}
+	}
+
+	return block->size;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/size-of/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+	uint64_t       id      = 0;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_KILOBYTE(1)
+		, Zakero_MemZone_Expand_None
+		, 0 // Defrag Disabled
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_KILOBYTE(1)
+		, id
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(Zakero_MemZone_Size_Of(memzone, id) == ZAKERO_KILOBYTE(1));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

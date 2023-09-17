@@ -684,22 +684,24 @@ Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_in_use_(block, Zakero_MemZone_Block_Find_Forward);
 
-	if(block == nullptr)
+	if(block != nullptr)
 	{
-		size_t mem_size = round_to_64bit(size) + zakero_memzone_sizeof_header_;
+		return nullptr;
+	}
 
-		switch(memzone.mode)
-		{
-			case Zakero_MemZone_Mode_RAM:
-				block = memzone_expand_ram_(memzone, mem_size);
-				break;
-			case Zakero_MemZone_Mode_FD:
-				block = memzone_expand_fd_(memzone, mem_size);
-				break;
-			case Zakero_MemZone_Mode_SHM:
-				block = memzone_expand_shm_(memzone, mem_size);
-				break;
-		}
+	size_t mem_size = round_to_64bit(size) + zakero_memzone_sizeof_header_;
+
+	switch(memzone.mode)
+	{
+		case Zakero_MemZone_Mode_RAM:
+			block = memzone_expand_ram_(memzone, mem_size);
+			break;
+		case Zakero_MemZone_Mode_FD:
+			block = memzone_expand_fd_(memzone, mem_size);
+			break;
+		case Zakero_MemZone_Mode_SHM:
+			block = memzone_expand_shm_(memzone, mem_size);
+			break;
 	}
 
 	return block;
@@ -1714,7 +1716,6 @@ TEST_CASE("/c/allocate/expand/to-fit/") // {{{
 		);
 
 	CHECK(error == Zakero_MemZone_Error_None);
-#if 0
 	CHECK(id_1  != 0);
 	CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Used_Total(memzone));
 	CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
@@ -1744,7 +1745,6 @@ TEST_CASE("/c/allocate/expand/to-fit/") // {{{
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_1));
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_2));
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_3));
-#endif
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

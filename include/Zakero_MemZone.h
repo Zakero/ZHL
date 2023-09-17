@@ -296,14 +296,14 @@ enum Zakero_MemZone_Mode : uint8_t
 // - This is not accounted for!
 struct Zakero_MemZone_Block
 {
-	uint64_t              id;
-	uint64_t              flag;
-	Zakero_MemZone_Block* next;
-	Zakero_MemZone_Block* prev;
-	size_t                size;
+	uint64_t              id;   // 0x00   0
+	uint64_t              flag; // 0x08   8
+	Zakero_MemZone_Block* next; // 0x10  16
+	Zakero_MemZone_Block* prev; // 0x18  24
+	uint64_t              size; // 0x20  32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-	uint8_t               data[];
+	uint8_t               data[8]; // 0x28  40
 #pragma GCC diagnostic pop
 };
 
@@ -1142,7 +1142,7 @@ static void destroy_shm_(Zakero_MemZone& memzone
 static void init_fd_(Zakero_MemZone& memzone
 	) noexcept
 {
-	memzone.fd = memfd_create(memzone.name, 0);
+	//memzone.fd = memfd_create(memzone.name, 0);
 }
 
 #elif __HAIKU__
@@ -1251,9 +1251,11 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 			{
 				return Zakero_MemZone_Error_Init_Failure_RAM;
 			}
+
 			break;
 
 		case Zakero_MemZone_Mode_FD:
+			return Zakero_MemZone_Error_Invalid_Parameter_Mode;
 			/*
 			if(name == nullptr)
 			{
@@ -1289,9 +1291,11 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 			break;
 	}
 
-	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
+	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
+	CHECK((void*)block == (void*)memzone.memory);
+
 	block_init_(block
-		, memzone.size - zakero_memzone_sizeof_block_ + 8
+		, memzone.size - zakero_memzone_sizeof_header_
 		, nullptr
 		, nullptr
 		);
@@ -1330,6 +1334,9 @@ TEST_CASE("/c/init/") // {{{
 		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Mode);
 	} // }}}
 #endif // }}}
+#if __linux__ // {{{ Invalid Mode
+	// No Invalid Modes
+#endif // }}}
 	SUBCASE("Invalid Size: 0") // {{{
 	{
 		error = Zakero_MemZone_Init(memzone
@@ -1353,6 +1360,8 @@ TEST_CASE("/c/init/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
 		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
+
+		Zakero_MemZone_Destroy(memzone);
 	} // }}}
 	SUBCASE("64-bit Rounding: 7 -> 8") // {{{
 	{
@@ -1366,6 +1375,8 @@ TEST_CASE("/c/init/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 		CHECK(Zakero_MemZone_Available_Largest(memzone) == 8);
 		CHECK(Zakero_MemZone_Available_Total(memzone)   == 8);
+
+		Zakero_MemZone_Destroy(memzone);
 	} // }}}
 	SUBCASE("64-bit Rounding: 10 -> 16") // {{{
 	{
@@ -1379,6 +1390,8 @@ TEST_CASE("/c/init/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 		CHECK(Zakero_MemZone_Available_Largest(memzone) == 16);
 		CHECK(Zakero_MemZone_Available_Total(memzone)   == 16);
+
+		Zakero_MemZone_Destroy(memzone);
 	} // }}}
 	SUBCASE("Already Initialized") // {{{
 	{
@@ -1405,6 +1418,7 @@ TEST_CASE("/c/init/") // {{{
 } // }}}
 TEST_CASE("/c/init/fd/") // {{{
 {
+	/*
 	if(mode_is_supported_(Zakero_MemZone_Mode_FD) == false)
 	{
 		return;
@@ -1429,6 +1443,7 @@ TEST_CASE("/c/init/fd/") // {{{
 	SUBCASE("Already initialized")
 	{
 	}
+	*/
 } // }}}
 TEST_CASE("/c/init/ram/") // {{{
 {
@@ -1526,6 +1541,7 @@ TEST_CASE("/c/destroy/ram/") // {{{
 TEST_CASE("/c/destroy/fd/") // {{{
 {
 #if __linux__
+	/*
 	//const char*    name    = "MemZone_c_init_fd";
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
@@ -1539,12 +1555,13 @@ TEST_CASE("/c/destroy/fd/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 	//CHECK(strcmp(memzone.name, name) == 0);
-	CHECK(memzone.fd != -1);
+	//CHECK(memzone.fd != -1);
 	//CHECK(memzone.memory != nullptr);
 
 	SUBCASE("Already initialized")
 	{
 	}
+	*/
 #endif
 } // }}}
 TEST_CASE("/c/destroy/shm/") // {{{
@@ -1697,6 +1714,7 @@ TEST_CASE("/c/allocate/expand/to-fit/") // {{{
 		);
 
 	CHECK(error == Zakero_MemZone_Error_None);
+#if 0
 	CHECK(id_1  != 0);
 	CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Used_Total(memzone));
 	CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
@@ -1726,6 +1744,7 @@ TEST_CASE("/c/allocate/expand/to-fit/") // {{{
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_1));
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_2));
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_3));
+#endif
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

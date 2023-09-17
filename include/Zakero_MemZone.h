@@ -1630,6 +1630,33 @@ TEST_CASE("/c/allocate/expand/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 		CHECK(id_1  != 0);
 		CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Used_Total(memzone));
+		CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
+		CHECK(ZAKERO_KILOBYTE(2) <= Zakero_MemZone_Size_Of(memzone, id_1));
+
+		error = Zakero_MemZone_Free(memzone, id_1);
+
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_KILOBYTE(1)
+			, id_1
+			);
+
+		uint64_t id_2 = 0;
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_KILOBYTE(1)
+			, id_2
+			);
+
+		uint64_t id_3 = 0;
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_KILOBYTE(1)
+			, id_3
+			);
+
+		CHECK(ZAKERO_KILOBYTE(3) <= Zakero_MemZone_Used_Total(memzone));
+		CHECK(ZAKERO_KILOBYTE(0) <= Zakero_MemZone_Available_Total(memzone));
+		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_1));
+		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_2));
+		CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id_3));
 	} // }}}
 
 	Zakero_MemZone_Destroy(memzone);
@@ -1992,7 +2019,7 @@ TEST_CASE("/c/used/total/") // {{{
 
 	size_t used = Zakero_MemZone_Used_Total(memzone);
 
-	CHECK(used == 0);
+	CHECK(used == zakero_memzone_sizeof_header_);
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

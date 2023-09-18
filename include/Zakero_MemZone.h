@@ -307,6 +307,9 @@ struct Zakero_MemZone_Block
 #pragma GCC diagnostic pop
 };
 
+#define zakero_memzone_block_data(block_) \
+	((uint8_t*)((uint64_t)block_ + sizeof(Zakero_MemZone_Block)))
+
 struct Zakero_MemZone
 {
 	uint8_t* memory  = nullptr;
@@ -523,7 +526,7 @@ void block_init_(Zakero_MemZone_Block* block
 	block->prev = prev;
 	block->size = size;
 
-	memset(block->data, 0, block->size);
+	memset((void*)block->data, 0, block->size);
 }
 
 // }}}
@@ -543,7 +546,7 @@ inline Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
 Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 	) noexcept
 {
-	Zakero_MemZone_Block* block = (Zakero_MemZone_Block*)memzone.memory;
+	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 
 	while(block->next != nullptr)
 	{
@@ -759,6 +762,15 @@ inline bool block_is_clear_on_free_(const Zakero_MemZone_Block* block
 }
 
 // }}}
+// {{{ Implementation : C : memzone_is_defrag_on_allocate_() -
+
+inline bool memzone_is_defrag_on_allocate_(const Zakero_MemZone& memzone
+	) noexcept
+{
+	return (bool)(memzone.defrag & Zakero_MemZone_Defrag_On_Allocate);
+}
+
+// }}}
 // {{{ Implementation : C : block_find_id_() -
 
 Zakero_MemZone_Block* block_find_id_(Zakero_MemZone_Block* block
@@ -904,12 +916,16 @@ void block_merge_with_next_(Zakero_MemZone_Block* block
 Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	if(block_is_free_(block->next) == true)
+	if((block->next != nullptr)
+		&& (block_is_free_(block->next) == true)
+		)
 	{
 		block_merge_with_next_(block);
 	}
 
-	if(block_is_free_(block->prev) == true)
+	if((block->prev != nullptr)
+		&& (block_is_free_(block->prev) == true)
+		)
 	{
 		block = block->prev;
 		block_merge_with_next_(block);
@@ -945,14 +961,14 @@ Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 
 	if(size < 8)
 	{
-		block_next = block + zakero_memzone_sizeof_block_;
+		block_next = (Zakero_MemZone_Block*)((uint64_t)block + zakero_memzone_sizeof_block_);
 		block_next->size = block->size - zakero_memzone_sizeof_block_;
 
 		block->size = 8;
 	}
 	else
 	{
-		block_next = block + (size - 8);
+		block_next = (Zakero_MemZone_Block*)((uint64_t)block + (size - 8));
 		block_next->size = block->size - size - zakero_memzone_sizeof_block_ + 8;
 
 		block->size = size;
@@ -980,7 +996,7 @@ Zakero_MemZone_Block* block_swap_with_next_(Zakero_MemZone_Block* block
 	*block = *block_next;
 	memmove(block->data, block_next->data, block_next->size);
 
-	block_next = block + block->size - 8;
+	block_next = (Zakero_MemZone_Block*)((uint64_t)block + block->size - 8);
 	*block_next = block_temp;
 	memset(block_next->data, 0, block_next->size);
 
@@ -1240,7 +1256,9 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.size    = round_to_64bit(size) + zakero_memzone_sizeof_header_;
+	const size_t block_size = round_to_64bit(size);
+
+	memzone.size    = block_size + zakero_memzone_sizeof_block_;
 	memzone.next_id = 1;
 	memzone.expand  = expand;
 	memzone.defrag  = defrag;
@@ -1297,7 +1315,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	CHECK((void*)block == (void*)memzone.memory);
 
 	block_init_(block
-		, memzone.size - zakero_memzone_sizeof_header_
+		, block_size
 		, nullptr
 		, nullptr
 		);
@@ -1586,9 +1604,9 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 	}
 
-	if(size == 0)
+	if(size < 8)
 	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'size' must be greater than 0");
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'size' must be greater than or equal to 8");
 		return Zakero_MemZone_Error_Invalid_Parameter_Size;
 	}
 #endif
@@ -1640,7 +1658,7 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	block->id   = id;
 	block->flag = Zakero_MemZone_Block_Flag_Allocated;
 
-	if(memzone.defrag & Zakero_MemZone_Defrag_On_Allocate)
+	if(memzone_is_defrag_on_allocate_(memzone) == true)
 	{
 		defrag_(memzone, 1);
 	}
@@ -1804,23 +1822,10 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 		memset(block->data, 0, block->size);
 	}
 
-	block->id = 0;
+	block->id   = 0;
 	block->flag = 0;
+	block = block_merge_free_(block);
 
-	if((block->next != nullptr)
-		&& (block_is_free_(block->next) == true)
-		)
-	{
-		block_merge_with_next_(block);
-	}
-
-	if((block->prev != nullptr)
-		&& (block_is_free_(block->prev) == true)
-		)
-	{
-		block_merge_with_next_(block->prev);
-	}
-	
 	return Zakero_MemZone_Error_None;
 }
 
@@ -2084,7 +2089,7 @@ size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 
 	do
 	{
-		retval += zakero_memzone_sizeof_header_;
+		retval += zakero_memzone_sizeof_block_;
 
 		if(block_is_allocated_(block) == true)
 		{
@@ -2115,7 +2120,7 @@ TEST_CASE("/c/used/total/") // {{{
 
 	size_t used = Zakero_MemZone_Used_Total(memzone);
 
-	CHECK(used == zakero_memzone_sizeof_header_);
+	CHECK(used == zakero_memzone_sizeof_block_);
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

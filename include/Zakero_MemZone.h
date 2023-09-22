@@ -511,7 +511,6 @@ static inline size_t round_to_64bit(size_t size
 static void block_init_(Zakero_MemZone_Block* block
 	, size_t size
 	, Zakero_MemZone_Block* prev
-	, Zakero_MemZone_Block* next
 	) noexcept
 {
 	block->id   = 0;
@@ -685,7 +684,7 @@ static Zakero_MemZone_Block* memzone_expand_ram_(Zakero_MemZone& memzone
 		Zakero_MemZone_Block* block_prev = block;
 
 		block = block_next_(block);
-		block_init_(block, size, block_prev, nullptr);
+		block_init_(block, size, block_prev);
 	}
 
 	memset(zakero_memzone_block_data_(block), 1, block->size);
@@ -718,7 +717,7 @@ static Zakero_MemZone_Block* memzone_expand_shm_(Zakero_MemZone& //memzone
 // }}}
 // {{{ Implementation : C : memzone_expand_() -
 
-static Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
+static inline Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
 	, const size_t size
 	) noexcept
 {
@@ -1367,7 +1366,6 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	block_init_(block
 		, block_size
 		, nullptr
-		, nullptr
 		);
 
 	return Zakero_MemZone_Error_None;
@@ -1527,7 +1525,7 @@ TEST_CASE("/c/init/ram/") // {{{
 
 	error = Zakero_MemZone_Init(memzone
 		 ,Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_KILOBYTE(1)
 		, Zakero_MemZone_Expand_None
 		, 0 // Defrag Disabled
 		);

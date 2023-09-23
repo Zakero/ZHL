@@ -297,11 +297,10 @@ enum Zakero_MemZone_Mode : uint8_t
 // - This is not accounted for!
 struct Zakero_MemZone_Block
 {
-	uint64_t              id;
-	uint64_t              flag;
-	Zakero_MemZone_Block* prev; // Remove
-	uint64_t              offset_prev; // Rename to prev
-	uint64_t              size;
+	uint64_t id;
+	uint64_t flag;
+	uint64_t size;
+	uint64_t prev;
 };
 
 #define zakero_memzone_block_data_(block_) \
@@ -506,26 +505,29 @@ static inline size_t round_to_64bit(size_t size
 }
 
 // }}}
-// {{{ Implementation : C : block_init_() -
+// {{{ Implementation : C : block_flag_last_() -
 
-static void block_init_(Zakero_MemZone_Block* block
-	, size_t size
-	, Zakero_MemZone_Block* prev
-	) noexcept
-{
-	block->id   = 0;
-	block->flag = 0;
-	block->prev = prev;
-	block->size = size;
-}
-
-// }}}
-// {{{ Implementation : C : block_is_last_() -
-
-static inline bool block_is_last_(const Zakero_MemZone_Block* block
+// TODO: Rename: block_state_last_()
+static inline bool block_flag_last_(const Zakero_MemZone_Block* block
 	) noexcept
 {
 	return (bool)(block->flag & Zakero_MemZone_Block_Flag_Last);
+}
+
+// }}}
+// {{{ Implementation : C : block_flag_last_set_() -
+
+static inline void block_flag_last_set_(Zakero_MemZone_Block* block
+	, bool value
+	) noexcept
+{
+	if(value)
+	{
+		block->flag |= Zakero_MemZone_Block_Flag_Last;
+		return;
+	}
+
+	block->flag &= (~Zakero_MemZone_Block_Flag_Last);
 }
 
 // }}}
@@ -549,11 +551,48 @@ static inline Zakero_MemZone_Block* block_prev_(const Zakero_MemZone_Block* bloc
 	) noexcept
 {
 	Zakero_MemZone_Block* block_prev = (Zakero_MemZone_Block*)
-		(	(((uint64_t)block) - sizeof(Zakero_MemZone_Block) - block->offset_prev)
-		*	(uint64_t)(block->offset_prev != 0)
+		(	(((uint64_t)block) - block->prev)
+		*	(uint64_t)(block->prev != 0)
 		);
 
 	return block_prev;
+}
+
+// }}}
+// {{{ Implementation : C : block_prev_set_() -
+
+static inline void block_prev_set_(Zakero_MemZone_Block* block
+	, const Zakero_MemZone_Block* block_prev
+	) noexcept
+{
+	if(block_prev == 0)
+	{
+		block->prev = 0;
+		return;
+	}
+
+	block->prev = (uint64_t)((uint64_t)block - (uint64_t)block_prev);
+}
+
+// }}}
+// {{{ Implementation : C : block_init_() -
+
+static void block_init_(Zakero_MemZone_Block* block
+	, size_t                size
+	, Zakero_MemZone_Block* block_prev
+	) noexcept
+{
+	block->id   = 0;
+	block->flag = 0;
+	block->size = size;
+
+	block_prev_set_(block, block_prev);
+
+	if(block_flag_last_(block_prev) == true)
+	{
+		block_flag_last_set_(block_prev, false);
+		block_flag_last_set_(block     , true);
+	}
 }
 
 // }}}
@@ -575,7 +614,7 @@ static Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 {
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 
-	while(block_is_last_(block) == false)
+	while(block_flag_last_(block) == false)
 	{
 		block = block_next_(block);
 	}
@@ -584,18 +623,25 @@ static Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 }
 
 // }}}
-// {{{ Implementation : C : block_is_in_use_() -
+// {{{ Implementation : C : block_flag_active_() -
 
-static inline bool block_is_in_use_(const Zakero_MemZone_Block* block
+static inline bool block_flag_active_(const Zakero_MemZone_Block* block
 	) noexcept
 {
 	return (bool)(block->flag & Zakero_MemZone_Block_Flag_In_Use);
 }
 
-// }}}
-// {{{ Implementation : C : block_find_in_use_() -
+// TODO: DELETE
+static inline bool block_is_in_use_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	return block_flag_active_(block);
+}
 
-static Zakero_MemZone_Block* block_find_in_use_(Zakero_MemZone_Block* block
+// }}}
+// {{{ Implementation : C : block_find_active_() -
+
+static Zakero_MemZone_Block* block_find_active_(Zakero_MemZone_Block* block
 	, Zakero_MemZone_Block_Find direction
 	) noexcept
 {
@@ -622,13 +668,21 @@ static Zakero_MemZone_Block* block_find_in_use_(Zakero_MemZone_Block* block
 				return block;
 			}
 
-			block = block->prev;
+			block = block_prev_(block);
 		}
 
 		return block;
 	}
 
 	return nullptr;
+}
+
+// TODO: DELETE
+static Zakero_MemZone_Block* block_find_in_use_(Zakero_MemZone_Block* block
+	, Zakero_MemZone_Block_Find direction
+	) noexcept
+{
+	return block_find_active_(block, direction);
 }
 
 // }}}
@@ -770,7 +824,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 	printf("---------------------------------------\n");
 	printf("Block: %lu %016lx <- %016lx -> %016lx\n"
 		, block->id
-		, (uint64_t)block->prev
+		, (uint64_t)block_prev_(block)
 		, (uint64_t)block
 		, (uint64_t)block_next_(block)
 		);
@@ -838,7 +892,7 @@ static Zakero_MemZone_Block* block_find_id_(Zakero_MemZone_Block* block
 				return block;
 			}
 
-			block = block->prev;
+			block = block_prev_(block);
 		}
 
 		return block;
@@ -884,7 +938,7 @@ static Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
 				}
 			}
 
-			block = block->prev;
+			block = block_prev_(block);
 		}
 
 		return block;
@@ -899,7 +953,7 @@ static Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
 static Zakero_MemZone_Block* block_find_last_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	while(block_is_last_(block) == false)
+	while(block_flag_last_(block) == false)
 	{
 		block = block_next_(block);
 	}
@@ -919,7 +973,7 @@ static Zakero_MemZone_Block* block_find_last_allocated_(Zakero_MemZone_Block* bl
 
 	while(block_is_allocated_(block) == false)
 	{
-		block = block->prev;
+		block = block_prev_(block);
 
 		if(block == nullptr)
 		{
@@ -943,9 +997,13 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 {
 	Zakero_MemZone_Block* block_next = block_next_(block);
 
-	if(block_is_last_(block_next) == false)
+	if(block_flag_last_(block_next) == true)
 	{
-		block_next_(block_next)->prev = block;
+		block_flag_last_set_(block, true);
+	}
+	else
+	{
+		block_prev_set_(block_next_(block_next), block);
 	}
 
 	block->size += block_next->size + sizeof(Zakero_MemZone_Block);
@@ -957,18 +1015,19 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 static Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	if((block_is_last_(block) == false)
+	if((block_flag_last_(block) == false)
 		&& (block_is_free_(block_next_(block)) == true)
 		)
 	{
 		block_merge_with_next_(block);
 	}
 
-	if((block->prev != nullptr)
-		&& (block_is_free_(block->prev) == true)
+	Zakero_MemZone_Block* block_prev = block_prev_(block);
+	if((block_prev != nullptr)
+		&& (block_is_free_(block_prev) == true)
 		)
 	{
-		block = block->prev;
+		block = block_prev;
 		block_merge_with_next_(block);
 	}
 
@@ -1003,7 +1062,8 @@ static void block_move_(Zakero_MemZone_Block* block_src
 	}
 
 	block_src->id   = 0;
-	block_src->flag = 0;
+	block_src->flag &= (~Zakero_MemZone_Block_Flag_Allocated);
+	//block_state_allocated(block, false);
 	block_merge_free_(block_src);
 }
 
@@ -1015,48 +1075,56 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 	) noexcept
 {
 	Zakero_MemZone_Block* block_next = block_next_(block);
-	block_next->size = block->size - (sizeof(Zakero_MemZone_Block) + size);
+	block_init_(block_next
+		, block->size - (sizeof(Zakero_MemZone_Block) + size)
+		, block
+		);
 
 	block->size = size;
 
-	block_next->id   = 0;
-	block_next->flag = 0;
-	block_next->prev = block;
-
-	if(block_is_last_(block_next) == false)
+	if(block_flag_last_(block_next) == false)
 	{
-		block_next_(block)->prev = block_next;
+		block_prev_set_(block_next_(block_next), block_next);
 	}
 
 	return block_next;
 }
 
 // }}}
-// {{{ Implementation : C : block_swap_with_next_() -
+// {{{ Implementation : C : block_swap_free_with_next_() -
 
-static Zakero_MemZone_Block* block_swap_with_next_(Zakero_MemZone_Block* block
+static Zakero_MemZone_Block* block_swap_free_with_next_(Zakero_MemZone_Block* block_left
 	) noexcept
 {
-	Zakero_MemZone_Block* block_next = block_next_(block);
-	Zakero_MemZone_Block  block_temp = *block;
+	Zakero_MemZone_Block* block_right = block_next_(block_left);
+
+	Zakero_MemZone_Block block_left_temp = *block_right;
+	block_left_temp.prev = block_left->prev;
 		
-	*block = *block_next;
-	memmove(zakero_memzone_block_data_(block)
-		, zakero_memzone_block_data_(block_next)
-		, block_next->size
+	Zakero_MemZone_Block block_right_temp = *block_left;
+		
+	memmove(zakero_memzone_block_data_(block_left)
+		, zakero_memzone_block_data_(block_right)
+		, block_right->size
 		);
 
-	block_next = block_next_(block);
-	*block_next = block_temp;
-	memset(zakero_memzone_block_data_(block_next)
+	*block_left = block_left_temp;
+
+	block_right = block_next_(block_left);
+	*block_right = block_right_temp;
+
+	if(block_flag_last_(block_left) == true)
+	{
+		block_flag_last_set_(block_left , false);
+		block_flag_last_set_(block_right, true);
+	}
+
+	memset(zakero_memzone_block_data_(block_right)
 		, 0
-		, block_next->size
+		, block_right->size
 		);
 
-	block_next->prev = block;
-	block->prev = block_temp.prev;
-
-	return block_next;
+	return block_right;
 }
 
 // }}}
@@ -1099,7 +1167,7 @@ static Zakero_MemZone_Block* defrag_pass_(Zakero_MemZone_Block* block
 			}
 		}
 
-		block_temp = block_temp->prev;
+		block_temp = block_prev_(block_temp);
 	}
 
 	if(block_to_move != nullptr)
@@ -1110,7 +1178,7 @@ static Zakero_MemZone_Block* defrag_pass_(Zakero_MemZone_Block* block
 	}
 	else
 	{
-		block_free = block_swap_with_next_(block_free);
+		block_free = block_swap_free_with_next_(block_free);
 		block_free = block_merge_free_(block_free);
 	}
 

@@ -505,19 +505,18 @@ static inline size_t round_to_64bit(size_t size
 }
 
 // }}}
-// {{{ Implementation : C : block_flag_last_() -
+// {{{ Implementation : C : block_state_last_() -
 
-// TODO: Rename: block_state_last_()
-static inline bool block_flag_last_(const Zakero_MemZone_Block* block
+static inline bool block_state_last_(const Zakero_MemZone_Block* block
 	) noexcept
 {
 	return (bool)(block->flag & Zakero_MemZone_Block_Flag_Last);
 }
 
 // }}}
-// {{{ Implementation : C : block_flag_last_set_() -
+// {{{ Implementation : C : block_state_last_set_() -
 
-static inline void block_flag_last_set_(Zakero_MemZone_Block* block
+static inline void block_state_last_set_(Zakero_MemZone_Block* block
 	, bool value
 	) noexcept
 {
@@ -588,10 +587,10 @@ static void block_init_(Zakero_MemZone_Block* block
 
 	block_prev_set_(block, block_prev);
 
-	if(block_flag_last_(block_prev) == true)
+	if(block_state_last_(block_prev) == true)
 	{
-		block_flag_last_set_(block_prev, false);
-		block_flag_last_set_(block     , true);
+		block_state_last_set_(block_prev, false);
+		block_state_last_set_(block     , true);
 	}
 }
 
@@ -614,7 +613,7 @@ static Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
 {
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 
-	while(block_flag_last_(block) == false)
+	while(block_state_last_(block) == false)
 	{
 		block = block_next_(block);
 	}
@@ -953,7 +952,7 @@ static Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
 static Zakero_MemZone_Block* block_find_last_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	while(block_flag_last_(block) == false)
+	while(block_state_last_(block) == false)
 	{
 		block = block_next_(block);
 	}
@@ -997,9 +996,9 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 {
 	Zakero_MemZone_Block* block_next = block_next_(block);
 
-	if(block_flag_last_(block_next) == true)
+	if(block_state_last_(block_next) == true)
 	{
-		block_flag_last_set_(block, true);
+		block_state_last_set_(block, true);
 	}
 	else
 	{
@@ -1015,7 +1014,7 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 static Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	if((block_flag_last_(block) == false)
+	if((block_state_last_(block) == false)
 		&& (block_is_free_(block_next_(block)) == true)
 		)
 	{
@@ -1082,7 +1081,7 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 
 	block->size = size;
 
-	if(block_flag_last_(block_next) == false)
+	if(block_state_last_(block_next) == false)
 	{
 		block_prev_set_(block_next_(block_next), block_next);
 	}
@@ -1113,10 +1112,10 @@ static Zakero_MemZone_Block* block_swap_free_with_next_(Zakero_MemZone_Block* bl
 	block_right = block_next_(block_left);
 	*block_right = block_right_temp;
 
-	if(block_flag_last_(block_left) == true)
+	if(block_state_last_(block_left) == true)
 	{
-		block_flag_last_set_(block_left , false);
-		block_flag_last_set_(block_right, true);
+		block_state_last_set_(block_left , false);
+		block_state_last_set_(block_right, true);
 	}
 
 	memset(zakero_memzone_block_data_(block_right)

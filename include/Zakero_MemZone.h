@@ -293,10 +293,11 @@ struct Zakero_MemZone
 
 [[]]          int      Zakero_MemZone_Init(Zakero_MemZone&, const Zakero_MemZone_Mode, const size_t) noexcept;
 [[]]          void     Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
-[[nodiscard]] int      Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
-[[]]          int      Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
 [[]]          void     Zakero_MemZone_Defrag(Zakero_MemZone&) noexcept;
 [[]]          int      Zakero_MemZone_Expand(Zakero_MemZone&, size_t) noexcept;
+[[nodiscard]] int      Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
+[[nodiscard]] int      Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
+[[]]          int      Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
 [[nodiscard]] size_t   Zakero_MemZone_Available_Largest(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t   Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t   Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;
@@ -318,10 +319,6 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	)
 void Zakero_MemZone_Release(Zakero_MemZone& memzone
 	, uint64_t id
-	)
-size_t Zakero_MemZone_Resize(Zakero_MemZone& memzone
-	, uint64_t id
-	, size_t size
 	)
 block_clear
 block_init
@@ -1742,6 +1739,89 @@ TEST_CASE("/c/destroy/shm/") // {{{
 #endif // }}}
 
 // }}}
+// {{{ Zakero_MemZone_Defrag() -
+
+void Zakero_MemZone_Defrag(Zakero_MemZone& memzone
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	memzone_defrag_(memzone, 0);
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/defrag/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, Zakero_MemZone_Expand_Disable
+		, Zakero_MemZone_Defrag_Disable
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+// }}}
+// {{{ Zakero_MemZone_Expand() -
+
+int Zakero_MemZone_Expand(Zakero_MemZone& memzone
+	, size_t size
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	size_t expand_size = round_to_64bit(size);
+	Zakero_MemZone_Block* block = memzone_expand_(memzone, expand_size);
+
+	if(block == nullptr)
+	{
+		return Zakero_MemZone_Error_Not_Enough_Memory_Expand;
+	}
+
+	return Zakero_MemZone_Error_None;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/expand/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, Zakero_MemZone_Expand_Disable
+		, Zakero_MemZone_Defrag_Disable
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+// }}}
 // {{{ Zakero_MemZone_Allocate() -
 
 int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
@@ -1937,6 +2017,46 @@ TEST_CASE("/c/allocate/expand/50/") // {{{
 #endif // }}}
 
 // }}}
+// {{{ Zakero_MemZone_Resize() -
+
+int Zakero_MemZone_Resize(Zakero_MemZone& memzone
+	, uint64_t //id
+	, size_t   //size
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+	}
+#endif
+
+	return Zakero_MemZone_Error_None;
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/resize/") // {{{
+{
+	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_MEGABYTE(1)
+		, Zakero_MemZone_Expand_Disable
+		, Zakero_MemZone_Defrag_Disable
+		);
+
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(memzone.memory != nullptr);
+
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+// }}}
 // {{{ Zakero_MemZone_Free() -
 
 int Zakero_MemZone_Free(Zakero_MemZone& memzone
@@ -2014,89 +2134,6 @@ TEST_CASE("/c/free/") // {{{
 // TEST_CASE("/c/allocate/defrag-trigger")
 // TEST_CASE("/c/allocate/defrag-any")
 // TEST_CASE("/c/allocate/defrag-none")
-
-#endif // }}}
-
-// }}}
-// {{{ Zakero_MemZone_Defrag() -
-
-void Zakero_MemZone_Defrag(Zakero_MemZone& memzone
-	) noexcept
-{
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
-	if(memzone.memory == nullptr)
-	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
-	}
-#endif
-
-	memzone_defrag_(memzone, 0);
-}
-
-#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-
-TEST_CASE("/c/defrag/") // {{{
-{
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
-
-	error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
-		, Zakero_MemZone_Expand_Disable
-		, Zakero_MemZone_Defrag_Disable
-		);
-
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	Zakero_MemZone_Destroy(memzone);
-} // }}}
-
-#endif // }}}
-
-// }}}
-// {{{ Zakero_MemZone_Expand() -
-
-int Zakero_MemZone_Expand(Zakero_MemZone& memzone
-	, size_t size
-	) noexcept
-{
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
-	if(memzone.memory == nullptr)
-	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
-	}
-#endif
-
-	size_t expand_size = round_to_64bit(size);
-	Zakero_MemZone_Block* block = memzone_expand_(memzone, expand_size);
-
-	if(block == nullptr)
-	{
-		return Zakero_MemZone_Error_Not_Enough_Memory_Expand;
-	}
-
-	return Zakero_MemZone_Error_None;
-}
-
-#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-
-TEST_CASE("/c/expand/") // {{{
-{
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
-
-	error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
-		, Zakero_MemZone_Expand_Disable
-		, Zakero_MemZone_Defrag_Disable
-		);
-
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	Zakero_MemZone_Destroy(memzone);
-} // }}}
 
 #endif // }}}
 

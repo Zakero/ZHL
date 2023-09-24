@@ -1439,6 +1439,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 		, block_size
 		, nullptr
 		);
+	block_state_last_set_(block, true);
 
 	return Zakero_MemZone_Error_None;
 }
@@ -1803,7 +1804,6 @@ TEST_CASE("/c/allocate/") // {{{
 
 	CHECK(error == Zakero_MemZone_Error_None);
 
-#if 0
 	uint64_t id = 0;
 
 	SUBCASE("Invalid Size: 0") // {{{
@@ -1833,7 +1833,6 @@ TEST_CASE("/c/allocate/") // {{{
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id    != 0);
 	CHECK(ZAKERO_KILOBYTE(1) <= Zakero_MemZone_Size_Of(memzone, id));
-#endif
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

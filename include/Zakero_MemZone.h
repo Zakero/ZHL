@@ -224,7 +224,7 @@
 	X(Error_Invalid_Parameter_Id     ,  7 , "The 'id' parameter is not valid"                      ) \
 	X(Error_Already_Initialized      ,  8 , "MemZone has already been initialized"                 ) \
 	X(Error_Not_Enough_Memory        ,  9 , "Not enough memory is availalbe"                       ) \
-	X(Error_Id_Is_In_Use             , 10 , "Can not free an Id that is in use"                    ) \
+	X(Error_Id_Is_Active             , 10 , "Can not free an Id that is active"                    ) \
 	X(Error_Not_Enough_Memory_Expand , 11 , "Not enough memory is availalbe and expanding failed"  ) \
 	X(Error_Not_Enough_Memory_Defrag , 12 , "Not enough memory is availalbe and defragging failed" ) \
 
@@ -249,10 +249,10 @@ enum Zakero_MemZone_Block_Find
 };
 
 enum Zakero_MemZone_Block_State
-{	Zakero_MemZone_Block_State_Allocated = 0x0000'0000'0000'0001
-,	Zakero_MemZone_Block_State_Active    = 0x0000'0000'0000'0010
-,	Zakero_MemZone_Block_State_Zero      = 0x0000'0000'0000'0100
-,	Zakero_MemZone_Block_State_Last      = 0x0000'0000'0000'1000
+{	Zakero_MemZone_Block_State_Allocated = (1 << 0)
+,	Zakero_MemZone_Block_State_Active    = (1 << 1)
+,	Zakero_MemZone_Block_State_Zero      = (1 << 2)
+,	Zakero_MemZone_Block_State_Last      = (1 << 3)
 };
 
 enum Zakero_MemZone_Defrag_
@@ -589,7 +589,20 @@ static inline Zakero_MemZone_Block* block_next_(const Zakero_MemZone_Block* bloc
 {
 	Zakero_MemZone_Block* block_next = (Zakero_MemZone_Block*)
 		(	(((uint64_t)block) + sizeof(Zakero_MemZone_Block) + block->size)
-		*	(uint64_t)((block->flag & Zakero_MemZone_Block_State_Last) != 0)
+		*	(uint64_t)(block_state_last_(block) == false)
+		);
+
+	return block_next;
+}
+
+// }}}
+// {{{ Implementation : C : block_next_ignore_last_() -
+
+static inline Zakero_MemZone_Block* block_next_ignore_last_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	Zakero_MemZone_Block* block_next = (Zakero_MemZone_Block*)
+		(	(((uint64_t)block) + sizeof(Zakero_MemZone_Block) + block->size)
 		);
 
 	return block_next;
@@ -629,7 +642,7 @@ static inline void block_prev_set_(Zakero_MemZone_Block* block
 // {{{ Implementation : C : block_init_() -
 
 static void block_init_(Zakero_MemZone_Block* block
-	, size_t                size
+	, uint64_t              size
 	, Zakero_MemZone_Block* block_prev
 	) noexcept
 {
@@ -637,17 +650,6 @@ static void block_init_(Zakero_MemZone_Block* block
 	block->flag = 0;
 	block->size = size;
 	block->prev = 0;
-
-	if(block_prev != nullptr)
-	{
-		block_prev_set_(block, block_prev);
-
-		if(block_state_last_(block_prev) == true)
-		{
-			block_state_last_set_(block_prev, false);
-			block_state_last_set_(block     , true);
-		}
-	}
 }
 
 // }}}
@@ -687,14 +689,6 @@ static Zakero_MemZone_Block* block_find_active_(Zakero_MemZone_Block* block
 	}
 
 	return nullptr;
-}
-
-// TODO: DELETE
-static Zakero_MemZone_Block* block_find_in_use_(Zakero_MemZone_Block* block
-	, Zakero_MemZone_Block_Find direction
-	) noexcept
-{
-	return block_find_active_(block, direction);
 }
 
 // }}}
@@ -912,15 +906,20 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 	size_t block_next_size = block->size - (sizeof(Zakero_MemZone_Block) + size);
 	block->size = size;
 
-	Zakero_MemZone_Block* block_next = block_next_(block);
+	Zakero_MemZone_Block* block_next = block_next_ignore_last_(block);
 	block_init_(block_next
 		, block_next_size
 		, block
 		);
 
-	if(block_state_last_(block_next) == false)
+	if(block_state_last_(block) == false)
 	{
 		block_prev_set_(block_next_(block_next), block_next);
+	}
+	else // block_state_last_(block) == true
+	{
+		block_state_last_set_(block     , false);
+		block_state_last_set_(block_next, true);
 	}
 
 	return block_next;
@@ -1054,8 +1053,11 @@ static Zakero_MemZone_Block* memzone_expand_ram_(Zakero_MemZone& memzone
 	{
 		Zakero_MemZone_Block* block_prev = block;
 
-		block = block_next_(block);
+		block = block_next_ignore_last_(block);
 		block_init_(block, size, block_prev);
+
+		block_state_last_set_(block_prev, false);
+		block_state_last_set_(block     , true);
 	}
 
 	memset(zakero_memzone_block_data_(block), 1, block->size);
@@ -1093,7 +1095,7 @@ static inline Zakero_MemZone_Block* memzone_expand_(Zakero_MemZone& memzone
 	) noexcept
 {
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_in_use_(block, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_active_(block, Zakero_MemZone_Block_Find_Forward);
 
 	if(block != nullptr)
 	{
@@ -1443,10 +1445,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 
-	block_init_(block
-		, block_size
-		, nullptr
-		);
+	block_init_(block, block_size, nullptr);
 	block_state_last_set_(block, true);
 
 	return Zakero_MemZone_Error_None;
@@ -1937,7 +1936,7 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 
 	if(block_state_active_(block) == true)
 	{
-		return Zakero_MemZone_Error_Id_Is_In_Use;
+		return Zakero_MemZone_Error_Id_Is_Active;
 	}
 
 	if(block_state_zero_(block) == true)
@@ -1946,7 +1945,7 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	}
 
 	block->id   = 0;
-	block->flag = 0;
+	block_state_allocated_set_(block, false);
 	block_merge_free_(block);
 
 	return Zakero_MemZone_Error_None;

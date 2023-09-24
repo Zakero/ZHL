@@ -261,10 +261,10 @@ enum Zakero_MemZone_Mode
 // }}
 enum Zakero_MemZone_Expand_Type
 {	Zakero_MemZone_Expand_Disable = 0x0000'0000'0000'0000
-,	Zakero_MemZone_Expand_To_Fit   = 0x0000'0001'0000'0000
-,	Zakero_MemZone_Expand_10       = 0x0000'0002'0000'0000  // 10% extra growth
-//,	Zakero_MemZone_Expand_33       = 0x0000'0003'0000'0000  // 33% extra growth
-//,	Zakero_MemZone_Expand_50       = 0x0000'0004'0000'0000  // 50% extra growth
+,	Zakero_MemZone_Expand_To_Fit  = 0x0000'0001'0000'0000
+//,	Zakero_MemZone_Expand_10      = 0x0000'0002'0000'0000  // 10% extra growth
+//,	Zakero_MemZone_Expand_33      = 0x0000'0003'0000'0000  // 33% extra growth
+//,	Zakero_MemZone_Expand_50      = 0x0000'0004'0000'0000  // 50% extra growth
 };
 
 enum Zakero_MemZone_Defrag_Event

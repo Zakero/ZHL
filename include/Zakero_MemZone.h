@@ -1406,33 +1406,33 @@ static void memzone_block_grow_(Zakero_MemZone& memzone
 }
 
 // }}}
-// {{{ destroy_fd_() -
+// {{{ memzone_destroy_fd_() -
 
 #ifdef __linux__
 
-static void destroy_fd_(Zakero_MemZone& memzone
+static void memzone_destroy_fd_(Zakero_MemZone& memzone
 	) noexcept
 {
 }
 
 #elif __HAIKU__
 
-static void destroy_fd_(Zakero_MemZone& memzone
+static void memzone_destroy_fd_(Zakero_MemZone& memzone
 	) noexcept
 {
 }
 
 #else
-#	error "destroy_fd_()" has not been implemented yet!
+#	error "memzone_destroy_fd_()" has not been implemented yet!
 #endif
 
 // }}}
-// {{{ destroy_ram_() -
+// {{{ memzone_destroy_ram_() -
 
 #if defined __linux__ \
 	|| __HAIKU__
 
-static void destroy_ram_(Zakero_MemZone& memzone
+static void memzone_destroy_ram_(Zakero_MemZone& memzone
 	) noexcept
 {
 	memset(memzone.memory, 0, memzone.size);
@@ -1440,36 +1440,36 @@ static void destroy_ram_(Zakero_MemZone& memzone
 }
 
 #else
-#	error "destroy_ram_()" has not been implemented yet!
+#	error "memzone_destroy_ram_()" has not been implemented yet!
 #endif
 
 // }}}
-// {{{ destroy_shm_() -
+// {{{ memzone_destroy_shm_() -
 
 #ifdef __linux__
 
-static void destroy_shm_(Zakero_MemZone& memzone
+static void memzone_destroy_shm_(Zakero_MemZone& memzone
 	) noexcept
 {
 }
 
 #elif __HAIKU__
 
-static void destroy_shm_(Zakero_MemZone& memzone
+static void memzone_destroy_shm_(Zakero_MemZone& memzone
 	) noexcept
 {
 }
 
 #else
-#	error "destroy_shm_()" has not been implemented yet!
+#	error "memzone_destroy_shm_()" has not been implemented yet!
 #endif
 
 // }}}
-// {{{ init_fd_() -
+// {{{ memzone_init_fd_() -
 
 #ifdef __linux__
 
-static void init_fd_(Zakero_MemZone& memzone
+static void memzone_init_fd_(Zakero_MemZone& memzone
 	) noexcept
 {
 	//memzone.fd = memfd_create(memzone.name, 0);
@@ -1477,29 +1477,29 @@ static void init_fd_(Zakero_MemZone& memzone
 
 #elif __HAIKU__
 
-static void init_fd_(Zakero_MemZone& memzone
+static void memzone_init_fd_(Zakero_MemZone& memzone
 	) noexcept
 {
 }
 
 #else
-#	error "init_fd_()" has not been implemented yet!
+#	error "memzone_init_fd_()" has not been implemented yet!
 #endif
 
 // }}}
-// {{{ init_ram_() -
+// {{{ memzone_init_ram_() -
 
 #if defined __linux__ \
 	|| defined __HAIKU__
 
-static void init_ram_(Zakero_MemZone& memzone
+static void memzone_init_ram_(Zakero_MemZone& memzone
 	) noexcept
 {
 	memzone.memory = (uint8_t*)calloc(memzone.size, sizeof(uint8_t));
 }
 
 #else
-#	error "init_ram_()" has not been implemented yet!
+#	error "memzone_init_ram_()" has not been implemented yet!
 #endif
 
 // }}}
@@ -1586,7 +1586,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
 	{
 		case Zakero_MemZone_Mode_RAM:
-			init_ram_(memzone);
+			memzone_init_ram_(memzone);
 			if(memzone.memory == nullptr)
 			{
 				return Zakero_MemZone_Error_Init_Failure_RAM;
@@ -1617,7 +1617,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 			}
 			*/
 
-			init_fd_(memzone);
+			memzone_init_fd_(memzone);
 			//if(memzone.fd == -1)
 			//{
 			//	Zakero_MemZone_Destroy(memzone);
@@ -1830,13 +1830,13 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
 	{
 		case Zakero_MemZone_Mode_FD:
-			destroy_fd_(memzone);
+			memzone_destroy_fd_(memzone);
 			break;
 		case Zakero_MemZone_Mode_RAM:
-			destroy_ram_(memzone);
+			memzone_destroy_ram_(memzone);
 			break;
 		case Zakero_MemZone_Mode_SHM:
-			destroy_shm_(memzone);
+			memzone_destroy_shm_(memzone);
 			break;
 	}
 

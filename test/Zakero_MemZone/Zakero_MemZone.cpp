@@ -1,9 +1,5 @@
 /*
 g++ -std=c++23 -O0 -Wall -Werror -Wpedantic -g -o Zakero_MemZone Zakero_MemZone.cpp && ./Zakero_MemZone
-g++ -std=c++23 -O0 -Wall -Werror -Wpedantic -g -o Zakero_MemZone -coverage Zakero_MemZone.cpp \
-	&& ./Zakero_MemZone \
-	&& lcov --directory . --capture --demangle-cpp --exclude bits --exclude ext --exclude atomic --exclude bit --exclude cmath --exclude compare --exclude iomanip --exclude limits --exclude new --exclude type_traits --output-file Zakero_MemZone.lcov --test-name Zakero_MemZone \
-	&& genhtml -o test-coverage Zakero_MemZone.lcov
  */
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "../doctest.h"

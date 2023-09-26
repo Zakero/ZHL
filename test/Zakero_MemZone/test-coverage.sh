@@ -31,6 +31,7 @@ lcov \
 	--exclude "*/new" \
 	--exclude "*/stdexcept" \
 	--exclude "*/type_traits" \
+	--ignore-errors unused,unused \
 	--list-full-path \
 	--output-file test-coverage/Zakero_MemZone.lcov \
 	--test-name "Zakero_MemZone" \

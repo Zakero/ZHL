@@ -1587,11 +1587,42 @@ static void memzone_init_ram_(Zakero_MemZone& memzone
 
 // {{{ Zakero_MemZone_Init() -
 
+/* {{function(name = Zakero_MemZone_Init
+ *   , param =
+ *     [ { Zakero_MemZone&            , memzone , The data.                 }
+ *     , { const size_t               , mode    , The type of memory pool.  }
+ *     , { Zakero_MemZone_Expand_Type , expand  , How the memory will grow. }
+ *     , { uint64_t                   , defrag  , When to defrag memory.    }
+ *     ]
+ *   , return = { int, An error code or 0 on success }
+ *   , attr   = [ nodiscard, noexcept ]
+ *   , brief  = Prepare the Zakero_MemZone data for use.
+ *   )
+ *   Before anything can be done with Zakero_MemZone data, it must be 
+ *   initialized. Initializing Zakero_MemZone data will create a memory pool 
+ *   resource that can be used to store and retrieve arbitrary data.
+ *
+ *   The size of the memory pool will be rounded up so that it will align on a 
+ *   64-bit boundary.
+ *
+ *   The {{link(target=[Zakero_MemZone_Expand_Type]}} parameter will determine 
+ *   how the memory pool will expand, if at all.
+ *
+ *   The defrag'ing of memory is event based, which allows each operation the 
+ *   chance to defrag part of the pool. This reduces overhead to reduce the 
+ *   penalty imposed by examining and defragmenting the entire memory pool. See 
+ *   {{link(target=[Zakero_MemZone_Defrag]}} for more details.
+ *
+ *   If the Zakero_MemZone was successfully initialized, the return value will 
+ *   be {{link(target=[Zakero_MemZone_Error_None])}}, aka '0'. Otherwise the 
+ *   appropriate error code will be returned.
+ * }}
+ */
 int Zakero_MemZone_Init(Zakero_MemZone& memzone
-	, Zakero_MemZone_Mode         mode
-	, const size_t                size
-	, Zakero_MemZone_Expand_Type  expand
-	, uint64_t                    defrag
+	, Zakero_MemZone_Mode        mode
+	, const size_t               size
+	, Zakero_MemZone_Expand_Type expand
+	, uint64_t                   defrag
 	) noexcept
 {
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED

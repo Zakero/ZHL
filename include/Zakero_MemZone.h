@@ -214,21 +214,24 @@
  * Error Codes used internally.
  */
 #define ZAKERO_MEMZONE__ERROR_DATA \
-	X(Error_None                     ,  0 , "No Error"                                             ) \
-	X(Error_Init_Failure_Name        ,  1 , "Failed to initialize the MemZone name"                ) \
-	X(Error_Init_Failure_FD          ,  2 , "Failed to initialize the MemZone FD"                  ) \
-	X(Error_Init_Failure_RAM         ,  3 , "Failed to initialize the MemZone RAM"                 ) \
-	X(Error_Invalid_Parameter_Name   ,  4 , "The 'name' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Size   ,  5 , "The 'size' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Mode   ,  6 , "The 'mode' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Expand ,  7 , "The 'expand' parameter is not valid"                  ) \
-	X(Error_Invalid_Parameter_Defrag ,  8 , "The 'defrag' parameter is not valid"                  ) \
-	X(Error_Invalid_Parameter_Id     ,  9 , "The 'id' parameter is not valid"                      ) \
-	X(Error_Already_Initialized      , 10 , "MemZone has already been initialized"                 ) \
-	X(Error_Not_Enough_Memory        , 11 , "Not enough memory is availalbe"                       ) \
-	X(Error_Id_Is_Acquired           , 12 , "Operation can not be done on an acquired ID"          ) \
-	X(Error_Not_Enough_Memory_Expand , 13 , "Not enough memory is availalbe and expanding failed"  ) \
-	X(Error_Not_Enough_Memory_Defrag , 14 , "Not enough memory is availalbe and defragging failed" ) \
+	X(Error_None                       ,  0 , "No Error"                                             ) \
+	X(Error_Init_Failure_Name          ,  1 , "Failed to initialize the MemZone name"                ) \
+	X(Error_Init_Failure_FD            ,  2 , "Failed to initialize the MemZone FD"                  ) \
+	X(Error_Init_Failure_RAM           ,  3 , "Failed to initialize the MemZone RAM"                 ) \
+	X(Error_Invalid_Parameter_Name     ,  4 , "The 'name' parameter is not valid"                    ) \
+	X(Error_Invalid_Parameter_Size     ,  5 , "The 'size' parameter is not valid"                    ) \
+	X(Error_Invalid_Parameter_Mode     ,  6 , "The 'mode' parameter is not valid"                    ) \
+	X(Error_Invalid_Parameter_Expand   ,  7 , "The 'expand' parameter is not valid"                  ) \
+	X(Error_Invalid_Parameter_Defrag   ,  8 , "The 'defrag' parameter is not valid"                  ) \
+	X(Error_Invalid_Parameter_Id       ,  9 , "The 'id' parameter is not valid"                      ) \
+	X(Error_Already_Initialized        , 10 , "MemZone has already been initialized"                 ) \
+	X(Error_Not_Initialized            , 11 , "MemZone has not been initialized"                     ) \
+	X(Error_Not_Enough_Memory          , 12 , "Not enough memory is availalbe"                       ) \
+	X(Error_Not_Enough_Memory_Expand   , 13 , "Not enough memory is availalbe and expanding failed"  ) \
+	X(Error_Not_Enough_Memory_Defrag   , 14 , "Not enough memory is availalbe and defragging failed" ) \
+	X(Error_Destroyed_Allocated_Memory , 15 , "MemZone was destroyed with Allocated memory"          ) \
+	X(Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
+	X(Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
 
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
 #define ZAKERO_MEGABYTE(val_) (ZAKERO_KILOBYTE(val_) * 1024)
@@ -295,11 +298,11 @@ struct Zakero_MemZone
 
 
 [[]]          int      Zakero_MemZone_Init(Zakero_MemZone&, const Zakero_MemZone_Mode, const size_t) noexcept;
-[[]]          void     Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
+[[]]          int      Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
 [[]]          void     Zakero_MemZone_Defrag(Zakero_MemZone&) noexcept;
 [[]]          int      Zakero_MemZone_Expand(Zakero_MemZone&, size_t) noexcept;
-[[nodiscard]] int      Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
-[[nodiscard]] int      Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
+[[]]          int      Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
+[[]]          int      Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
 [[]]          int      Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
 [[nodiscard]] void*    Zakero_MemZone_Acquire(Zakero_MemZone&, uint64_t id) noexcept;
 [[]]          void     Zakero_MemZone_Release(Zakero_MemZone&, uint64_t id) noexcept;
@@ -1594,8 +1597,8 @@ static void memzone_init_ram_(Zakero_MemZone& memzone
  *     , { Zakero_MemZone_Expand_Type , expand  , How the memory will grow. }
  *     , { uint64_t                   , defrag  , When to defrag memory.    }
  *     ]
- *   , return = { int, An error code or 0 on success }
- *   , attr   = [ nodiscard, noexcept ]
+ *   , return = { int, An error code or 0 on success. }
+ *   , attr   = [ noexcept ]
  *   , brief  = Prepare the Zakero_MemZone data for use.
  *   )
  *   Before anything can be done with Zakero_MemZone data, it must be 
@@ -1932,14 +1935,52 @@ TEST_CASE("/c/init/shm/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Destroy() -
 
-void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
+/* {{function(name = Zakero_MemZone_Init
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data. }
+ *     ]
+ *   , return = { int, An error code or 0 on success. }
+ *   , attr   = [ noexcept ]
+ *   , brief  = Destroy the Zakero_MemZone daat.
+ *   )
+ *   When the Zakero_MemZone data is no longer needed, this method will destroy 
+ *   and release all used resources.
+ *
+ *   If the Zakero_MemZone is backed by RAM, then the memory will be 
+ *   zero-filled then free'ed.
+ * }}
+ */
+int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	) noexcept
 {
+	int error = Zakero_MemZone_Error_None;
+
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Not_Initialized;
+#		endif // }}}
 	}
+
+	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
+	do
+	{
+		if(block_state_acquired_(block) == true)
+		{
+			error = Zakero_MemZone_Error_Destroyed_Acquired_Memory;
+			break;
+		}
+
+		if(block_state_allocated_(block) == true)
+		{
+			error = Zakero_MemZone_Error_Destroyed_Allocated_Memory;
+			break;
+		}
+
+		block = block_next_(block);
+	} while(block != nullptr);
 #endif
 
 	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
@@ -1959,10 +2000,68 @@ void Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	memzone.size    = 0;
 	memzone.next_id = 0;
 	memzone.flag    = 0;
+
+	return error;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
+TEST_CASE("/c/destroy/") // {{{
+{
+	SUBCASE("Destroy Uninitialized") // {{{
+	{
+		Zakero_MemZone memzone = {};
+		int            error   = 0;
+
+		error = Zakero_MemZone_Destroy(memzone);
+		CHECK(error == Zakero_MemZone_Error_Not_Initialized);
+	} // }}}
+	SUBCASE("Destroy With Allocated Memory") // {{{
+	{
+		Zakero_MemZone memzone = {};
+		int            error   = 0;
+
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, ZAKERO_KILOBYTE(1)
+			, Zakero_MemZone_Expand_Disable
+			, Zakero_MemZone_Defrag_Disable
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+
+		uint64_t id = 0;
+		Zakero_MemZone_Allocate(memzone, 128 /* Bytes */, id);
+		CHECK(id != 0);
+
+		error = Zakero_MemZone_Destroy(memzone);
+		CHECK(error == Zakero_MemZone_Error_Destroyed_Allocated_Memory);
+	} // }}}
+	SUBCASE("Destroy With Acquired Memory") // {{{
+	{
+		Zakero_MemZone memzone = {};
+		int            error   = 0;
+
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, ZAKERO_KILOBYTE(1)
+			, Zakero_MemZone_Expand_Disable
+			, Zakero_MemZone_Defrag_Disable
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+
+		uint64_t id = 0;
+		Zakero_MemZone_Allocate(memzone, 128 /* Bytes */, id);
+		CHECK(id != 0);
+
+		void* ptr = Zakero_MemZone_Acquire(memzone, id);
+		CHECK(ptr != nullptr);
+
+		error = Zakero_MemZone_Destroy(memzone);
+		CHECK(error == Zakero_MemZone_Error_Destroyed_Acquired_Memory);
+	} // }}}
+} // }}}
 TEST_CASE("/c/destroy/ram/") // {{{
 {
 	Zakero_MemZone memzone = {};

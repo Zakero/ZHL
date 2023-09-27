@@ -1629,7 +1629,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 	, uint64_t                   defrag
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory != nullptr)
 	{
 		return Zakero_MemZone_Error_Already_Initialized;
@@ -1658,7 +1658,7 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'defrag' has unsupported value");
 		return Zakero_MemZone_Error_Invalid_Parameter_Defrag;
 	}
-#endif
+#endif // }}}
 
 	const size_t block_size = round_to_64bit(size);
 
@@ -1870,6 +1870,28 @@ TEST_CASE("/c/init/") // {{{
 
 		Zakero_MemZone_Destroy(memzone);
 	} // }}}
+	SUBCASE("Initialized") // {{{
+	{
+		error = Zakero_MemZone_Init(memzone
+			, Zakero_MemZone_Mode_RAM
+			, ZAKERO_KILOBYTE(1)
+			, Zakero_MemZone_Expand_Disable
+			, Zakero_MemZone_Defrag_Disable
+			);
+
+		CHECK(error == Zakero_MemZone_Error_None);
+
+		Zakero_MemZone_Block* block = memzone_block_first_(memzone);
+
+		CHECK(block                         != nullptr);
+		CHECK(block_next_(block)            == nullptr);
+		CHECK(block_state_acquired_(block)  == false);
+		CHECK(block_state_allocated_(block) == false);
+		CHECK(block_state_free_(block)      == true);
+		CHECK(block_state_last_(block)      == true);
+
+		Zakero_MemZone_Destroy(memzone);
+	} // }}}
 } // }}}
 TEST_CASE("/c/init/fd/") // {{{
 {
@@ -1902,10 +1924,8 @@ TEST_CASE("/c/init/fd/") // {{{
 } // }}}
 TEST_CASE("/c/init/ram/") // {{{
 {
-	if(mode_is_valid_(Zakero_MemZone_Mode_RAM) == false)
-	{
-		return;
-	}
+#if defined(__HAIKU__) \
+	|| defined(__linux__)
 
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
@@ -1921,14 +1941,16 @@ TEST_CASE("/c/init/ram/") // {{{
 	CHECK(memzone.memory != nullptr);
 
 	Zakero_MemZone_Destroy(memzone);
+#endif
 } // }}}
 TEST_CASE("/c/init/shm/") // {{{
 {
+#if 0 //defined(__linux__)
 	if(mode_is_valid_(Zakero_MemZone_Mode_SHM) == false)
 	{
 		return;
 	}
-
+#endif
 } // }}}
 
 #endif // }}}
@@ -1942,7 +1964,7 @@ TEST_CASE("/c/init/shm/") // {{{
  *     ]
  *   , return = { int, An error code or 0 on success. }
  *   , attr   = [ noexcept ]
- *   , brief  = Destroy the Zakero_MemZone daat.
+ *   , brief  = Destroy the Zakero_MemZone data.
  *   )
  *   When the Zakero_MemZone data is no longer needed, this method will destroy 
  *   and release all used resources.
@@ -1956,7 +1978,7 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 {
 	int error = Zakero_MemZone_Error_None;
 
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
@@ -1982,7 +2004,7 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 
 		block = block_next_(block);
 	} while(block != nullptr);
-#endif
+#endif // }}}
 
 	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
 	{

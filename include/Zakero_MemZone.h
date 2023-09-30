@@ -2151,8 +2151,13 @@ void Zakero_MemZone_ExpandDisable(Zakero_MemZone& memzone
 TEST_CASE("/c/expand/disable") // {{{
 {
 	Zakero_MemZone memzone = {};
-	int            error   = 0;
 
+	SUBCASE("Unitialized") // {{{
+	{
+		Zakero_MemZone_ExpandDisable(memzone);
+	} // }}}
+
+	int error = 0;
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
 		, ZAKERO_KILOBYTE(1)
@@ -2211,8 +2216,13 @@ void Zakero_MemZone_ExpandEnable(Zakero_MemZone& memzone
 TEST_CASE("/c/expand/enable") // {{{
 {
 	Zakero_MemZone memzone = {};
-	int            error   = 0;
 
+	SUBCASE("Unitialized") // {{{
+	{
+		Zakero_MemZone_ExpandEnable(memzone);
+	} // }}}
+
+	int error = 0;
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
 		, ZAKERO_KILOBYTE(1)

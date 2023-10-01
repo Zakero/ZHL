@@ -233,6 +233,7 @@
 	X(Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
 	X(Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
 
+#define ZAKERO_BYTE(val_)     (val_)
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
 #define ZAKERO_MEGABYTE(val_) (ZAKERO_KILOBYTE(val_) * 1024)
 #define ZAKERO_GIGABYTE(val_) (ZAKERO_MEGABYTE(val_) * 1024)
@@ -1116,7 +1117,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 
 	if(block_to_move == nullptr)
 	{
-		block_free = block_swap_free_with_next_(block_free); // Rename block_free_swap_with_next_()
+		block_free = block_swap_free_with_next_(block_free); // TODO: Rename block_free_swap_with_next_()
 		block_free = block_merge_free_(block_free);
 
 		return block_free;
@@ -1124,7 +1125,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 
 	if(block_free->size < (block_to_move->size + sizeof(Zakero_MemZone_Block)))
 	{
-		block_move_(block_to_move, block_free); // Rename block_free_swap_()
+		block_move_(block_to_move, block_free); // TODO: Rename block_free_swap_()
 		block_free = block_to_move;
 
 		return block_free;
@@ -1909,6 +1910,7 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 	int error = Zakero_MemZone_Error_None;
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
+
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
@@ -1917,23 +1919,34 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 #		endif // }}}
 	}
 
+	bool has_acquired = false;
+	bool has_allocated = false;
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	do
 	{
 		if(block_state_acquired_(block) == true)
 		{
-			error = Zakero_MemZone_Error_Destroyed_Acquired_Memory;
-			break;
+			has_acquired = true;
+			ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still acquired", block->id);
 		}
-
-		if(block_state_allocated_(block) == true)
+		else if(block_state_allocated_(block) == true)
 		{
-			error = Zakero_MemZone_Error_Destroyed_Allocated_Memory;
-			break;
+			has_allocated = true;
+			ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still allocated", block->id);
 		}
 
 		block = block_next_(block);
 	} while(block != nullptr);
+
+	if(has_acquired == true)
+	{
+		error = Zakero_MemZone_Error_Destroyed_Acquired_Memory;
+	}
+	else if(has_allocated == true)
+	{
+		error = Zakero_MemZone_Error_Destroyed_Allocated_Memory;
+	}
+
 #endif // }}}
 
 	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
@@ -1982,7 +1995,7 @@ TEST_CASE("/c/destroy/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 
 		uint64_t id = 0;
-		Zakero_MemZone_Allocate(memzone, 128 /* Bytes */, id);
+		Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(128), id);
 		CHECK(id != 0);
 
 		error = Zakero_MemZone_Destroy(memzone);
@@ -2001,7 +2014,7 @@ TEST_CASE("/c/destroy/") // {{{
 		CHECK(error == Zakero_MemZone_Error_None);
 
 		uint64_t id = 0;
-		Zakero_MemZone_Allocate(memzone, 128 /* Bytes */, id);
+		Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(128), id);
 		CHECK(id != 0);
 
 		void* ptr = Zakero_MemZone_Acquire(memzone, id);

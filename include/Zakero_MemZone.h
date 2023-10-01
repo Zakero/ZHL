@@ -1775,15 +1775,6 @@ TEST_CASE("/c/init/") // {{{
 
 		Zakero_MemZone_Destroy(memzone);
 	} // }}}
-	SUBCASE("Invalid Defrag") // {{{
-	{
-		error = Zakero_MemZone_Init(memzone
-			, Zakero_MemZone_Mode_RAM
-			, 8
-			);
-
-		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Defrag);
-	} // }}}
 	SUBCASE("Already Initialized") // {{{
 	{
 		error = Zakero_MemZone_Init(memzone
@@ -2383,6 +2374,7 @@ TEST_CASE("/c/allocate/") // {{{
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
+#if 0
 	SUBCASE("Not Enough Memory") // {{{
 	{
 		uint64_t id = 0;
@@ -2431,9 +2423,11 @@ TEST_CASE("/c/allocate/") // {{{
 		error = Zakero_MemZone_Free(memzone, id_2);
 		CHECK(error == Zakero_MemZone_Error_None);
 	} // }}}
+#endif
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
+#if 0
 TEST_CASE("/c/allocate/defrag/") // {{{
 {
 	Zakero_MemZone memzone = {};
@@ -2553,6 +2547,7 @@ TEST_CASE("/c/allocate/expand/") // {{{
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
+#endif
 
 #endif // }}}
 

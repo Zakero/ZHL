@@ -2117,8 +2117,8 @@ TEST_CASE("/c/defrag/") // {{{
 
 /* {{function(name = Zakero_MemZone_Defrag
  *   , param =
- *     [ { Zakero_MemZone& , memzone , The data.                 }
- *     , { uint64_t        , defrag  , When to defrag memory.    }
+ *     [ { Zakero_MemZone& , memzone , The data.              }
+ *     , { uint64_t        , defrag  , When to defrag memory. }
  *     ]
  *   , attr   = [ noexcept ]
  *   , brief  = Determine when to automatically defrag.
@@ -2740,6 +2740,27 @@ TEST_CASE("/c/free/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Acquire() -
 
+/* {{function(name = Zakero_MemZone_Acquire
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.      }
+ *     , { uint64_t        , id      , The memory ID. }
+ *     ]
+ *   , attr  = [ noexcept ]
+ *   , brief = Get a pointer to the allocated memory.
+ *   )
+ *   This function will provide a pointer to the memory that has been allocated 
+ *   and associated with an ID. When a pointer to the memory has been acquired, 
+ *   that memory will be "lock" in position. Any memory that is "locked" will 
+ *   not be moved by Zakero_MemZone, meaning that defragging operations will 
+ *   not touch that memory and any attempts to expand the size of 
+ *   Zakero_MemZone will automatically fail (the entire memory pool may be 
+ *   moved).
+ *
+ *   When the memory no longer needs to be used, but still kept for future 
+ *   access, {{link(target=[Zakero_MemZone_Release]) Release}} the ID so that 
+ *   Zakero_MemZone can move the memory to another location if needed.
+ * }}
+ */
 void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
@@ -2750,6 +2771,11 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 	}
 #endif // }}}
+
+	if(memzone_defrag_on_acquire_(memzone) == true)
+	{
+		memzone_defrag_(memzone, 1);
+	}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
@@ -2764,11 +2790,6 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 
 	block_state_acquired_set_(block, true);
 	void* ptr = (void*)zakero_memzone_block_data_(block);
-
-	if(memzone_defrag_on_acquire_(memzone) == true)
-	{
-		memzone_defrag_(memzone, 1);
-	}
 
 	return ptr;
 }
@@ -2811,6 +2832,56 @@ TEST_CASE("/c/acquire/") // {{{
 	Zakero_MemZone_Free(memzone, id);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
+TEST_CASE("/c/acquire/defrag/") // {{{
+{
+	Zakero_MemZone memzone  = {};
+	int            error    = 0;
+	uint64_t       id_1     = 0;
+	uint64_t       id_2     = 0;
+	void*          p_before = nullptr;
+	void*          p_after  = nullptr;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_BYTE(128) + sizeof(Zakero_MemZone_Block)
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id_1
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id_1  != 0);
+	p_before = Zakero_MemZone_Acquire(memzone, id_1);
+	memset(p_before, 0x11, Zakero_MemZone_Size_Of(memzone, id_1));
+	Zakero_MemZone_Release(memzone, id_1);
+
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id_2
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id_2  != 0);
+	p_before = Zakero_MemZone_Acquire(memzone, id_2);
+	memset(p_before, 0x22, Zakero_MemZone_Size_Of(memzone, id_2));
+	Zakero_MemZone_Release(memzone, id_2);
+
+	Zakero_MemZone_Free(memzone, id_1);
+
+	//----------------------------------------
+	Zakero_MemZone_DefragSet(memzone
+		, Zakero_MemZone_Defrag_On_Acquire
+		);
+	//----------------------------------------
+
+	p_after = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK(p_before != p_after);
+
+	Zakero_MemZone_Release(memzone, id_2);
+	Zakero_MemZone_Free(memzone, id_2);
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
 
 #endif // }}}
 
@@ -2821,12 +2892,12 @@ void Zakero_MemZone_Release(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
@@ -3135,7 +3206,7 @@ TEST_CASE("/c/size-of/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Size_Of() -
+// {{{ Zakero_MemZone_Error_Message() -
 
 const char* Zakero_MemZone_Error_Message(int error_code
 	) noexcept

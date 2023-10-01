@@ -2744,20 +2744,23 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
 
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' doses not exist.", id);
 		return nullptr;
 	}
+#endif // }}}
 
 	block_state_acquired_set_(block, true);
 	void* ptr = (void*)zakero_memzone_block_data_(block);
@@ -2777,21 +2780,35 @@ TEST_CASE("/c/acquire/") // {{{
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 	uint64_t       id      = 0;
+	void*          ptr     = nullptr;
+
+	SUBCASE("Unitialized") // {{{
+	{
+		ptr = Zakero_MemZone_Acquire(memzone, id);
+		CHECK(ptr == nullptr);
+	} // }}}
 
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_BYTE(128)
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(1)
+		, ZAKERO_BYTE(64)
 		, id
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id    != 0);
 
+	ptr = Zakero_MemZone_Acquire(memzone, id);
+	CHECK(ptr != nullptr);
+
+	ptr = Zakero_MemZone_Acquire(memzone, id + 1);
+	CHECK(ptr == nullptr);
+
+	Zakero_MemZone_Release(memzone, id);
+	Zakero_MemZone_Free(memzone, id);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 

@@ -2297,6 +2297,9 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Not_Initialized;
+#		endif // }}}
 	}
 
 #endif // }}}
@@ -2362,19 +2365,21 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 TEST_CASE("/c/allocate/") // {{{
 {
 	Zakero_MemZone memzone = {};
+	int            error   = 0;
+
 	SUBCASE("Unitialized") // {{{
 	{
-		Zakero_MemZone_ExpandEnable(memzone);
+		uint64_t id = 0;
+		error = Zakero_MemZone_Allocate(memzone, 0, id);
+		CHECK(error == Zakero_MemZone_Error_Not_Initialized);
 	} // }}}
 
-	int error = 0;
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
 		, ZAKERO_KILOBYTE(1)
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-#if 0
 	SUBCASE("Not Enough Memory") // {{{
 	{
 		uint64_t id = 0;
@@ -2398,6 +2403,7 @@ TEST_CASE("/c/allocate/") // {{{
 		error = Zakero_MemZone_Free(memzone, id);
 		CHECK(error == Zakero_MemZone_Error_None);
 	} // }}}
+#if 0
 	SUBCASE("Enough Memory x2") // {{{
 	{
 		uint64_t id_1 = 0;

@@ -2209,7 +2209,7 @@ TEST_CASE("/c/expand/disable") // {{{
 {
 	Zakero_MemZone memzone = {};
 
-	SUBCASE("Unitialized") // {{{
+	SUBCASE("Uninitialized") // {{{
 	{
 		Zakero_MemZone_ExpandDisable(memzone);
 	} // }}}
@@ -2273,7 +2273,7 @@ TEST_CASE("/c/expand/enable") // {{{
 {
 	Zakero_MemZone memzone = {};
 
-	SUBCASE("Unitialized") // {{{
+	SUBCASE("Uninitialized") // {{{
 	{
 		Zakero_MemZone_ExpandEnable(memzone);
 	} // }}}
@@ -2398,7 +2398,7 @@ TEST_CASE("/c/allocate/") // {{{
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 
-	SUBCASE("Unitialized") // {{{
+	SUBCASE("Uninitialized") // {{{
 	{
 		uint64_t id = 0;
 		error = Zakero_MemZone_Allocate(memzone, 0, id);
@@ -2663,30 +2663,53 @@ TEST_CASE("/c/resize/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Free() --------------TEST-
+// {{{ Zakero_MemZone_Free() ------ DEFRAG TEST-
 
+/* {{function(nam = Zakero_MemZone_Free
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.       }
+ *     , { uint64_t        , id      , The ID to free. }
+ *     ]
+ *   , attr = [ noexcept ]
+ *   , brief = Free allocated memory.
+ *   )
+ *   When allocated memory is no longer needed, use this function to free it.
+ * }}
+ */
 int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Not_Initialized;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' doses not exist.", id);
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 		return Zakero_MemZone_Error_Invalid_Parameter_Id;
+#		endif // }}}
 	}
 
 	if(block_state_acquired_(block) == true)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still acquired", block->id);
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 		return Zakero_MemZone_Error_Id_Is_Acquired;
+#		endif // }}}
 	}
+#endif // }}}
 
 	if(block_state_zerofill_(block) == true)
 	{
@@ -2707,30 +2730,50 @@ TEST_CASE("/c/free/") // {{{
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 	uint64_t       id      = 0;
-	size_t         size    = 0;
+
+	SUBCASE("Uninitialized") // {{{
+	{
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Not_Initialized);
+	} // }}}
 
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_BYTE(128)
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	size = Zakero_MemZone_Available_Total(memzone);
+	SUBCASE("Does Not Exist: Never Created") // {{{
+	{
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Id);
+	} // }}}
 
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(1)
+		, ZAKERO_BYTE(128)
 		, id
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id    != 0);
-	CHECK(size  != Zakero_MemZone_Available_Total(memzone));
 
-	error = Zakero_MemZone_Free(memzone, id);
+	SUBCASE("Happy Path") // {{{
+	{
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_None);
+	} // }}}
+	SUBCASE("Is Acquired") // {{{
+	{
+		(void)Zakero_MemZone_Acquire(memzone, id);
 
-	CHECK(error == Zakero_MemZone_Error_None);
-	CHECK(size  == Zakero_MemZone_Available_Total(memzone));
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Id_Is_Acquired);
+	} // }}}
+	SUBCASE("Free'ed 2x") // {{{
+	{
+		error = Zakero_MemZone_Free(memzone, id);
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Id);
+	} // }}}
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
@@ -2808,7 +2851,7 @@ TEST_CASE("/c/acquire/") // {{{
 	uint64_t       id      = 0;
 	void*          ptr     = nullptr;
 
-	SUBCASE("Unitialized") // {{{
+	SUBCASE("Uninitialized") // {{{
 	{
 		ptr = Zakero_MemZone_Acquire(memzone, id);
 		CHECK(ptr == nullptr);

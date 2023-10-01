@@ -857,7 +857,7 @@ static inline void block_init_(Zakero_MemZone_Block* block
 			return nullptr;
 		}
 
-		if(block == block_stop)
+		if(block <= block_stop)
 		{
 			return nullptr;
 		}
@@ -1111,9 +1111,17 @@ static void block_dump_(const Zakero_MemZone_Block* block
 
 	if(block_to_move != nullptr)
 	{
-		block_temp = block_split_(block_free, block_to_move->size);
-		block_move_(block_to_move, block_free);
-		block_free = block_temp;
+		if(block_free->size >= (block_to_move->size + sizeof(Zakero_MemZone_Block)))
+		{
+			block_temp = block_free;
+			block_free = block_split_(block_temp, block_to_move->size);
+			block_move_(block_to_move, block_temp);
+		}
+		else
+		{
+			block_move_(block_to_move, block_free);
+			block_free = block_to_move;
+		}
 	}
 	else
 	{

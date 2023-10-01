@@ -2284,18 +2284,17 @@ TEST_CASE("/c/expand/enable") // {{{
 
 /* {{function(name = Zakero_MemZone_Allocate
  *   , param =
- *     [ { Zakero_MemZone& , memzone , The data. }
- *     , { const size_t    , memzone , The data. }
+ *     [ { Zakero_MemZone& , memzone , The data.                             }
+ *     , { const size_t    , memzone , The byte size of the memory section.  }
+ *     , { uint64_t&       , id      , The ID of the memory section.         }
  *     ]
  *   , return = { int, An error code or 0 on success. }
  *   , attr   = [ noexcept ]
- *   , brief  = Destroy the Zakero_MemZone data.
+ *   , brief  = Allocate a section of the Zakero_MemZone data for use.
  *   )
- *   When the Zakero_MemZone data is no longer needed, this method will destroy 
- *   and release all used resources.
- *
- *   If the Zakero_MemZone is backed by RAM, then the memory will be 
- *   zero-filled then free'ed.
+ *   Use this function to reserve a section of the Zakero_MemZone data for 
+ *   future use. The "id" of the data will be provided as the means of 
+ *   identifing the reserved section of data.
  * }}
  */
 int Zakero_MemZone_Allocate(Zakero_MemZone& memzone

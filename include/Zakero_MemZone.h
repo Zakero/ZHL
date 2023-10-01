@@ -232,6 +232,7 @@
 	X(Error_Destroyed_Allocated_Memory , 15 , "MemZone was destroyed with Allocated memory"          ) \
 	X(Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
 	X(Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
+	X(Error_Id_Is_Not_Acquired         , 18 , "The ID has not been aquired"                          ) \
 
 #define ZAKERO_BYTE(val_)     (val_)
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
@@ -289,7 +290,7 @@ struct Zakero_MemZone
 [[]]          int         Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
 [[]]          int         Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
 [[nodiscard]] void*       Zakero_MemZone_Acquire(Zakero_MemZone&, uint64_t id) noexcept;
-[[]]          void        Zakero_MemZone_Release(Zakero_MemZone&, uint64_t id) noexcept;
+[[]]          int         Zakero_MemZone_Release(Zakero_MemZone&, uint64_t id) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Available_Largest(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;
@@ -797,7 +798,9 @@ static inline void block_init_(Zakero_MemZone_Block* block
 	{
 		while(block != nullptr)
 		{
-			if(block->id == id)
+			if((block->id == id)
+				&& (block_state_allocated_(block) == true)
+				)
 			{
 				return block;
 			}
@@ -811,7 +814,9 @@ static inline void block_init_(Zakero_MemZone_Block* block
 	{
 		while(block != nullptr)
 		{
-			if(block->id == id)
+			if((block->id == id)
+				&& (block_state_allocated_(block) == true)
+				)
 			{
 				return block;
 			}
@@ -2075,7 +2080,7 @@ TEST_CASE("/c/destroy/shm/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Defrag() -
+// {{{ Zakero_MemZone_Defrag() ------------TEST-
 
 void Zakero_MemZone_Defrag(Zakero_MemZone& memzone
 	) noexcept
@@ -2113,7 +2118,7 @@ TEST_CASE("/c/defrag/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_DefragSet() -
+// {{{ Zakero_MemZone_DefragSet() ---------TEST-
 
 /* {{function(name = Zakero_MemZone_Defrag
  *   , param =
@@ -2581,7 +2586,7 @@ TEST_CASE("/c/allocate/expand/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Resize() -
+// {{{ Zakero_MemZone_Resize() ------------TEST-
 
 int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 	, uint64_t id
@@ -2658,7 +2663,7 @@ TEST_CASE("/c/resize/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Free() -
+// {{{ Zakero_MemZone_Free() --------------TEST-
 
 int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	, uint64_t id
@@ -2888,7 +2893,20 @@ TEST_CASE("/c/acquire/defrag/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Release() -
 
-void Zakero_MemZone_Release(Zakero_MemZone& memzone
+/* {{function(name = Zakero_MemZone_Release
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.      }
+ *     , { uint64_t        , id      , The memory ID. }
+ *     ]
+ *   , attr  = [ noexcept ]
+ *   , brief = Release the pointer to allocated memory.
+ *   )
+ *   After a pointer has been acquired to allocated memory, use this function 
+ *   to release the pointer. The memory will also be "unlocked", allowing 
+ *   Zakero_MemZone to relocate the memory if needed.
+ * }}
+ */
+int Zakero_MemZone_Release(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
 {
@@ -2896,16 +2914,32 @@ void Zakero_MemZone_Release(Zakero_MemZone& memzone
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Not_Initialized;
+#		endif // }}}
 	}
 #endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
 
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
 	{
-		return;
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' doses not exist.", id);
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Invalid_Parameter_Id;
+#		endif // }}}
 	}
+
+	if(block_state_acquired_(block) == false)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' has not been acquired.", id);
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return Zakero_MemZone_Error_Id_Is_Not_Acquired;
+#		endif // }}}
+	}
+#endif // }}}
 
 	block_state_acquired_set_(block, false);
 
@@ -2913,6 +2947,8 @@ void Zakero_MemZone_Release(Zakero_MemZone& memzone
 	{
 		memzone_defrag_(memzone, 1);
 	}
+
+	return Zakero_MemZone_Error_None;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2923,27 +2959,114 @@ TEST_CASE("/c/release/") // {{{
 	int            error   = 0;
 	uint64_t       id      = 0;
 
+	SUBCASE("Uninitialized") // {{{
+	{
+		error = Zakero_MemZone_Release(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Not_Initialized);
+	} // }}}
+
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_BYTE(128)
 		);
+	CHECK(error == Zakero_MemZone_Error_None);
 
+	SUBCASE("Does Not Exist: Never Created") // {{{
+	{
+		error = Zakero_MemZone_Release(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Invalid_Parameter_Id);
+	} // }}}
+
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	SUBCASE("Not Acquired") // {{{
+	{
+		error = Zakero_MemZone_Release(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Id_Is_Not_Acquired);
+	} // }}}
+	SUBCASE("Happy Path") // {{{
+	{
+		(void)Zakero_MemZone_Acquire(memzone, id);
+
+		error = Zakero_MemZone_Release(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_None);
+	} // }}}
+	SUBCASE("Released 2x") // {{{
+	{
+		(void)Zakero_MemZone_Acquire(memzone, id);
+
+		error = Zakero_MemZone_Release(memzone, id);
+		error = Zakero_MemZone_Release(memzone, id);
+		CHECK(error == Zakero_MemZone_Error_Id_Is_Not_Acquired);
+	} // }}}
+
+	Zakero_MemZone_Free(memzone, id);
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+TEST_CASE("/c/release/defrag/") // {{{
+{
+	Zakero_MemZone memzone  = {};
+	int            error    = 0;
+	uint64_t       id_1     = 0;
+	uint64_t       id_2     = 0;
+	void*          p_before = nullptr;
+	void*          p_after  = nullptr;
+
+	error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_BYTE(128) + sizeof(Zakero_MemZone_Block)
+		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(1)
-		, id
+		, ZAKERO_BYTE(64)
+		, id_1
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id_1  != 0);
+	p_before = Zakero_MemZone_Acquire(memzone, id_1);
+	memset(p_before, 0x11, Zakero_MemZone_Size_Of(memzone, id_1));
+	Zakero_MemZone_Release(memzone, id_1);
 
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id_2
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+	CHECK(id_2  != 0);
+	p_before = Zakero_MemZone_Acquire(memzone, id_2);
+	memset(p_before, 0x22, Zakero_MemZone_Size_Of(memzone, id_2));
+	Zakero_MemZone_Release(memzone, id_2);
+
+	Zakero_MemZone_Free(memzone, id_1);
+
+	//----------------------------------------
+	Zakero_MemZone_DefragSet(memzone
+		, Zakero_MemZone_Defrag_On_Release
+		);
+	//----------------------------------------
+
+	p_after = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK(p_before == p_after);
+
+	Zakero_MemZone_Release(memzone, id_2);
+
+	p_after = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK(p_before != p_after);
+
+	Zakero_MemZone_Release(memzone, id_2);
+	Zakero_MemZone_Free(memzone, id_2);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Available_Largest() -
+// {{{ Zakero_MemZone_Available_Largest() -TEST-
 
 size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 	) noexcept
@@ -2995,7 +3118,7 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Available_Total() -
+// {{{ Zakero_MemZone_Available_Total() ---TEST-
 
 size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
 	) noexcept
@@ -3047,7 +3170,7 @@ TEST_CASE("/c/availalbe/total/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Used_Largest() -
+// {{{ Zakero_MemZone_Used_Largest() ------TEST-
 
 size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
 	) noexcept
@@ -3099,7 +3222,7 @@ TEST_CASE("/c/used/largest/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Used_Total() -
+// {{{ Zakero_MemZone_Used_Total() --------TEST-
 
 size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	) noexcept
@@ -3153,7 +3276,7 @@ TEST_CASE("/c/used/total/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Size_Of() -
+// {{{ Zakero_MemZone_Size_Of() -----------TEST-
 
 size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 	, uint64_t id
@@ -3206,7 +3329,7 @@ TEST_CASE("/c/size-of/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Error_Message() -
+// {{{ Zakero_MemZone_Error_Message() -----TEST-
 
 const char* Zakero_MemZone_Error_Message(int error_code
 	) noexcept

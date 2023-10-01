@@ -1083,10 +1083,10 @@ static void block_dump_(const Zakero_MemZone_Block* block
 [[nodiscard]] static Zakero_MemZone_Block* memzone_defrag_pass_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	Zakero_MemZone_Block* block_free = nullptr;
-	block_free = block_find_free_(block, 0, Zakero_MemZone_Block_Find_Forward);
-
-	if(block == nullptr)
+	Zakero_MemZone_Block* block_free = block_find_free_(block, 0, Zakero_MemZone_Block_Find_Forward);
+	if((block_free == nullptr)
+		|| (block_state_last_(block_free) == true)
+		)
 	{
 		return nullptr;
 	}
@@ -1094,40 +1094,45 @@ static void block_dump_(const Zakero_MemZone_Block* block
 	Zakero_MemZone_Block* block_temp    = block_find_last_allocated_(block_free);
 	Zakero_MemZone_Block* block_to_move = nullptr;
 
-	while(block_temp > block_free)
+	while((block_temp != nullptr)
+		&& (block_temp > block_free)
+		)
 	{
-		if(block_temp->size <= block_free->size)
+		if(block_state_allocated_(block_temp) == true)
 		{
-			if(block_to_move == nullptr
-				|| block_to_move->size < block_temp->size
-				)
+			if(block_free->size >= block_temp->size)
 			{
-				block_to_move = block_temp;
+				if((block_to_move == nullptr)
+					|| (block_temp->size > block_to_move->size)
+					)
+				{
+					block_to_move = block_temp;
+				}
 			}
 		}
 
 		block_temp = block_prev_(block_temp);
 	}
 
-	if(block_to_move != nullptr)
+	if(block_to_move == nullptr)
 	{
-		if(block_free->size >= (block_to_move->size + sizeof(Zakero_MemZone_Block)))
-		{
-			block_temp = block_free;
-			block_free = block_split_(block_temp, block_to_move->size);
-			block_move_(block_to_move, block_temp);
-		}
-		else
-		{
-			block_move_(block_to_move, block_free);
-			block_free = block_to_move;
-		}
-	}
-	else
-	{
-		block_free = block_swap_free_with_next_(block_free);
+		block_free = block_swap_free_with_next_(block_free); // Rename block_free_swap_with_next_()
 		block_free = block_merge_free_(block_free);
+
+		return block_free;
 	}
+
+	if(block_free->size < (block_to_move->size + sizeof(Zakero_MemZone_Block)))
+	{
+		block_move_(block_to_move, block_free); // Rename block_free_swap_()
+		block_free = block_to_move;
+
+		return block_free;
+	}
+
+	block_temp = block_free;
+	block_free = block_split_(block_temp, block_to_move->size);
+	block_move_(block_to_move, block_temp);
 
 	return block_free;
 }
@@ -2445,14 +2450,12 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 
 	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		//, ZAKERO_KILOBYTE(4) + (sizeof(Zakero_MemZone_Block) * 2)
 		, (64 * 4) + (sizeof(Zakero_MemZone_Block) * 2)
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
 	uint64_t id_1 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		//, ZAKERO_KILOBYTE(1)
 		, 64
 		, id_1
 		);
@@ -2463,7 +2466,6 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 
 	uint64_t id_3 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		//, ZAKERO_KILOBYTE(1)
 		, 64
 		, id_3
 		);
@@ -2474,7 +2476,6 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 
 	uint64_t id_2 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		//, ZAKERO_KILOBYTE(1)
 		, 64
 		, id_2
 		);
@@ -2496,14 +2497,13 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 	Zakero_MemZone_Defrag(memzone);
 	// -----------------------------------
 
-#if 1
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(2)
+		, (64 * 2)
 		, id_3
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id_3  != 0);
-	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, 64 * 2);
+	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, (64 * 2));
 
 	Zakero_MemZone_Release(memzone, id_1);
 	Zakero_MemZone_Free(memzone, id_1);
@@ -2514,7 +2514,6 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 	Zakero_MemZone_Release(memzone, id_3);
 	Zakero_MemZone_Free(memzone, id_3);
 
-#endif
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 TEST_CASE("/c/allocate/expand/") // {{{

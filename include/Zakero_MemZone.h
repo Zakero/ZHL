@@ -3549,7 +3549,7 @@ TEST_CASE("/c/size-of/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Error_Message() -----TEST-
+// {{{ Zakero_MemZone_Error_Message() -
 
 const char* Zakero_MemZone_Error_Message(int error_code
 	) noexcept
@@ -3568,28 +3568,13 @@ ZAKERO_MEMZONE__ERROR_DATA
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
-TEST_CASE("/c/size-of/") // {{{
+TEST_CASE("/c/error-message/") // {{{
 {
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
-	uint64_t       id      = 0;
-
-	error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
-		);
-
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(1)
-		, id
-		);
-
-	CHECK(error == Zakero_MemZone_Error_None);
-	CHECK(Zakero_MemZone_Size_Of(memzone, id) == ZAKERO_KILOBYTE(1));
-
-	Zakero_MemZone_Destroy(memzone);
+#	define X(error_name_, error_code_, error_message_) \
+	CHECK(Zakero_MemZone_Error_Message(error_code_) == error_message_);
+	ZAKERO_MEMZONE__ERROR_DATA
+#	undef X
+	CHECK(Zakero_MemZone_Error_Message(-1) == Zakero_MemZone_Error_Message(Zakero_MemZone_Error_None));
 } // }}}
 
 #endif // }}}

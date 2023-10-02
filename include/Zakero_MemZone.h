@@ -3390,17 +3390,30 @@ TEST_CASE("/c/availalbe/total/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Used_Largest() ------TEST-
+// {{{ Zakero_MemZone_Used_Largest() -
 
+/* {{function(name = Zakero_MemZone_Used_Largest
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data. }
+ *     ]
+ *   , attr   = [ noexcept ]
+ *   , brief  = Get the current size of the memory at ID.
+ *   , return = The single largest amount of memory in use.
+ *   )
+ * }}
+ */
 size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return 0;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
 	size_t                retval = 0;
@@ -3423,19 +3436,46 @@ size_t Zakero_MemZone_Used_Largest(Zakero_MemZone& memzone
 TEST_CASE("/c/used/largest/") // {{{
 {
 	Zakero_MemZone memzone = {};
-	int            error   = 0;
 
-	error = Zakero_MemZone_Init(memzone
+	SUBCASE("Uninitialized") // {{{
+	{
+		CHECK(Zakero_MemZone_Used_Largest(memzone) == 0);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_KILOBYTE(1)
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	size_t used = Zakero_MemZone_Used_Largest(memzone);
+	CHECK(Zakero_MemZone_Used_Largest(memzone) == 0);
 
-	CHECK(used == 0);
+	uint64_t id_1 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id_1
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
 
+	uint64_t id_2 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(256)
+		, id_2
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	uint64_t id_3 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(128)
+		, id_3
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	CHECK(Zakero_MemZone_Used_Largest(memzone) == ZAKERO_BYTE(256));
+
+	Zakero_MemZone_Free(memzone, id_1);
+	Zakero_MemZone_Free(memzone, id_2);
+	Zakero_MemZone_Free(memzone, id_3);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 
@@ -3444,6 +3484,16 @@ TEST_CASE("/c/used/largest/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Used_Total() -
 
+/* {{function(name = Zakero_MemZone_Used_Total
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data. }
+ *     ]
+ *   , attr   = [ noexcept ]
+ *   , brief  = Get the current size of the memory at ID.
+ *   , return = The total size of all memory that is in use.
+ *   )
+ * }}
+ */
 size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	) noexcept
 {
@@ -3500,6 +3550,8 @@ TEST_CASE("/c/used/total/") // {{{
 		CHECK(Zakero_MemZone_Size_Of(memzone, 0) == 0);
 	} // }}}
 
+	CHECK(Zakero_MemZone_Used_Total(memzone) == OVERHEAD); // of free block
+
 	uint64_t id[TEST_COUNT];
 
 	for(size_t i = 0; i < TEST_COUNT; i++)
@@ -3535,9 +3587,10 @@ TEST_CASE("/c/used/total/") // {{{
  *     [ { Zakero_MemZone& , memzone , The data.      }
  *     , { uint64_t        , id      , The memory ID. }
  *     ]
- *   , attr = [ noexcept ]
- *   , brief = Get the current size of the memory at ID.
+ *   , attr   = [ noexcept ]
+ *   , brief  = Get the current size of the memory at ID.
  *   , return = The size of the memory at ID in bytes.
+ *   )
  * }}
  */
 size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
@@ -3615,7 +3668,7 @@ TEST_CASE("/c/size-of/") // {{{
  *   , param =
  *     [ { int , error_code , The error code. }
  *     ]
- *   , attr = [ noexcept ]
+ *   , attr  = [ noexcept ]
  *   , brief = Convert an error code into a string.
  *   )
  *   Use this function to get a breif description of the error_code.

@@ -3496,26 +3496,44 @@ TEST_CASE("/c/used/total/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Size_Of() -----------TEST-
+// {{{ Zakero_MemZone_Size_Of() -
 
+/* {{function(name = Zakero_MemZone_Size_Of
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.      }
+ *     , { uint64_t        , id      , The memory ID. }
+ *     ]
+ *   , attr = [ noexcept ]
+ *   , brief = Get the current size of the memory at ID.
+ *   , return = The size of the memory at ID in bytes.
+ * }}
+ */
 size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return 0;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
 
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
 	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' doses not exist.", id);
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 		return 0;
+#		endif // }}}
 	}
+#endif // }}}
 
 	return block->size;
 }
@@ -3524,25 +3542,35 @@ size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 
 TEST_CASE("/c/size-of/") // {{{
 {
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
-	uint64_t       id      = 0;
+	constexpr size_t TEST_SIZE = ZAKERO_BYTE(64);
+	Zakero_MemZone   memzone   = {};
+	uint64_t         id        = 0;
 
-	error = Zakero_MemZone_Init(memzone
+	SUBCASE("Uninitialized") // {{{
+	{
+		CHECK(Zakero_MemZone_Size_Of(memzone, id) == 0);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, TEST_SIZE
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
+
+	SUBCASE("Does Not Exist: Never Created") // {{{
+	{
+		CHECK(Zakero_MemZone_Size_Of(memzone, id) == 0);
+	} // }}}
 
 	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_KILOBYTE(1)
+		, TEST_SIZE
 		, id
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
-	CHECK(Zakero_MemZone_Size_Of(memzone, id) == ZAKERO_KILOBYTE(1));
 
+	CHECK(Zakero_MemZone_Size_Of(memzone, id) == TEST_SIZE);
+
+	Zakero_MemZone_Free(memzone, id);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 
@@ -3551,6 +3579,16 @@ TEST_CASE("/c/size-of/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Error_Message() -
 
+/* {{function(name = Zakero_MemZone_Message
+ *   , param =
+ *     [ { int , error_code , The error code. }
+ *     ]
+ *   , attr = [ noexcept ]
+ *   , brief = Convert an error code into a string.
+ *   )
+ *   Use this function to get a breif description of the error_code.
+ * }}
+ */
 const char* Zakero_MemZone_Error_Message(int error_code
 	) noexcept
 {

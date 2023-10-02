@@ -3442,17 +3442,20 @@ TEST_CASE("/c/used/largest/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Used_Total() --------TEST-
+// {{{ Zakero_MemZone_Used_Total() -
 
 size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return 0;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
 	size_t                retval = 0;
@@ -3476,20 +3479,49 @@ size_t Zakero_MemZone_Used_Total(Zakero_MemZone& memzone
 
 TEST_CASE("/c/used/total/") // {{{
 {
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
+	constexpr size_t TEST_SIZE  = ZAKERO_BYTE(64);
+	constexpr size_t TEST_COUNT = 1;
+	constexpr size_t OVERHEAD   = sizeof(Zakero_MemZone_Block);
+	Zakero_MemZone   memzone    = {};
 
-	error = Zakero_MemZone_Init(memzone
+	SUBCASE("Uninitialized") // {{{
+	{
+		CHECK(Zakero_MemZone_Used_Total(memzone) == 0);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, (TEST_SIZE + OVERHEAD) * TEST_COUNT * 2
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	size_t used = Zakero_MemZone_Used_Total(memzone);
+	SUBCASE("Does Not Exist: Never Created") // {{{
+	{
+		CHECK(Zakero_MemZone_Size_Of(memzone, 0) == 0);
+	} // }}}
 
-	CHECK(used == sizeof(Zakero_MemZone_Block));
+	uint64_t id[TEST_COUNT];
 
+	for(size_t i = 0; i < TEST_COUNT; i++)
+	{
+		Zakero_MemZone_Allocate(memzone
+			, TEST_SIZE
+			, id[i]
+			);
+	}
+
+	size_t expected_total = 0;
+	// The number of allocated memory blocks including header
+	expected_total += (TEST_SIZE + OVERHEAD) * TEST_COUNT;
+	// The header of the free memory block
+	expected_total += OVERHEAD;
+
+	CHECK(Zakero_MemZone_Used_Total(memzone) == expected_total);
+
+	for(size_t i = 0; i < TEST_COUNT; i++)
+	{
+		Zakero_MemZone_Free(memzone, id[i]);
+	}
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 

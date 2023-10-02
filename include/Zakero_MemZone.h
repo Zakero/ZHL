@@ -3338,17 +3338,30 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Available_Total() ---TEST-
+// {{{ Zakero_MemZone_Available_Total() -
 
+/* {{function(name = Zakero_MemZone_Available_Total
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data. }
+ *     ]
+ *   , attr   = [ noexcept ]
+ *   , brief  = Get the current size of the memory at ID.
+ *   , return = The total amount of memory available for allocation.
+ *   )
+ * }}
+ */
 size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return 0;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
 	size_t                retval = 0;
@@ -3370,19 +3383,48 @@ size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
 
 TEST_CASE("/c/availalbe/total/") // {{{
 {
-	Zakero_MemZone memzone = {};
-	int            error   = 0;
+	constexpr size_t TEST_SIZE = ZAKERO_BYTE(64);
+	constexpr size_t OVERHEAD  = sizeof(Zakero_MemZone_Block);
+	Zakero_MemZone   memzone   = {};
 
-	error = Zakero_MemZone_Init(memzone
+	SUBCASE("Uninitialized") // {{{
+	{
+		CHECK(Zakero_MemZone_Available_Total(memzone) == 0);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_KILOBYTE(1)
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	size_t available = Zakero_MemZone_Available_Total(memzone);
+	CHECK(Zakero_MemZone_Available_Total(memzone) == ZAKERO_KILOBYTE(1));
 
-	CHECK(available == ZAKERO_MEGABYTE(1));
+	size_t expected_size = ZAKERO_KILOBYTE(1);
+
+	uint64_t id_1 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, TEST_SIZE
+		, id_1
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+	expected_size -= (TEST_SIZE + OVERHEAD);
+
+	uint64_t id_2 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, TEST_SIZE
+		, id_2
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+	expected_size -= (TEST_SIZE + OVERHEAD);
+
+	CHECK(Zakero_MemZone_Available_Total(memzone) == expected_size);
+
+
+	Zakero_MemZone_Free(memzone, id_1);
+	expected_size += TEST_SIZE; // OVERHEAD is still used by the free block
+
+	CHECK(Zakero_MemZone_Available_Total(memzone) == expected_size);
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

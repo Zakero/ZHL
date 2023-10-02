@@ -3286,17 +3286,30 @@ TEST_CASE("/c/release/defrag/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Available_Largest() -TEST-
+// {{{ Zakero_MemZone_Available_Largest() -
 
+/* {{function(name = Zakero_MemZone_Available_Largest
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data. }
+ *     ]
+ *   , attr   = [ noexcept ]
+ *   , brief  = Get the size of the largest contiguous block of memory.
+ *   , return = The size of the memory.
+ *   )
+ * }}
+ */
 size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return 0;
+#		endif // }}}
 	}
-#endif
+#endif // }}}
 
 	Zakero_MemZone_Block* block  = memzone_block_first_(memzone);
 	size_t                retval = 0;
@@ -3319,18 +3332,65 @@ size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 TEST_CASE("/c/availalbe/largest/") // {{{
 {
 	Zakero_MemZone memzone = {};
-	int            error   = 0;
 
-	error = Zakero_MemZone_Init(memzone
+	SUBCASE("Uninitialized") // {{{
+	{
+		CHECK(Zakero_MemZone_Available_Largest(memzone) == 0);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_MEGABYTE(1)
+		, ZAKERO_KILOBYTE(1)
 		);
-
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	size_t available = Zakero_MemZone_Available_Largest(memzone);
+	CHECK(Zakero_MemZone_Available_Largest(memzone) == ZAKERO_KILOBYTE(1));
 
-	CHECK(available == ZAKERO_MEGABYTE(1));
+	uint64_t id_1 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(64)
+		, id_1
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	uint64_t id_2 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(200)
+		, id_2
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	uint64_t id_3 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(256)
+		, id_3
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	uint64_t id_4 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(200)
+		, id_4
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	uint64_t id_5 = 0;
+	error = Zakero_MemZone_Allocate(memzone
+		, ZAKERO_BYTE(128)
+		, id_5
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Free(memzone, id_1);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Free(memzone, id_3);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	error = Zakero_MemZone_Free(memzone, id_5);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	CHECK(Zakero_MemZone_Available_Largest(memzone) == ZAKERO_BYTE(256));
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}

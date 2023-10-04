@@ -2862,7 +2862,7 @@ TEST_CASE("/c/resize/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Free() ------ DEFRAG TEST-
+// {{{ Zakero_MemZone_Free() -
 
 /* {{function(nam = Zakero_MemZone_Free
  *   , param =

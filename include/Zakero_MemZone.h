@@ -474,8 +474,8 @@ namespace
 		uint64_t size;
 		uint64_t prev;
 	};
-	constexpr uint64_t Size_Min_ = sizeof(Zakero_MemZone_Block) + sizeof(uint64_t);
 
+	constexpr uint64_t Size_Min_ = sizeof(Zakero_MemZone_Block) + sizeof(uint64_t);
 }
 
 // }}}

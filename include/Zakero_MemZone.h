@@ -251,18 +251,18 @@ ZAKERO_MEMZONE__ERROR_DATA
 #undef X
 
 enum Zakero_MemZone_Mode
-{	Zakero_MemZone_Mode_FD  = 0x0001'0000'0000'0000
-,	Zakero_MemZone_Mode_RAM = 0x0002'0000'0000'0000
-,	Zakero_MemZone_Mode_SHM = 0x0003'0000'0000'0000
+{	Zakero_MemZone_Mode_FD  = 0x0000'0000'0000'0001
+,	Zakero_MemZone_Mode_RAM = 0x0000'0000'0000'0002
+,	Zakero_MemZone_Mode_SHM = 0x0000'0000'0000'0003
 };
 
 enum Zakero_MemZone_Defrag_Event
 {	Zakero_MemZone_Defrag_Disable     = 0x0000'0000'0000'0000
-,	Zakero_MemZone_Defrag_On_Allocate = 0x0000'0000'0000'0001
-,	Zakero_MemZone_Defrag_On_Free     = 0x0000'0000'0000'0002
-,	Zakero_MemZone_Defrag_On_Acquire  = 0x0000'0000'0000'0004
-,	Zakero_MemZone_Defrag_On_Release  = 0x0000'0000'0000'0008
-,	Zakero_MemZone_Defrag_On_Resize   = 0x0000'0000'0000'0018
+,	Zakero_MemZone_Defrag_On_Allocate = 0x0000'0000'0000'0100
+,	Zakero_MemZone_Defrag_On_Free     = 0x0000'0000'0000'0200
+,	Zakero_MemZone_Defrag_On_Acquire  = 0x0000'0000'0000'0400
+,	Zakero_MemZone_Defrag_On_Release  = 0x0000'0000'0000'0800
+,	Zakero_MemZone_Defrag_On_Resize   = 0x0000'0000'0000'1800
 };
 
 
@@ -455,32 +455,10 @@ namespace zakero
 
 namespace
 {
-	/* {{enum(name=Zakero_MemZone_Expand
-	 *   , member =
-	 *     [ { name  = Zakero_MemZone_Expand_Disable
-	 *       , brief = The MemZone is not allowed to expand.
-	 *       }
-	 *     , { name  = Zakero_MemZone_Expand_Auto
-	 *       , brief = The MemZone will automatically expand as needed.
-	 *       }
-	 *     ]
-	 *   )
-	 * }}
-	 */
-	enum Zakero_MemZone_Expand
-	{	Zakero_MemZone_Expand_Disable = 0x0000'0000'0000'0000
-	,	Zakero_MemZone_Expand_Enable  = 0x0000'0001'0000'0000
-	};
-
-	enum Zakero_MemZone_ZeroFill
-	{	Zakero_MemZone_ZeroFill_Disable = 0x0000'0000'0000'0000
-	,	Zakero_MemZone_ZeroFill_Enable  = 0x0000'0000'0001'0000
-	};
-
-	constexpr uint64_t Zakero_MemZone_Defrag_Mask_   = 0x0000'0000'0000'000f;
-	constexpr uint64_t Zakero_MemZone_ZeroFill_Mask_ = 0x0000'0000'ffff'0000;
-	constexpr uint64_t Zakero_MemZone_Expand_Mask_   = 0x0000'ffff'0000'0000;
-	constexpr uint64_t Zakero_MemZone_Mode_Mask_     = 0xffff'0000'0000'0000;
+	constexpr uint64_t Zakero_MemZone_Expand_Enable_   = 0x0000'0000'0001'0000;
+	constexpr uint64_t Zakero_MemZone_ZeroFill_Enable_ = 0x0000'0000'0010'0000;
+	constexpr uint64_t Zakero_MemZone_Mode_Mask_       = 0x0000'0000'0000'00ff;
+	constexpr uint64_t Zakero_MemZone_Defrag_Mask_     = 0x0000'0000'0000'1f00;
 
 	enum Zakero_MemZone_Block_State
 	{	Zakero_MemZone_Block_State_Allocated = (1 << 0)
@@ -1184,7 +1162,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 [[nodiscard]] static inline bool memzone_expand_is_enabled_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Expand_Mask_);
+	return (bool)(memzone.flag & Zakero_MemZone_Expand_Enable_);
 }
 
 // }}}
@@ -1193,7 +1171,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 [[nodiscard]] static inline bool memzone_zerofill_is_enabled_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_ZeroFill_Mask_);
+	return (bool)(memzone.flag & Zakero_MemZone_ZeroFill_Enable_);
 }
 
 // }}}
@@ -2183,7 +2161,7 @@ void Zakero_MemZone_ExpandDisable(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.flag &= (~Zakero_MemZone_Expand_Enable);
+	memzone.flag &= (~Zakero_MemZone_Expand_Enable_);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2247,7 +2225,7 @@ void Zakero_MemZone_ExpandEnable(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.flag |= Zakero_MemZone_Expand_Enable;
+	memzone.flag |= Zakero_MemZone_Expand_Enable_;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2309,7 +2287,7 @@ void Zakero_MemZone_ZeroFillDisable(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	memzone.flag &= (~Zakero_MemZone_ZeroFill_Enable);
+	memzone.flag &= (~Zakero_MemZone_ZeroFill_Enable_);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2381,7 +2359,7 @@ void Zakero_MemZone_ZeroFillEnable(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	memzone.flag |= Zakero_MemZone_ZeroFill_Enable;
+	memzone.flag |= Zakero_MemZone_ZeroFill_Enable_;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{

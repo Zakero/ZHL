@@ -961,6 +961,7 @@ static void block_move_(Zakero_MemZone_Block* block_src
 	block_src->id = 0;
 	block_state_allocated_set_(block_src, false);
 
+	// BUG: There is no "Zero Fill" state for blocks
 	if(block_state_zerofill_(block_src) == true)
 	{
 		block_zerofill_(block_src);
@@ -2787,35 +2788,52 @@ TEST_CASE("/c/allocate/expand/") // {{{
 // }}}
 // {{{ Zakero_MemZone_Resize() ------------TEST-
 
+/* {{function(nam = Zakero_MemZone_Resize
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.       }
+ *     , { uint64_t        , id      , The ID to free. }
+ *     , { size_t          , size    , The new size.   }
+ *     ]
+ *   , attr = [ noexcept ]
+ *   , brief = Resize allocated memory.
+ *   )
+ *   Sometimes memory needs to be increased in size to hold more data, or it 
+ *   size can be decreased. Changing the size of allocated memory is what this 
+ *   function does.
+ *
+ *   The section of memory that is associated with the "id" must be unacquired 
+ *   (or not in use).
+ * }}
+ */
 int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 	, uint64_t id
 	, size_t   size
 	) noexcept
 {
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(memzone.memory == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 	}
-#endif
+#endif // }}}
 
 	size = round_to_64bit(size);
 	
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
 	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
 
-	if(block_state_acquired_(block) == true)
-	{
-		return Zakero_MemZone_Error_Id_Is_Acquired;
-	}
-
 	if(block->size == size)
 	{
 		return Zakero_MemZone_Error_None;
 	}
 
+	if(block_state_acquired_(block) == true)
+	{
+		return Zakero_MemZone_Error_Id_Is_Acquired;
+	}
+
 	Zakero_MemZone_Block* block_free = memzone_block_first_(memzone);
-	block_free = block_find_free_(block, size, Zakero_MemZone_Block_Find_Forward);
+	block_free = block_find_free_(block_free, size, Zakero_MemZone_Block_Find_Forward);
 
 	if(block_free != nullptr
 		&& block_free->size == size
@@ -2823,14 +2841,13 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 	{
 		block_move_(block, block_free);
 	}
-	else if(block->size > size) // Shrink
+	else if(size < block->size) // Shrink
 	{
 		memzone_block_shrink_(memzone, block, size, block_free);
 	}
 	else // Grow
 	{
 		memzone_block_grow_(memzone, block, size, block_free);
-
 	}
 
 	if(memzone_defrag_on_resize_(memzone) == true)

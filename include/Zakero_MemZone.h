@@ -1429,18 +1429,18 @@ static void memzone_block_grow_(Zakero_MemZone& memzone
 		return block_free;
 	}
 
-	if(block_free->size < (block_to_move->size + sizeof(Zakero_MemZone_Block)))
+	if(block_free->size >= (block_to_move->size + sizeof(Zakero_MemZone_Block)))
 	{
-		// Not enough room to split
-		block_move_(block_to_move, block_free); // TODO: Rename block_free_swap_()
-		block_free = block_to_move;
+		block_temp = block_free;
+		block_free = block_split_(block_temp, block_to_move->size);
+		block_move_(block_to_move, block_temp);
 
 		return block_free;
 	}
 
-	block_temp = block_free;
-	block_free = block_split_(block_temp, block_to_move->size);
-	block_move_(block_to_move, block_temp);
+	// Not enough room to split
+	block_move_(block_to_move, block_free); // TODO: Rename block_free_swap_()
+	block_free = block_to_move;
 
 	return block_free;
 }
@@ -1472,7 +1472,9 @@ static void memzone_defrag_(Zakero_MemZone& memzone
 		{
 			block = memzone_defrag_pass_(block);
 
-			if(memzone_zerofill_is_enabled_(memzone) == true)
+			if((block != nullptr)
+				&& (memzone_zerofill_is_enabled_(memzone) == true)
+				)
 			{
 				block_zerofill_(block);
 			}

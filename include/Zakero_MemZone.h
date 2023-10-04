@@ -482,12 +482,6 @@ namespace
 	constexpr uint64_t Zakero_MemZone_Expand_Mask_   = 0x0000'ffff'0000'0000;
 	constexpr uint64_t Zakero_MemZone_Mode_Mask_     = 0xffff'0000'0000'0000;
 
-	// TODO: Can this be removed?
-	enum Zakero_MemZone_Block_Find
-	{	Zakero_MemZone_Block_Find_Forward
-	,	Zakero_MemZone_Block_Find_Backward
-	};
-
 	enum Zakero_MemZone_Block_State
 	{	Zakero_MemZone_Block_State_Allocated = (1 << 0)
 	,	Zakero_MemZone_Block_State_Acquired  = (1 << 1)
@@ -713,39 +707,19 @@ static inline void block_init_(Zakero_MemZone_Block* block
 // {{{ block_find_active_() -
 
 [[nodiscard]] static Zakero_MemZone_Block* block_find_active_(Zakero_MemZone_Block* block
-	, Zakero_MemZone_Block_Find direction
 	) noexcept
 {
-	if(direction == Zakero_MemZone_Block_Find_Forward)
+	while(block != nullptr)
 	{
-		while(block != nullptr)
+		if(block_state_acquired_(block) == true)
 		{
-			if(block_state_acquired_(block) == true)
-			{
-				return block;
-			}
-
-			block = block_next_(block);
+			return block;
 		}
 
-		return block;
-	}
-	else if(direction == Zakero_MemZone_Block_Find_Backward)
-	{
-		while(block != nullptr)
-		{
-			if(block_state_acquired_(block) == true)
-			{
-				return block;
-			}
-
-			block = block_prev_(block);
-		}
-
-		return block;
+		block = block_next_(block);
 	}
 
-	return nullptr;
+	return block;
 }
 
 // }}}
@@ -753,45 +727,22 @@ static inline void block_init_(Zakero_MemZone_Block* block
 
 [[nodiscard]] static Zakero_MemZone_Block* block_find_free_(Zakero_MemZone_Block* block
 	, size_t                    size
-	, Zakero_MemZone_Block_Find direction
 	) noexcept
 {
-	if(direction == Zakero_MemZone_Block_Find_Forward)
+	while(block != nullptr)
 	{
-		while(block != nullptr)
+		if(block_state_free_(block) == true)
 		{
-			if(block_state_free_(block) == true)
+			if(block->size >= size)
 			{
-				if(block->size >= size)
-				{
-					return block;
-				}
+				return block;
 			}
-
-			block = block_next_(block);
 		}
 
-		return block;
-	}
-	else if(direction == Zakero_MemZone_Block_Find_Backward)
-	{
-		while(block != nullptr)
-		{
-			if(block_state_free_(block) == true)
-			{
-				if(block->size >= size)
-				{
-					return block;
-				}
-			}
-
-			block = block_prev_(block);
-		}
-
-		return block;
+		block = block_next_(block);
 	}
 
-	return nullptr;
+	return block;
 }
 
 // }}}
@@ -799,43 +750,21 @@ static inline void block_init_(Zakero_MemZone_Block* block
 
 [[nodiscard]] static Zakero_MemZone_Block* block_find_id_(Zakero_MemZone_Block* block
 	, uint64_t                  id
-	, Zakero_MemZone_Block_Find direction
 	) noexcept
 {
-	if(direction == Zakero_MemZone_Block_Find_Forward)
+	while(block != nullptr)
 	{
-		while(block != nullptr)
+		if((block->id == id)
+			&& (block_state_allocated_(block) == true)
+			)
 		{
-			if((block->id == id)
-				&& (block_state_allocated_(block) == true)
-				)
-			{
-				return block;
-			}
-
-			block = block_next_(block);
+			return block;
 		}
 
-		return block;
-	}
-	else if(direction == Zakero_MemZone_Block_Find_Backward)
-	{
-		while(block != nullptr)
-		{
-			if((block->id == id)
-				&& (block_state_allocated_(block) == true)
-				)
-			{
-				return block;
-			}
-
-			block = block_prev_(block);
-		}
-
-		return block;
+		block = block_next_(block);
 	}
 
-	return nullptr;
+	return block;
 }
 
 // }}}
@@ -1225,7 +1154,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 	) noexcept
 {
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_active_(block, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_active_(block);
 
 	if(block != nullptr)
 	{
@@ -1310,7 +1239,6 @@ static void memzone_block_shrink_(Zakero_MemZone& memzone
 		block_free = memzone_block_first_(memzone);
 		block_free = block_find_free_(block_free
 			, (size + sizeof(Zakero_MemZone_Block))
-			, Zakero_MemZone_Block_Find_Forward
 			);
 
 		if(block_free == nullptr)
@@ -1383,7 +1311,7 @@ static void memzone_block_grow_(Zakero_MemZone& memzone
 [[nodiscard]] static Zakero_MemZone_Block* memzone_defrag_pass_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	Zakero_MemZone_Block* block_free = block_find_free_(block, 0, Zakero_MemZone_Block_Find_Forward);
+	Zakero_MemZone_Block* block_free = block_find_free_(block, 0);
 	if((block_free == nullptr)
 		|| (block_state_last_(block_free) == true)
 		)
@@ -2540,7 +2468,7 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 	int error_code = Zakero_MemZone_Error_Not_Enough_Memory;
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_free_(block, block_size, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_free_(block, block_size);
 
 	if((block == nullptr)
 		&& memzone_defrag_is_enabled_(memzone)
@@ -2549,7 +2477,7 @@ int Zakero_MemZone_Allocate(Zakero_MemZone& memzone
 		memzone_defrag_(memzone, 0);
 
 		block = memzone_block_first_(memzone);
-		block = block_find_free_(block, block_size, Zakero_MemZone_Block_Find_Forward);
+		block = block_find_free_(block, block_size);
 
 		if(block == nullptr)
 		{
@@ -2820,7 +2748,7 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 	size = round_to_64bit(size);
 	
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_id_(block, id);
 
 	if(block->size == size)
 	{
@@ -2833,7 +2761,7 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 	}
 
 	Zakero_MemZone_Block* block_free = memzone_block_first_(memzone);
-	block_free = block_find_free_(block_free, size, Zakero_MemZone_Block_Find_Forward);
+	block_free = block_find_free_(block_free, size);
 
 	if(block_free != nullptr
 		&& block_free->size == size
@@ -2907,7 +2835,7 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 #endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_id_(block, id);
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
@@ -3124,7 +3052,7 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_id_(block, id);
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
@@ -3262,7 +3190,7 @@ int Zakero_MemZone_Release(Zakero_MemZone& memzone
 #endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_id_(block, id);
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)
@@ -3831,7 +3759,7 @@ size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 #endif // }}}
 
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id, Zakero_MemZone_Block_Find_Forward);
+	block = block_find_id_(block, id);
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
 	if(block == nullptr)

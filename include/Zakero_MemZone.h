@@ -853,7 +853,14 @@ static void block_move_(Zakero_MemZone_Block* block_src
 	block_dst->id   = block_src->id;
 	block_dst->flag = block_src->flag;
 
-	block_state_last_set_(block_dst, is_last);
+	if(block_dst < block_src)
+	{
+		block_state_last_set_(block_dst, false);
+	}
+	else
+	{
+		block_state_last_set_(block_dst, is_last);
+	}
 
 	if(block_dst->size > block_src->size)
 	{

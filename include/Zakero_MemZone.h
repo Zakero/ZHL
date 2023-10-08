@@ -3262,6 +3262,7 @@ TEST_CASE("/c/free/") // {{{
 } // }}}
 TEST_CASE("/c/free/defrag/") // {{{
 {
+	// 1111222233334444----
 	Zakero_MemZone memzone = {};
 
 	int error = Zakero_MemZone_Init(memzone
@@ -3276,10 +3277,7 @@ TEST_CASE("/c/free/defrag/") // {{{
 	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	uint64_t id_1 = 0;
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_BYTE(32)
-		, id_1
-		);
+	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(32), id_1);
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id_1  != 0);
 	void* ptr_1 = Zakero_MemZone_Acquire(memzone, id_1);
@@ -3287,10 +3285,7 @@ TEST_CASE("/c/free/defrag/") // {{{
 	Zakero_MemZone_Release(memzone, id_1);
 
 	uint64_t id_2 = 0;
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_BYTE(32)
-		, id_2
-		);
+	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(32), id_2);
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id_2  != 0);
 	void* ptr_2 = Zakero_MemZone_Acquire(memzone, id_2);
@@ -3298,21 +3293,15 @@ TEST_CASE("/c/free/defrag/") // {{{
 	Zakero_MemZone_Release(memzone, id_2);
 
 	uint64_t id_3 = 0;
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_BYTE(32)
-		, id_3
-		);
+	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(32), id_3);
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id_3  != 0);
 	void* ptr_3 = Zakero_MemZone_Acquire(memzone, id_3);
 	memset(ptr_3, 0x33, Zakero_MemZone_Size_Of(memzone, id_3));
-	// Do not release id_3
+	Zakero_MemZone_Release(memzone, id_3);
 
 	uint64_t id_4 = 0;
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_BYTE(64)
-		, id_4
-		);
+	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(64), id_4);
 	CHECK(error == Zakero_MemZone_Error_None);
 	CHECK(id_4  != 0);
 	void* ptr_4 = Zakero_MemZone_Acquire(memzone, id_4);
@@ -3321,22 +3310,33 @@ TEST_CASE("/c/free/defrag/") // {{{
 
 	//----------------------------------------
 
-	void* ptr = nullptr;
+	// Memory at "id_3" should not move
+	ptr_3 = Zakero_MemZone_Acquire(memzone, id_3);
 
+	//   +-ptr_1
+	//   |   +-ptr_2
+	//   |   |   +-ptr_3
+	//   |   |   |   +-ptr_4
+	//   v   v   v   v
+	//   1111222233334444----
+	// > 2222----33334444----
 	Zakero_MemZone_Free(memzone, id_1);
-	ptr = Zakero_MemZone_Acquire(memzone, id_2);
-	CHECK(ptr == ptr_1);
+	CHECK(ptr_1 == Zakero_MemZone_Acquire(memzone, id_2));
 	Zakero_MemZone_Release(memzone, id_2);
 
+	//   1111222233334444----
+	//   2222----33334444----
+	// > 4444----3333--------
 	Zakero_MemZone_Free(memzone, id_2);
-	ptr = Zakero_MemZone_Acquire(memzone, id_4);
-	CHECK(ptr == ptr_1);
+	CHECK(ptr_1 == Zakero_MemZone_Acquire(memzone, id_4));
 	Zakero_MemZone_Release(memzone, id_4);
-	Zakero_MemZone_Free(memzone, id_4);
 
-	Zakero_MemZone_Release(memzone, id_3);
-	ptr = Zakero_MemZone_Acquire(memzone, id_3);
-	CHECK(ptr == ptr_3); // Make sure id_3 did not move
+	//   1111222233334444----
+	//   2222----33334444----
+	//   4444----3333--------
+	// > --------3333--------
+	Zakero_MemZone_Free(memzone, id_4);
+	CHECK(ptr_3 == Zakero_MemZone_Acquire(memzone, id_3));
 	Zakero_MemZone_Release(memzone, id_3);
 	Zakero_MemZone_Free(memzone, id_3);
 

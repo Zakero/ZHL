@@ -1,8 +1,7 @@
-// Change CHECK(.. == ..) to CHECK_EQ(.. , ..)
-// Add tests for checking block content
-// ZeroFill is hardcoded in, can not be disabled
 // Rethink private api
 // Do all TODO items
+// Change CHECK(.. == ..) to CHECK_EQ(.. , ..)
+// Add tests for checking block content
 
 /******************************************************************************
  * Copyright 2020-2022 Andrew Moore
@@ -294,8 +293,6 @@ struct Zakero_MemZone
 [[]]          void        Zakero_MemZone_DefragSet(Zakero_MemZone&, uint64_t) noexcept;
 [[]]          void        Zakero_MemZone_ExpandDisable(Zakero_MemZone&) noexcept;
 [[]]          void        Zakero_MemZone_ExpandEnable(Zakero_MemZone&) noexcept;
-[[]]          void        Zakero_MemZone_ZeroFillDisable(Zakero_MemZone&) noexcept;
-[[]]          void        Zakero_MemZone_ZeroFillEnable(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
 [[]]          int         Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
 [[]]          int         Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
@@ -463,7 +460,6 @@ namespace zakero
 namespace
 {
 	constexpr uint64_t Zakero_MemZone_Expand_Enable_   = 0x0000'0000'0001'0000;
-	constexpr uint64_t Zakero_MemZone_ZeroFill_Enable_ = 0x0000'0000'0010'0000;
 	constexpr uint64_t Zakero_MemZone_Mode_Mask_       = 0x0000'0000'0000'00ff;
 	constexpr uint64_t Zakero_MemZone_Defrag_Mask_     = 0x0000'0000'0000'1f00;
 
@@ -577,31 +573,6 @@ static inline void block_state_last_set_(Zakero_MemZone_Block* block
 	}
 
 	block->flag &= (~Zakero_MemZone_Block_State_Last);
-}
-
-// }}}
-// {{{ block_state_zerofill_() -
-
-[[nodiscard]] static inline bool block_state_zerofill_(const Zakero_MemZone_Block* block
-	) noexcept
-{
-	return (bool)(block->flag & Zakero_MemZone_Block_State_ZeroFill);
-}
-
-// }}}
-// {{{ block_state_zerofill_set_() -
-
-static inline void block_state_zerofill_set_(Zakero_MemZone_Block* block
-	, bool value
-	) noexcept
-{
-	if(value == true)
-	{
-		block->flag |= Zakero_MemZone_Block_State_ZeroFill;
-		return;
-	}
-
-	block->flag &= (~Zakero_MemZone_Block_State_ZeroFill);
 }
 
 // }}}
@@ -884,12 +855,7 @@ static Zakero_MemZone_Block* block_move_(Zakero_MemZone_Block* block_src
 	block_src->id = 0;
 	block_state_allocated_set_(block_src, false);
 
-	// BUG: There is no "Zero Fill" state for blocks
-	if(block_state_zerofill_(block_src) == true)
-	{
-		block_zerofill_(block_src);
-		block_state_zerofill_set_(block_src, false);
-	}
+	block_zerofill_(block_src);
 
 	return block_merge_free_(block_src);
 }
@@ -954,11 +920,7 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 		block_state_last_set_(block_right, true);
 	}
 
-	if(block_state_zerofill_(block_right) == true)
-	{
-		block_zerofill_(block_right);
-		block_state_zerofill_set_(block_right, false);
-	}
+	block_zerofill_(block_right);
 
 	if(block_state_last_(block_right) == false)
 	{
@@ -1190,15 +1152,6 @@ static void block_dump_(const Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ memzone_zerofill_is_enabled_() -
-
-[[nodiscard]] static inline bool memzone_zerofill_is_enabled_(const Zakero_MemZone& memzone
-	) noexcept
-{
-	return (bool)(memzone.flag & Zakero_MemZone_ZeroFill_Enable_);
-}
-
-// }}}
 // {{{ memzone_next_id_() -
 
 [[nodiscard]] static uint64_t memzone_next_id_(Zakero_MemZone& memzone
@@ -1224,10 +1177,7 @@ static void memzone_block_shrink_(Zakero_MemZone& memzone
 
 	block_free = block_split_(block, size_free);
 
-	if(memzone_zerofill_is_enabled_(memzone) == true)
-	{
-		block_zerofill_(block_free);
-	}
+	block_zerofill_(block_free);
 
 	block_merge_free_(block_free);
 }
@@ -2032,7 +1982,6 @@ TEST_CASE("/c/defragnow/") // {{{
 
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
 	Zakero_MemZone_ExpandDisable(memzone);
-	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	size_t   mem_size = 64; // Bytes
 	uint64_t id_1     = 0;
@@ -2155,7 +2104,6 @@ TEST_CASE("/c/defragset/") // {{{
 
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
 	Zakero_MemZone_ExpandDisable(memzone);
-	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	size_t   mem_size = 64; // Bytes
 	uint64_t id_1     = 0;
@@ -2324,157 +2272,6 @@ TEST_CASE("/c/expand/enable") // {{{
 	error = Zakero_MemZone_Allocate(memzone, ZAKERO_KILOBYTE(2), id);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	Zakero_MemZone_Free(memzone, id);
-	Zakero_MemZone_Destroy(memzone);
-} // }}}
-
-#endif // }}}
-
-// }}}
-// {{{ Zakero_MemZone_ZeroFillDisable() ----- Check Block Content -
-
-/* {{function(name = Zakero_MemZone_ZeroFillDisable
- *   , param =
- *     [ { Zakero_MemZone& , memzone , The data. }
- *     ]
- *   , attr = [ noexcept ]
- *   , brief = Do not allow the memory pool to expand.
- *   )
- *   Use this function to keep the MemZone at a fixed size.
- *
- *   {{bold This is the default.}}
- * }}
- */
-void Zakero_MemZone_ZeroFillDisable(Zakero_MemZone& memzone
-	) noexcept
-{
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
-	if(memzone.memory == nullptr)
-	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
-#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-		return;
-#		endif // }}}
-	}
-#endif // }}}
-
-	memzone.flag &= (~Zakero_MemZone_ZeroFill_Enable_);
-}
-
-#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-
-TEST_CASE("/c/zerofill/disable") // {{{
-{
-	Zakero_MemZone memzone = {};
-
-	SUBCASE("Uninitialized") // {{{
-	{
-		Zakero_MemZone_ZeroFillDisable(memzone);
-	} // }}}
-
-	int error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_BYTE(64)
-		);
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	//----------------------------------------
-	// This is the default, but disable anyway
-	Zakero_MemZone_ZeroFillDisable(memzone);
-	//----------------------------------------
-
-	uint64_t id = 0;
-	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(64), id);
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	constexpr uint8_t VALUE = 0x11;
-	void* ptr = Zakero_MemZone_Acquire(memzone, id);
-	memset(ptr, VALUE, Zakero_MemZone_Size_Of(memzone, id));
-	Zakero_MemZone_Release(memzone, id);
-	Zakero_MemZone_Free(memzone, id);
-
-	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(64), id);
-	CHECK(error == Zakero_MemZone_Error_None);
-	ptr = Zakero_MemZone_Acquire(memzone, id);
-	CHECK(ptr != nullptr);
-	uint8_t value = ((uint8_t*)ptr)[0];
-	CHECK(value == VALUE);
-
-	Zakero_MemZone_Release(memzone, id);
-	Zakero_MemZone_Free(memzone, id);
-	Zakero_MemZone_Destroy(memzone);
-} // }}}
-
-#endif // }}}
-
-// }}}
-// {{{ Zakero_MemZone_ZeroFillEnable() ------ Check Block Content -
-
-/* {{function(name = Zakero_MemZone_ZeroFillEnable
- *   , parm =
- *     [ { Zakero_MemZone& , memzone , The data. }
- *     ]
- *   , attr = [ noexcept ]
- *   , brief = Allow the memory pool to automatially expand.
- *   )
- *   After calling this function, the MemZone memory pool will automatically 
- *   grow to accomodate new allocations if possible.
- */
-void Zakero_MemZone_ZeroFillEnable(Zakero_MemZone& memzone
-	) noexcept
-{
-#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
-	if(memzone.memory == nullptr)
-	{
-		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
-#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-		return;
-#		endif // }}}
-	}
-#endif // }}}
-
-	memzone.flag |= Zakero_MemZone_ZeroFill_Enable_;
-}
-
-#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-
-TEST_CASE("/c/zerofill/enable") // {{{
-{
-	Zakero_MemZone memzone = {};
-
-	SUBCASE("Uninitialized") // {{{
-	{
-		Zakero_MemZone_ZeroFillEnable(memzone);
-	} // }}}
-
-	int error = Zakero_MemZone_Init(memzone
-		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_KILOBYTE(1)
-		);
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	//----------------------------------------
-	Zakero_MemZone_ZeroFillEnable(memzone);
-	//----------------------------------------
-
-	uint64_t id = 0;
-	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(64), id);
-	CHECK(error == Zakero_MemZone_Error_None);
-
-	constexpr uint8_t VALUE = 0x11;
-	void* ptr = Zakero_MemZone_Acquire(memzone, id);
-	memset(ptr, VALUE, Zakero_MemZone_Size_Of(memzone, id));
-	Zakero_MemZone_Release(memzone, id);
-	Zakero_MemZone_Free(memzone, id);
-
-	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(64), id);
-	CHECK(error == Zakero_MemZone_Error_None);
-	ptr = Zakero_MemZone_Acquire(memzone, id);
-	CHECK(ptr != nullptr);
-	uint8_t value = ((uint8_t*)ptr)[0];
-	CHECK(value == 0x00);
-
-	Zakero_MemZone_Release(memzone, id);
 	Zakero_MemZone_Free(memzone, id);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
@@ -2939,7 +2736,6 @@ TEST_CASE("/c/resize/") // {{{
 
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
 	Zakero_MemZone_ExpandDisable(memzone);
-	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	SUBCASE("Resize: Error") // {{{
 	{
@@ -3144,7 +2940,6 @@ TEST_CASE("/c/resize/defrag/") // {{{
 
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_On_Resize);
 	Zakero_MemZone_ExpandDisable(memzone);
-	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	SUBCASE("Resize: Smaller") // {{{
 	{
@@ -3306,7 +3101,6 @@ TEST_CASE("/c/resize/expand/") // {{{
 	CHECK(error == Zakero_MemZone_Error_None);
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
 	Zakero_MemZone_ExpandEnable(memzone);
-	Zakero_MemZone_ZeroFillDisable(memzone);
 
 	SUBCASE("Resize: Larger") // {{{
 	{
@@ -3393,10 +3187,7 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	if(memzone_zerofill_is_enabled_(memzone) == true)
-	{
-		block_zerofill_(block);
-	}
+	block_zerofill_(block);
 
 	block->id   = 0;
 	block_state_allocated_set_(block, false);
@@ -3478,7 +3269,6 @@ TEST_CASE("/c/free/defrag/") // {{{
 	Zakero_MemZone_DefragSet(memzone
 		, Zakero_MemZone_Defrag_On_Free
 		);
-	Zakero_MemZone_ZeroFillEnable(memzone);
 
 	uint64_t id_1 = 0;
 	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(32), id_1);

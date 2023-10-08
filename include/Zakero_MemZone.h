@@ -483,6 +483,67 @@ namespace
 
 // }}}
 // {{{ Implementation : C -
+// {{{ defrag_is_valid_() -
+
+[[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
+	) noexcept
+{
+	if((defrag & (~Zakero_MemZone_Defrag_Mask_)) == 0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+// }}}
+// {{{ mode_is_valid_() -
+
+#ifdef __linux__
+
+[[nodiscard]] static bool mode_is_valid_(const Zakero_MemZone_Mode mode
+	) noexcept
+{
+	switch(mode)
+	{
+		case Zakero_MemZone_Mode_FD:
+			return true;
+
+		case Zakero_MemZone_Mode_RAM:
+			return true;
+
+		case Zakero_MemZone_Mode_SHM:
+			return true;
+	};
+
+	return false;
+}
+
+#elif __HAIKU__
+
+[[nodiscard]] static bool mode_is_valid_(const Zakero_MemZone_Mode mode
+	) noexcept
+{
+	switch(mode)
+	{
+		case Zakero_MemZone_Mode_FD:
+			return false;
+
+		case Zakero_MemZone_Mode_RAM:
+			return true;
+
+		case Zakero_MemZone_Mode_SHM:
+			return false;
+	};
+
+	return false;
+}
+
+#else
+#	error "mode_is_valid_()" has not been implemented yet!
+#endif
+
+// }}}
 // {{{ round_to_64bit() -
 
 [[nodiscard]] static inline size_t round_to_64bit(size_t size
@@ -492,6 +553,7 @@ namespace
 }
 
 // }}}
+
 // {{{ block_state_acquired_() -
 
 [[nodiscard]] static inline bool block_state_acquired_(const Zakero_MemZone_Block* block
@@ -953,6 +1015,7 @@ static void block_dump_(const Zakero_MemZone_Block* block
 
 #endif // }}}
 // }}}
+
 // {{{ memzone_block_first_() -
 
 [[nodiscard]] static inline Zakero_MemZone_Block* memzone_block_first_(Zakero_MemZone& memzone
@@ -1389,67 +1452,6 @@ static void memzone_init_ram_(Zakero_MemZone& memzone
 
 #else
 #	error "memzone_init_ram_()" has not been implemented yet!
-#endif
-
-// }}}
-// {{{ defrag_is_valid_() -
-
-[[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
-	) noexcept
-{
-	if((defrag & (~Zakero_MemZone_Defrag_Mask_)) == 0)
-	{
-		return true;
-	}
-
-	return false;
-}
-
-// }}}
-// {{{ mode_is_valid_() -
-
-#ifdef __linux__
-
-[[nodiscard]] static bool mode_is_valid_(const Zakero_MemZone_Mode mode
-	) noexcept
-{
-	switch(mode)
-	{
-		case Zakero_MemZone_Mode_FD:
-			return true;
-
-		case Zakero_MemZone_Mode_RAM:
-			return true;
-
-		case Zakero_MemZone_Mode_SHM:
-			return true;
-	};
-
-	return false;
-}
-
-#elif __HAIKU__
-
-[[nodiscard]] static bool mode_is_valid_(const Zakero_MemZone_Mode mode
-	) noexcept
-{
-	switch(mode)
-	{
-		case Zakero_MemZone_Mode_FD:
-			return false;
-
-		case Zakero_MemZone_Mode_RAM:
-			return true;
-
-		case Zakero_MemZone_Mode_SHM:
-			return false;
-	};
-
-	return false;
-}
-
-#else
-#	error "mode_is_valid_()" has not been implemented yet!
 #endif
 
 // }}}
@@ -2101,6 +2103,11 @@ TEST_CASE("/c/defragset/") // {{{
 		, ZAKERO_KILOBYTE(1)
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
+
+	SUBCASE("Invalid") // {{{
+	{
+		Zakero_MemZone_DefragSet(memzone, ~0);
+	} // }}}
 
 	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
 	Zakero_MemZone_ExpandDisable(memzone);

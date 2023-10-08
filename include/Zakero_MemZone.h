@@ -1,3 +1,9 @@
+// Change CHECK(.. == ..) to CHECK_EQ(.. , ..)
+// Add tests for checking block content
+// ZeroFill is hardcoded in, can not be disabled
+// Rethink private api
+// Do all TODO items
+
 /******************************************************************************
  * Copyright 2020-2022 Andrew Moore
  *

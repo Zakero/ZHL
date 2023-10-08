@@ -2086,6 +2086,8 @@ TEST_CASE("/c/defrag/") // {{{
  *   details.
  * }}
  */
+// TODO: Rename DefragSet() ==> DefragEnable()
+// TODO: Create DefragDisable()
 void Zakero_MemZone_DefragSet(Zakero_MemZone& memzone
 	, uint64_t defrag
 	) noexcept
@@ -2683,7 +2685,7 @@ TEST_CASE("/c/allocate/expand/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Resize() ------------TEST-
+// {{{ Zakero_MemZone_Resize() -
 
 /* {{function(nam = Zakero_MemZone_Resize
  *   , param =
@@ -3159,28 +3161,44 @@ TEST_CASE("/c/resize/expand/") // {{{
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
 
-	SUBCASE("Uninitialized") // {{{
-	{
-		uint64_t id = 0;
-		error = Zakero_MemZone_Allocate(memzone, 0, id);
-		CHECK(error == Zakero_MemZone_Error_Not_Initialized);
-	} // }}}
-
-
 	error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, ZAKERO_KILOBYTE(1)
+		, ZAKERO_BYTE(128)
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
+	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
+	Zakero_MemZone_ExpandEnable(memzone);
+	Zakero_MemZone_ZeroFillEnable(memzone);
 
-	SUBCASE("Resize: Equal") // {{{
-	{
-	} // }}}
-	SUBCASE("Resize: Smaller") // {{{
-	{
-	} // }}}
 	SUBCASE("Resize: Larger") // {{{
 	{
+		// 1111xx-
+		// 1111xxxx
+		size_t   mem_size = 64; // Bytes
+		uint64_t id_x     = 0;
+		uint64_t id_1     = 0;
+		void*    ptr_x    = nullptr;
+
+		error = Zakero_MemZone_Allocate(memzone, mem_size, id_1);
+		CHECK(error == Zakero_MemZone_Error_None);
+		ptr_x = Zakero_MemZone_Acquire(memzone, id_1);
+		memset(ptr_x, 0x11, Zakero_MemZone_Size_Of(memzone, id_1));
+		Zakero_MemZone_Release(memzone, id_1);
+
+		error = Zakero_MemZone_Allocate(memzone, mem_size / 2, id_x);
+		CHECK(error == Zakero_MemZone_Error_None);
+		ptr_x = Zakero_MemZone_Acquire(memzone, id_x);
+		memset(ptr_x, 0xaa, Zakero_MemZone_Size_Of(memzone, id_x));
+		Zakero_MemZone_Release(memzone, id_x);
+
+		//--------------------------------------------------
+		error = Zakero_MemZone_Resize(memzone, id_x, mem_size);
+		CHECK(error    == Zakero_MemZone_Error_None);
+		CHECK(mem_size == Zakero_MemZone_Size_Of(memzone, id_x));
+		//--------------------------------------------------
+
+		Zakero_MemZone_Free(memzone, id_x);
+		Zakero_MemZone_Free(memzone, id_1);
 	} // }}}
 
 	Zakero_MemZone_Destroy(memzone);
@@ -4126,6 +4144,7 @@ TEST_CASE("/c/used/total/") // {{{
  *   )
  * }}
  */
+// TODO: Rename to SizeOf
 size_t Zakero_MemZone_Size_Of(Zakero_MemZone& memzone
 	, uint64_t id
 	) noexcept

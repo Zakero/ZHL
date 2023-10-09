@@ -263,8 +263,7 @@ enum Zakero_MemZone_Mode
 };
 
 enum Zakero_MemZone_Defrag_Event
-{	Zakero_MemZone_Defrag_Disable     = 0x0000'0000'0000'0000
-,	Zakero_MemZone_Defrag_On_Allocate = 0x0000'0000'0000'0100
+{	Zakero_MemZone_Defrag_On_Allocate = 0x0000'0000'0000'0100
 ,	Zakero_MemZone_Defrag_On_Free     = 0x0000'0000'0000'0200
 ,	Zakero_MemZone_Defrag_On_Acquire  = 0x0000'0000'0000'0400
 ,	Zakero_MemZone_Defrag_On_Release  = 0x0000'0000'0000'0800
@@ -290,7 +289,8 @@ struct Zakero_MemZone
 [[]]          int         Zakero_MemZone_Init(Zakero_MemZone&, const Zakero_MemZone_Mode, const size_t) noexcept;
 [[]]          int         Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_DefragNow(Zakero_MemZone&) noexcept;
-[[]]          void        Zakero_MemZone_DefragSet(Zakero_MemZone&, uint64_t) noexcept;
+[[]]          void        Zakero_MemZone_DefragDisable(Zakero_MemZone&) noexcept;
+[[]]          void        Zakero_MemZone_DefragEnable(Zakero_MemZone&, uint64_t) noexcept;
 [[]]          void        Zakero_MemZone_ExpandDisable(Zakero_MemZone&) noexcept;
 [[]]          void        Zakero_MemZone_ExpandEnable(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
@@ -461,7 +461,13 @@ namespace
 {
 	constexpr uint64_t Zakero_MemZone_Expand_Enable_   = 0x0000'0000'0001'0000;
 	constexpr uint64_t Zakero_MemZone_Mode_Mask_       = 0x0000'0000'0000'00ff;
-	constexpr uint64_t Zakero_MemZone_Defrag_Mask_     = 0x0000'0000'0000'1f00;
+	constexpr uint64_t Zakero_MemZone_Defrag_Mask_     = 0
+		| Zakero_MemZone_Defrag_On_Allocate
+		| Zakero_MemZone_Defrag_On_Free
+		| Zakero_MemZone_Defrag_On_Acquire
+		| Zakero_MemZone_Defrag_On_Release
+		| Zakero_MemZone_Defrag_On_Resize
+		;
 
 	enum Zakero_MemZone_Block_State
 	{	Zakero_MemZone_Block_State_Allocated = (1 << 0)
@@ -488,12 +494,12 @@ namespace
 [[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
 	) noexcept
 {
-	if((defrag & (~Zakero_MemZone_Defrag_Mask_)) == 0)
+	if((defrag & Zakero_MemZone_Defrag_Mask_) == 0)
 	{
-		return true;
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
 // }}}
@@ -1982,7 +1988,7 @@ TEST_CASE("/c/defragnow/") // {{{
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
+	Zakero_MemZone_DefragDisable(memzone);
 	Zakero_MemZone_ExpandDisable(memzone);
 
 	size_t   mem_size = 64; // Bytes
@@ -2042,9 +2048,9 @@ TEST_CASE("/c/defragnow/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_DefragSet() ----------- Check Block Content -
+// {{{ Zakero_MemZone_DefragDisable() ------- Check Block Content -
 
-/* {{function(name = Zakero_MemZone_DefragSet
+/* {{function(name = Zakero_MemZone_DefragDisable
  *   , param =
  *     [ { Zakero_MemZone& , memzone , The data.              }
  *     , { uint64_t        , defrag  , When to defrag memory. }
@@ -2059,9 +2065,94 @@ TEST_CASE("/c/defragnow/") // {{{
  *   details.
  * }}
  */
-// TODO: Rename DefragSet() ==> DefragEnable()
-// TODO: Create DefragDisable()
-void Zakero_MemZone_DefragSet(Zakero_MemZone& memzone
+void Zakero_MemZone_DefragDisable(Zakero_MemZone& memzone
+	) noexcept
+{
+#if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
+	if(memzone.memory == nullptr)
+	{
+		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
+#		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+		return;
+#		endif // }}}
+	}
+#endif // }}}
+
+	memzone.flag &= (~Zakero_MemZone_Defrag_Mask_);
+}
+
+#ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
+
+TEST_CASE("/c/defragdisable/") // {{{
+{
+	Zakero_MemZone memzone = {};
+
+	SUBCASE("Uninitialized") // {{{
+	{
+		Zakero_MemZone_DefragDisable(memzone);
+	} // }}}
+
+	int error = Zakero_MemZone_Init(memzone
+		, Zakero_MemZone_Mode_RAM
+		, ZAKERO_KILOBYTE(1)
+		);
+	CHECK(error == Zakero_MemZone_Error_None);
+
+	Zakero_MemZone_DefragDisable(memzone);
+	Zakero_MemZone_ExpandDisable(memzone);
+
+	size_t   mem_size = 64; // Bytes
+	uint64_t id_1     = 0;
+	uint64_t id_2     = 0;
+	void*    ptr_1    = nullptr;
+	void*    ptr_2    = nullptr;
+
+	error = Zakero_MemZone_Allocate(memzone, mem_size, id_1);
+	CHECK(error == Zakero_MemZone_Error_None);
+	ptr_1 = Zakero_MemZone_Acquire(memzone, id_1);
+	memset(ptr_1, 0xff, Zakero_MemZone_Size_Of(memzone, id_1));
+	Zakero_MemZone_Release(memzone, id_1);
+
+	error = Zakero_MemZone_Allocate(memzone, mem_size, id_2);
+	CHECK(error == Zakero_MemZone_Error_None);
+	ptr_2 = Zakero_MemZone_Acquire(memzone, id_2);
+	memset(ptr_2, 0x11, Zakero_MemZone_Size_Of(memzone, id_2));
+	Zakero_MemZone_Release(memzone, id_2);
+
+	//----------------------------------------
+
+	Zakero_MemZone_Free(memzone, id_1);
+	CHECK(ptr_2 == Zakero_MemZone_Acquire(memzone, id_2));
+	Zakero_MemZone_Release(memzone, id_2);
+
+	//----------------------------------------
+
+	Zakero_MemZone_Free(memzone, id_1);
+	Zakero_MemZone_Free(memzone, id_2);
+	Zakero_MemZone_Destroy(memzone);
+} // }}}
+
+#endif // }}}
+
+// }}}
+// {{{ Zakero_MemZone_DefragEnable() -------- Check Block Content -
+
+/* {{function(name = Zakero_MemZone_DefragEnable
+ *   , param =
+ *     [ { Zakero_MemZone& , memzone , The data.              }
+ *     , { uint64_t        , defrag  , When to defrag memory. }
+ *     ]
+ *   , attr   = [ noexcept ]
+ *   , brief  = Determine when to automatically defrag.
+ *   )
+ *   The automatic defrag'ing of memory is event based, which allows each 
+ *   operation the chance to defrag part of the pool. This reduces overhead to 
+ *   reduce the penalty imposed by examining and defragmenting the entire 
+ *   memory pool. See {{link(target=[Zakero_MemZone_DefragNow]}} for more 
+ *   details.
+ * }}
+ */
+void Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
 	, uint64_t defrag
 	) noexcept
 {
@@ -2083,19 +2174,18 @@ void Zakero_MemZone_DefragSet(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	memzone.flag &= (~Zakero_MemZone_Defrag_Mask_);
 	memzone.flag |= defrag;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
-TEST_CASE("/c/defragset/") // {{{
+TEST_CASE("/c/defragenable/") // {{{
 {
 	Zakero_MemZone memzone = {};
 
 	SUBCASE("Uninitialized") // {{{
 	{
-		Zakero_MemZone_DefragSet(memzone, 0);
+		Zakero_MemZone_DefragEnable(memzone, 0);
 	} // }}}
 
 	int error = Zakero_MemZone_Init(memzone
@@ -2106,10 +2196,10 @@ TEST_CASE("/c/defragset/") // {{{
 
 	SUBCASE("Invalid") // {{{
 	{
-		Zakero_MemZone_DefragSet(memzone, ~0);
+		Zakero_MemZone_DefragEnable(memzone, ~0);
 	} // }}}
 
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
+	Zakero_MemZone_DefragDisable(memzone);
 	Zakero_MemZone_ExpandDisable(memzone);
 
 	size_t   mem_size = 64; // Bytes
@@ -2141,7 +2231,7 @@ TEST_CASE("/c/defragset/") // {{{
 	CHECK(ptr_2 == Zakero_MemZone_Acquire(memzone, id_1));
 	Zakero_MemZone_Release(memzone, id_1);
 
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_On_Free);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Free);
 
 	Zakero_MemZone_Free(memzone, id_1);
 	CHECK(ptr_2 == Zakero_MemZone_Acquire(memzone, id_2));
@@ -2741,7 +2831,7 @@ TEST_CASE("/c/resize/") // {{{
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
+	Zakero_MemZone_DefragDisable(memzone);
 	Zakero_MemZone_ExpandDisable(memzone);
 
 	SUBCASE("Resize: Error") // {{{
@@ -2945,7 +3035,7 @@ TEST_CASE("/c/resize/defrag/") // {{{
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_On_Resize);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Resize);
 	Zakero_MemZone_ExpandDisable(memzone);
 
 	SUBCASE("Resize: Smaller") // {{{
@@ -3106,7 +3196,7 @@ TEST_CASE("/c/resize/expand/") // {{{
 		, ZAKERO_BYTE(128)
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
-	Zakero_MemZone_DefragSet(memzone, Zakero_MemZone_Defrag_Disable);
+	Zakero_MemZone_DefragDisable(memzone);
 	Zakero_MemZone_ExpandEnable(memzone);
 
 	SUBCASE("Resize: Larger") // {{{
@@ -3273,9 +3363,7 @@ TEST_CASE("/c/free/defrag/") // {{{
 		);
 	CHECK(error == Zakero_MemZone_Error_None);
 
-	Zakero_MemZone_DefragSet(memzone
-		, Zakero_MemZone_Defrag_On_Free
-		);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Free);
 
 	uint64_t id_1 = 0;
 	error = Zakero_MemZone_Allocate(memzone, ZAKERO_BYTE(32), id_1);
@@ -3482,9 +3570,7 @@ TEST_CASE("/c/acquire/defrag/") // {{{
 	Zakero_MemZone_Free(memzone, id_1);
 
 	//----------------------------------------
-	Zakero_MemZone_DefragSet(memzone
-		, Zakero_MemZone_Defrag_On_Acquire
-		);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Acquire);
 	//----------------------------------------
 
 	p_after = Zakero_MemZone_Acquire(memzone, id_2);
@@ -3652,9 +3738,7 @@ TEST_CASE("/c/release/defrag/") // {{{
 	Zakero_MemZone_Free(memzone, id_1);
 
 	//----------------------------------------
-	Zakero_MemZone_DefragSet(memzone
-		, Zakero_MemZone_Defrag_On_Release
-		);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Release);
 	//----------------------------------------
 
 	p_after = Zakero_MemZone_Acquire(memzone, id_2);

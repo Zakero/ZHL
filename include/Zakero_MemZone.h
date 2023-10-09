@@ -813,34 +813,6 @@ static inline void block_init_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ block_find_last_allocated_() -
-
-[[nodiscard]] static Zakero_MemZone_Block* block_find_last_allocated_(Zakero_MemZone_Block* block
-	) noexcept
-{
-	Zakero_MemZone_Block* block_stop = block;
-
-	block = block_find_last_(block);
-
-	while(block_is_allocated_(block) == false)
-	{
-		if(block_is_first_(block))
-		{
-			return nullptr;
-		}
-
-		block = block_prev_(block);
-
-		if(block <= block_stop)
-		{
-			return nullptr;
-		}
-	}
-
-	return block;
-}
-
-// }}}
 // {{{ block_merge_with_next_() -
 
 static Zakero_MemZone_Block* block_merge_with_next_(Zakero_MemZone_Block* block
@@ -925,7 +897,7 @@ static Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 
 // }}}
 
-// {{{ block_move_() -
+// {{{ block_move_() ------ Rewrite -
 
 static Zakero_MemZone_Block* block_move_(Zakero_MemZone_Block* block_src
 	, Zakero_MemZone_Block* block_dst
@@ -1002,9 +974,8 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ block_swap_free_with_next_() -
+// {{{ block_swap_free_with_next_() ----- Rewrite -
 
-// TODO: Rename to block_merge_with_prev_()
 [[nodiscard]] static Zakero_MemZone_Block* block_swap_free_with_next_(Zakero_MemZone_Block* block_left
 	) noexcept
 {
@@ -1091,19 +1062,19 @@ static Zakero_MemZone_Block* defrag_single_pass_(Zakero_MemZone_Block* block
 		return nullptr;
 	}
 
-	Zakero_MemZone_Block* block_temp    = block_find_last_allocated_(block_free);
+	Zakero_MemZone_Block* block_temp    = block_next_(block_free);
 	Zakero_MemZone_Block* block_to_move = nullptr;
 
-	while(block_temp > block_free)
+	while(true)
 	{
 		if((block_is_allocated_(block_temp) == true)
 			&& (block_is_acquired_(block_temp) == false)
 			)
 		{
-			if(block_free->size >= block_temp->size)
+			if(block_temp->size < block_free->size)
 			{
 				if((block_to_move == nullptr)
-					|| (block_temp->size > block_to_move->size)
+					|| (block_temp->size >= block_to_move->size)
 					)
 				{
 					block_to_move = block_temp;
@@ -1111,13 +1082,15 @@ static Zakero_MemZone_Block* defrag_single_pass_(Zakero_MemZone_Block* block
 			}
 		}
 
-		if(block_is_first_(block_temp) == true)
+		if(block_is_last_(block_temp) == true)
 		{
 			break;
 		}
 
-		block_temp = block_prev_(block_temp);
+		block_temp = block_next_(block_temp);
 	}
+
+	// --- Start Rewrite --- //
 
 	if(block_to_move == nullptr)
 	{
@@ -1364,24 +1337,6 @@ static void defrag_multi_pass_(Zakero_MemZone_Block* block
 	memzone.next_id++;
 
 	return id;
-}
-
-// }}}
-// {{{ memzone_block_shrink_() -
-
-static void memzone_block_shrink_(Zakero_MemZone& memzone
-	, Zakero_MemZone_Block* block
-	, size_t                size
-	) noexcept
-{
-	uint64_t size_free = block->size - size;
-	Zakero_MemZone_Block* block_free = nullptr;
-
-	block_free = block_split_(block, size_free);
-
-	block_zerofill_(block_free);
-
-	block_merge_free_(block_free);
 }
 
 // }}}
@@ -2058,8 +2013,8 @@ TEST_CASE("/c/defragnow/") // {{{
 
 	Zakero_MemZone_DefragNow(memzone);
 
-	CHECK(ptr_1 == Zakero_MemZone_Acquire(memzone, id_4));
-	CHECK(ptr_2 == Zakero_MemZone_Acquire(memzone, id_2));
+	CHECK(ptr_1 == Zakero_MemZone_Acquire(memzone, id_2));
+	CHECK(ptr_2 == Zakero_MemZone_Acquire(memzone, id_4));
 
 	Zakero_MemZone_Release(memzone, id_2);
 	Zakero_MemZone_Release(memzone, id_4);
@@ -2765,7 +2720,10 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 			return Zakero_MemZone_Error_Resize_Too_Small;
 		}
 
-		memzone_block_shrink_(memzone, block, size);
+		Zakero_MemZone_Block* block_free = nullptr;
+		block_free = block_split_(block, size_free);
+		block_zerofill_(block_free);
+		block_merge_free_(block_free);
 	}
 	else
 	{

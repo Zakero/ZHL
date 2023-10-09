@@ -609,6 +609,15 @@ static inline void block_allocated_set_(Zakero_MemZone_Block* block
 }
 
 // }}}
+// {{{ block_is_first_() -
+
+[[nodiscard]] static inline bool block_is_first_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	return (block->prev == 0);
+}
+
+// }}}
 // {{{ block_is_free_() -
 
 [[nodiscard]] static inline bool block_is_free_(const Zakero_MemZone_Block* block
@@ -664,7 +673,6 @@ static inline void block_last_set_(Zakero_MemZone_Block* block
 {
 	Zakero_MemZone_Block* block_prev = (Zakero_MemZone_Block*)
 		(	(((uint64_t)block) - block->prev)
-		*	(uint64_t)(block->prev != 0)
 		);
 
 	return block_prev;
@@ -817,12 +825,12 @@ static inline void block_init_(Zakero_MemZone_Block* block
 
 	while(block_is_allocated_(block) == false)
 	{
-		block = block_prev_(block);
-
-		if(block == nullptr)
+		if(block_is_first_(block))
 		{
 			return nullptr;
 		}
+
+		block = block_prev_(block);
 
 		if(block <= block_stop)
 		{
@@ -867,13 +875,14 @@ static Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 		block_merge_with_next_(block);
 	}
 
-	Zakero_MemZone_Block* block_prev = block_prev_(block);
-	if((block_prev != nullptr)
-		&& (block_is_free_(block_prev) == true)
-		)
+	if(block_is_first_(block) == false)
 	{
-		block = block_prev;
-		block_merge_with_next_(block);
+		Zakero_MemZone_Block* block_prev = block_prev_(block);
+		if(block_is_free_(block_prev) == true)
+		{
+			block = block_prev;
+			block_merge_with_next_(block);
+		}
 	}
 
 	return block;
@@ -1049,9 +1058,7 @@ static Zakero_MemZone_Block* defrag_single_pass_(Zakero_MemZone_Block* block
 	Zakero_MemZone_Block* block_temp    = block_find_last_allocated_(block_free);
 	Zakero_MemZone_Block* block_to_move = nullptr;
 
-	while((block_temp != nullptr)
-		&& (block_temp > block_free)
-		)
+	while(block_temp > block_free)
 	{
 		if((block_is_allocated_(block_temp) == true)
 			&& (block_is_acquired_(block_temp) == false)
@@ -1066,6 +1073,11 @@ static Zakero_MemZone_Block* defrag_single_pass_(Zakero_MemZone_Block* block
 					block_to_move = block_temp;
 				}
 			}
+		}
+
+		if(block_is_first_(block_temp) == true)
+		{
+			break;
 		}
 
 		block_temp = block_prev_(block_temp);

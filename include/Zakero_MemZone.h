@@ -974,47 +974,6 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ block_swap_free_with_next_() ----- Rewrite -
-
-[[nodiscard]] static Zakero_MemZone_Block* block_swap_free_with_next_(Zakero_MemZone_Block* block_left
-	) noexcept
-{
-	Zakero_MemZone_Block* block_right = block_next_(block_left);
-
-	Zakero_MemZone_Block block_left_temp = *block_right;
-	block_left_temp.prev = block_left->prev;
-		
-	Zakero_MemZone_Block block_right_temp = *block_left;
-		
-	memmove(zakero_memzone_block_data_(block_left)
-		, zakero_memzone_block_data_(block_right)
-		, block_right->size
-		);
-
-	*block_left = block_left_temp;
-
-	block_right = block_next_(block_left);
-	*block_right = block_right_temp;
-	block_prev_set_(block_right, block_left);
-
-	if(block_is_last_(block_left) == true)
-	{
-		block_last_set_(block_left , false);
-		block_last_set_(block_right, true);
-	}
-
-	block_zerofill_(block_right);
-
-	if(block_is_last_(block_right) == false)
-	{
-		Zakero_MemZone_Block* block_temp = block_next_(block_right);
-		block_prev_set_(block_temp, block_right);
-	}
-
-	return block_right;
-}
-
-// }}}
 // {{{ block_dump_() -
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
@@ -1090,23 +1049,24 @@ static Zakero_MemZone_Block* defrag_single_pass_(Zakero_MemZone_Block* block
 		block_temp = block_next_(block_temp);
 	}
 
-	// --- Start Rewrite --- //
-
 	if(block_to_move == nullptr)
 	{
-		block_temp = block_next_(block_free);
-		if(block_is_acquired_(block_temp) == true)
+		block_to_move = block_next_(block_free);
+		if(block_is_acquired_(block_to_move) == true)
 		{
 			return nullptr;
 		}
 
-		block_free = block_swap_free_with_next_(block_free); // TODO: Rename block_free_swap_with_next_()
-		block_zerofill_(block_free);
+		uint64_t free_size = block_free->size;
 
-		block_free = block_merge_free_(block_free);
+		block_to_move = block_merge_with_prev_(block_to_move);
+		block_free    = block_split_(block_to_move, free_size);
+		block_free    = block_merge_free_(block_free);
 
 		return block_free;
 	}
+
+	// --- Start Rewrite --- //
 
 	if(block_free->size >= (block_to_move->size + sizeof(Zakero_MemZone_Block)))
 	{

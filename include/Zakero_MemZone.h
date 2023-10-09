@@ -559,15 +559,6 @@ namespace
 
 // }}}
 
-// {{{ block_is_acquired_() -
-
-[[nodiscard]] static inline bool block_is_acquired_(const Zakero_MemZone_Block* block
-	) noexcept
-{
-	return (bool)(block->flag & Zakero_MemZone_Block_State_Acquired);
-}
-
-// }}}
 // {{{ block_acquired_set_() -
 
 static inline void block_acquired_set_(Zakero_MemZone_Block* block
@@ -584,15 +575,6 @@ static inline void block_acquired_set_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ block_is_allocated_() -
-
-[[nodiscard]] static inline bool block_is_allocated_(const Zakero_MemZone_Block* block
-	) noexcept
-{
-	return (bool)(block->flag & Zakero_MemZone_Block_State_Allocated);
-}
-
-// }}}
 // {{{ block_allocated_set_() -
 
 static inline void block_allocated_set_(Zakero_MemZone_Block* block
@@ -606,6 +588,24 @@ static inline void block_allocated_set_(Zakero_MemZone_Block* block
 	}
 
 	block->flag &= (~Zakero_MemZone_Block_State_Allocated);
+}
+
+// }}}
+// {{{ block_is_acquired_() -
+
+[[nodiscard]] static inline bool block_is_acquired_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	return (bool)(block->flag & Zakero_MemZone_Block_State_Acquired);
+}
+
+// }}}
+// {{{ block_is_allocated_() -
+
+[[nodiscard]] static inline bool block_is_allocated_(const Zakero_MemZone_Block* block
+	) noexcept
+{
+	return (bool)(block->flag & Zakero_MemZone_Block_State_Allocated);
 }
 
 // }}}
@@ -652,7 +652,6 @@ static inline void block_last_set_(Zakero_MemZone_Block* block
 }
 
 // }}}
-
 // {{{ block_next_() -
 
 [[nodiscard]] static inline Zakero_MemZone_Block* block_next_(const Zakero_MemZone_Block* block
@@ -722,9 +721,9 @@ static inline void block_init_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ block_find_active_() -
+// {{{ block_find_acquired_() -
 
-[[nodiscard]] static Zakero_MemZone_Block* block_find_active_(Zakero_MemZone_Block* block
+[[nodiscard]] static Zakero_MemZone_Block* block_find_acquired_(Zakero_MemZone_Block* block
 	) noexcept
 {
 	while(true)
@@ -844,7 +843,7 @@ static inline void block_init_(Zakero_MemZone_Block* block
 // }}}
 // {{{ block_merge_with_next_() -
 
-static void block_merge_with_next_(Zakero_MemZone_Block* block
+static Zakero_MemZone_Block* block_merge_with_next_(Zakero_MemZone_Block* block
 	) noexcept
 {
 	Zakero_MemZone_Block* block_next = block_next_(block);
@@ -860,6 +859,45 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 
 	block->size += block_next->size + sizeof(Zakero_MemZone_Block);
 	block_init_(block_next, 0, nullptr);
+
+	return block;
+}
+
+// }}}
+// {{{ block_merge_with_prev_() -
+
+static Zakero_MemZone_Block* block_merge_with_prev_(Zakero_MemZone_Block* block
+	) noexcept
+{
+	Zakero_MemZone_Block* block_prev = block_prev_(block);
+	block_prev->id     = block->id;
+	block_prev->flag   = block->flag;
+	block_prev->size  += block->size + sizeof(Zakero_MemZone_Block);
+	// block_prev->prev remains unchanged
+
+	uint64_t block_size = block->size;
+
+	block_init_(block, 0, nullptr);
+
+	if(block_is_allocated_(block_prev) == true)
+	{
+		memmove(zakero_memzone_block_data_(block_prev)
+			, zakero_memzone_block_data_(block)
+			, block_size
+			);
+	}
+
+	// Merging complete
+	block = block_prev;
+
+	// Update next block
+	if(block_is_last_(block) == false)
+	{
+		Zakero_MemZone_Block* block_next = block_next_(block);
+		block_prev_set_(block_next, block);
+	}
+
+	return block;
 }
 
 // }}}
@@ -868,27 +906,25 @@ static void block_merge_with_next_(Zakero_MemZone_Block* block
 static Zakero_MemZone_Block* block_merge_free_(Zakero_MemZone_Block* block
 	) noexcept
 {
+	if((block_is_first_(block) == false)
+		&& (block_is_free_(block_prev_(block)) == true)
+		)
+	{
+		block = block_merge_with_prev_(block);
+	}
+
 	if((block_is_last_(block) == false)
 		&& (block_is_free_(block_next_(block)) == true)
 		)
 	{
-		block_merge_with_next_(block);
-	}
-
-	if(block_is_first_(block) == false)
-	{
-		Zakero_MemZone_Block* block_prev = block_prev_(block);
-		if(block_is_free_(block_prev) == true)
-		{
-			block = block_prev;
-			block_merge_with_next_(block);
-		}
+		block = block_merge_with_next_(block);
 	}
 
 	return block;
 }
 
 // }}}
+
 // {{{ block_move_() -
 
 static Zakero_MemZone_Block* block_move_(Zakero_MemZone_Block* block_src
@@ -1144,18 +1180,6 @@ static void defrag_multi_pass_(Zakero_MemZone_Block* block
 }
 
 // }}}
-// {{{ memzone_block_last_() -
-
-[[nodiscard]] static Zakero_MemZone_Block* memzone_block_last_(Zakero_MemZone& memzone
-	) noexcept
-{
-	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_last_(block);
-
-	return block;
-}
-
-// }}}
 // {{{ memzone_defrag_is_enabled_() -
 
 [[nodiscard]] static inline bool memzone_defrag_is_enabled_(const Zakero_MemZone& memzone
@@ -1219,7 +1243,8 @@ static void defrag_multi_pass_(Zakero_MemZone_Block* block
 	size_t memzone_size = memzone.size + size;
 	bool   append       = false;
 
-	Zakero_MemZone_Block* block = memzone_block_last_(memzone);
+	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
+	block = block_find_last_(block);
 	if(block_is_free_(block) == true)
 	{
 		append        = true;
@@ -1241,7 +1266,8 @@ static void defrag_multi_pass_(Zakero_MemZone_Block* block
 	if(memzone.memory != memory)
 	{
 		memzone.memory = memory;
-		block = memzone_block_last_(memzone);
+		block = memzone_block_first_(memzone);
+		block = block_find_last_(block);
 	}
 
 	if(append == true)
@@ -1294,7 +1320,7 @@ static void defrag_multi_pass_(Zakero_MemZone_Block* block
 	) noexcept
 {
 	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_active_(block);
+	block = block_find_acquired_(block);
 
 	if(block != nullptr)
 	{

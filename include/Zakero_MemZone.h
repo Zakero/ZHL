@@ -472,8 +472,7 @@ namespace
 	enum Zakero_MemZone_Block_State
 	{	Zakero_MemZone_Block_State_Allocated = (1 << 0)
 	,	Zakero_MemZone_Block_State_Acquired  = (1 << 1)
-	,	Zakero_MemZone_Block_State_ZeroFill  = (1 << 2)
-	,	Zakero_MemZone_Block_State_Last      = (1 << 3)
+	,	Zakero_MemZone_Block_State_Last      = (1 << 2)
 	};
 
 	struct Zakero_MemZone_Block
@@ -909,7 +908,6 @@ static Zakero_MemZone_Block* block_move_(Zakero_MemZone_Block* block_src
 
 	if(block_dst->size > block_src->size)
 	{
-		// TODO: If NOT zerofill
 		memset((void*)
 			(	(	(uint64_t)block_dst
 					+ sizeof(Zakero_MemZone_Block)

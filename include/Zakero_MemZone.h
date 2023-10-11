@@ -1711,12 +1711,12 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 		if(block_is_acquired_(block) == true)
 		{
 			has_acquired = true;
-			ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still acquired", block->id);
+			ZAKERO_MEMZONE_LOG_ERROR("id(%lu) is still acquired", block->id);
 		}
 		else if(block_is_allocated_(block) == true)
 		{
 			has_allocated = true;
-			ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still allocated", block->id);
+			ZAKERO_MEMZONE_LOG_ERROR("id(%lu) is still allocated", block->id);
 		}
 
 		if(block_is_last_(block) == true)
@@ -3283,7 +3283,7 @@ int Zakero_MemZone_Free(Zakero_MemZone& memzone
 
 	if(block_is_acquired_(block) == true)
 	{
-		ZAKERO_MEMZONE_LOG_ERROR("Id %lu is still acquired", block->id);
+		ZAKERO_MEMZONE_LOG_ERROR("id(%lu) is still acquired", block->id);
 #		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 		return Zakero_MemZone_Error_Id_Is_Acquired;
 #		endif // }}}

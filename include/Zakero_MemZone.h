@@ -1,7 +1,7 @@
-// Rethink private api
 // Do all TODO items
 // Change CHECK(.. == ..) to CHECK_EQ(.. , ..)
 // Add tests for checking block content
+// Bug getting the next id should check existing id's
 
 /******************************************************************************
  * Copyright 2020-2022 Andrew Moore

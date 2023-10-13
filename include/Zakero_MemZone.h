@@ -2721,6 +2721,8 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 			)
 		{
 			block_free = memzone_expand_(memzone, size);
+			block = memzone_block_first_(memzone);
+			block = block_find_id_(block, id);
 		}
 
 		if(block_free == nullptr)
@@ -2960,7 +2962,7 @@ TEST_CASE("/c/resize/") // {{{
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
-TEST_CASE("/c/resize/boundary") // {{{
+TEST_CASE("/c/resize/boundary/") // {{{
 {
 	Zakero_MemZone memzone = {};
 	int            error   = 0;

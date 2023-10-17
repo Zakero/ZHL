@@ -258,17 +258,17 @@ ZAKERO_MEMZONE__ERROR_DATA
 #undef X
 
 enum Zakero_MemZone_Mode
-{	Zakero_MemZone_Mode_FD  = 0x0000'0000'0000'0001
-,	Zakero_MemZone_Mode_RAM = 0x0000'0000'0000'0002
-,	Zakero_MemZone_Mode_SHM = 0x0000'0000'0000'0003
+{	Zakero_MemZone_Mode_FD  = 0x0001
+,	Zakero_MemZone_Mode_RAM = 0x0002
+,	Zakero_MemZone_Mode_SHM = 0x0003
 };
 
 enum Zakero_MemZone_Defrag_Event
-{	Zakero_MemZone_Defrag_On_Allocate = 0x0000'0000'0000'0100
-,	Zakero_MemZone_Defrag_On_Free     = 0x0000'0000'0000'0200
-,	Zakero_MemZone_Defrag_On_Acquire  = 0x0000'0000'0000'0400
-,	Zakero_MemZone_Defrag_On_Release  = 0x0000'0000'0000'0800
-,	Zakero_MemZone_Defrag_On_Resize   = 0x0000'0000'0000'1800
+{	Zakero_MemZone_Defrag_On_Allocate = 0x0001
+,	Zakero_MemZone_Defrag_On_Free     = 0x0002
+,	Zakero_MemZone_Defrag_On_Acquire  = 0x0004
+,	Zakero_MemZone_Defrag_On_Release  = 0x0008
+,	Zakero_MemZone_Defrag_On_Resize   = 0x0010
 };
 
 
@@ -457,9 +457,10 @@ namespace zakero
 
 namespace
 {
-	constexpr uint64_t Zakero_MemZone_Expand_Enable_   = 0x0000'0000'0001'0000;
-	constexpr uint64_t Zakero_MemZone_Mode_Mask_       = 0x0000'0000'0000'00ff;
-	constexpr uint64_t Zakero_MemZone_Defrag_Mask_     = 0
+	constexpr uint64_t Zakero_MemZone_Expand_Enable_ = 0x0000'0000'0001'0000;
+	constexpr uint64_t Zakero_MemZone_Mode_Mask_     = 0x0000'0000'0000'00ff;
+	constexpr uint64_t Zakero_MemZone_Defrag_Shift_  = 8;
+	constexpr uint64_t Zakero_MemZone_Defrag_Mask_   = 0
 		| Zakero_MemZone_Defrag_On_Allocate
 		| Zakero_MemZone_Defrag_On_Free
 		| Zakero_MemZone_Defrag_On_Acquire
@@ -486,20 +487,6 @@ namespace
 
 // }}}
 // {{{ Implementation : C -
-// {{{ defrag_is_valid_() -
-
-[[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
-	) noexcept
-{
-	if((defrag & Zakero_MemZone_Defrag_Mask_) == 0)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-// }}}
 // {{{ mode_is_valid_() -
 
 #ifdef __linux__
@@ -967,6 +954,20 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 
 // }}}
 
+// {{{ defrag_is_valid_() -
+
+[[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
+	) noexcept
+{
+	if((defrag & Zakero_MemZone_Defrag_Mask_) == 0)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+// }}}
 // {{{ defrag_find_block_to_move_() -
 
 [[nodiscard]]
@@ -1097,7 +1098,7 @@ static inline void defrag_multi_pass_(Zakero_MemZone_Block* block
 [[nodiscard]] static inline Zakero_MemZone_Mode memzone_mode_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (Zakero_MemZone_Mode)(memzone.flag & Zakero_MemZone_Mode_Mask_);
+	return (Zakero_MemZone_Mode)(memzone.flag & (uint64_t)Zakero_MemZone_Mode_Mask_);
 }
 
 // }}}
@@ -1107,7 +1108,26 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 	, const Zakero_MemZone_Mode mode
 	) noexcept
 {
-	memzone.flag |= mode;
+	memzone.flag |= (uint64_t)mode;
+}
+
+// }}}
+// {{{ memzone_defrag_disable_() -
+
+static inline void memzone_defrag_disable_(Zakero_MemZone& memzone
+	) noexcept
+{
+	memzone.flag &= ~(Zakero_MemZone_Defrag_Mask_ << Zakero_MemZone_Defrag_Shift_);
+}
+
+// }}}
+// {{{ memzone_defrag_enable_() -
+
+static inline void memzone_defrag_enable_(Zakero_MemZone& memzone
+	, const uint64_t defrag_enable
+	) noexcept
+{
+	memzone.flag |= (defrag_enable << Zakero_MemZone_Defrag_Shift_);
 }
 
 // }}}
@@ -1116,7 +1136,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_is_enabled_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_Mask_);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_Mask_ << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -1125,7 +1145,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_on_allocate_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_On_Allocate);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_On_Allocate << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -1134,7 +1154,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_on_free_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_On_Free);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_On_Free << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -1143,7 +1163,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_on_resize_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_On_Resize);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_On_Resize << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -1152,7 +1172,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_on_acquire_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_On_Acquire);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_On_Acquire << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -1161,7 +1181,7 @@ static inline void memzone_mode_set_(Zakero_MemZone& memzone
 [[nodiscard]] static inline bool memzone_defrag_on_release_(const Zakero_MemZone& memzone
 	) noexcept
 {
-	return (bool)(memzone.flag & Zakero_MemZone_Defrag_On_Release);
+	return (bool)(memzone.flag & (Zakero_MemZone_Defrag_On_Release << Zakero_MemZone_Defrag_Shift_));
 }
 
 // }}}
@@ -2018,7 +2038,7 @@ void Zakero_MemZone_DefragDisable(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	memzone.flag &= (~Zakero_MemZone_Defrag_Mask_);
+	memzone_defrag_disable_(memzone);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2114,7 +2134,7 @@ void Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	memzone.flag |= defrag;
+	memzone_defrag_enable_(memzone, defrag);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{

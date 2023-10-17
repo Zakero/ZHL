@@ -272,9 +272,6 @@ enum Zakero_MemZone_Defrag_Event
 };
 
 
-#define zakero_memzone_block_data_(block_) \
-	((uint8_t*)((uint64_t)block_ + sizeof(Zakero_MemZone_Block)))
-
 struct Zakero_MemZone
 {
 	uint8_t* memory  = nullptr;
@@ -560,6 +557,13 @@ namespace
 
 // }}}
 
+// {{{ block_data_() -
+
+// Use a "function" macro to ensure the code is expanded inplace.
+#define block_data_(block_) \
+	((uint8_t*)((uint64_t)block_ + sizeof(Zakero_MemZone_Block)))
+
+// }}}
 // {{{ block_acquired_set_() -
 
 static inline void block_acquired_set_(Zakero_MemZone_Block* block
@@ -700,7 +704,7 @@ static inline void block_prev_set_(Zakero_MemZone_Block* block
 static inline void block_zerofill_(Zakero_MemZone_Block* block
 	) noexcept
 {
-	memset(zakero_memzone_block_data_(block)
+	memset(block_data_(block)
 		, 0
 		, block->size
 		);
@@ -854,8 +858,8 @@ static Zakero_MemZone_Block* block_merge_with_prev_(Zakero_MemZone_Block* block
 
 	if(block_is_allocated_(block_prev) == true)
 	{
-		memmove(zakero_memzone_block_data_(block_prev)
-			, zakero_memzone_block_data_(block)
+		memmove(block_data_(block_prev)
+			, block_data_(block)
 			, block_size
 			);
 	}
@@ -903,8 +907,8 @@ static Zakero_MemZone_Block* block_move_(Zakero_MemZone_Block* block_src
 	, Zakero_MemZone_Block* block_dst
 	) noexcept
 {
-	memcpy(zakero_memzone_block_data_(block_dst)
-		, zakero_memzone_block_data_(block_src)
+	memcpy(block_data_(block_dst)
+		, block_data_(block_src)
 		, block_src->size
 		);
 
@@ -3519,7 +3523,7 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 #endif // }}}
 
 	block_acquired_set_(block, true);
-	void* ptr = (void*)zakero_memzone_block_data_(block);
+	void* ptr = (void*)block_data_(block);
 
 	return ptr;
 }

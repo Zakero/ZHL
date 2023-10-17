@@ -1088,6 +1088,25 @@ static inline void defrag_multi_pass_(Zakero_MemZone_Block* block
 }
 
 // }}}
+// {{{ memzone_mode_() -
+
+[[nodiscard]] static inline Zakero_MemZone_Mode memzone_mode_(const Zakero_MemZone& memzone
+	) noexcept
+{
+	return (Zakero_MemZone_Mode)(memzone.flag & Zakero_MemZone_Mode_Mask_);
+}
+
+// }}}
+// {{{ memzone_mode_set_() -
+
+static inline void memzone_mode_set_(Zakero_MemZone& memzone
+	, const Zakero_MemZone_Mode mode
+	) noexcept
+{
+	memzone.flag |= mode;
+}
+
+// }}}
 // {{{ memzone_defrag_is_enabled_() -
 
 [[nodiscard]] static inline bool memzone_defrag_is_enabled_(const Zakero_MemZone& memzone
@@ -1236,8 +1255,7 @@ static inline void defrag_multi_pass_(Zakero_MemZone_Block* block
 		return nullptr;
 	}
 
-	// TODO: memzone_mode_()
-	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
+	switch(memzone_mode_(memzone))
 	{
 		case Zakero_MemZone_Mode_RAM:
 			block = memzone_expand_ram_(memzone, size);
@@ -1431,9 +1449,10 @@ int Zakero_MemZone_Init(Zakero_MemZone& memzone
 
 	memzone.size    = sizeof(Zakero_MemZone_Block) + block_size;
 	memzone.next_id = 1;
-	memzone.flag    = mode & Zakero_MemZone_Mode_Mask_;
+	memzone.flag    = 0;
 
-	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
+	memzone_mode_set_(memzone, mode);
+	switch(memzone_mode_(memzone))
 	{
 		case Zakero_MemZone_Mode_RAM:
 			memzone_init_ram_(memzone);
@@ -1739,7 +1758,7 @@ int Zakero_MemZone_Destroy(Zakero_MemZone& memzone
 
 #endif // }}}
 
-	switch(memzone.flag & Zakero_MemZone_Mode_Mask_)
+	switch(memzone_mode_(memzone))
 	{
 		case Zakero_MemZone_Mode_FD:
 			memzone_destroy_fd_(memzone);

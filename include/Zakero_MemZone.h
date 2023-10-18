@@ -1,5 +1,4 @@
 // Add tests for checking block content
-// Finish test coverage for RAM
 
 /******************************************************************************
  * Copyright 2020-2022 Andrew Moore
@@ -229,9 +228,9 @@
 	X(Error_Invalid_Parameter_Id       ,  9 , "The 'id' parameter is not valid"                      ) \
 	X(Error_Already_Initialized        , 10 , "MemZone has already been initialized"                 ) \
 	X(Error_Not_Initialized            , 11 , "MemZone has not been initialized"                     ) \
-	X(Error_Not_Enough_Memory          , 12 , "Not enough memory is availalbe"                       ) \
-	X(Error_Not_Enough_Memory_Expand   , 13 , "Not enough memory is availalbe and expanding failed"  ) \
-	X(Error_Not_Enough_Memory_Defrag   , 14 , "Not enough memory is availalbe and defragging failed" ) \
+	X(Error_Not_Enough_Memory          , 12 , "Not enough memory is available"                       ) \
+	X(Error_Not_Enough_Memory_Expand   , 13 , "Not enough memory is available and expanding failed"  ) \
+	X(Error_Not_Enough_Memory_Defrag   , 14 , "Not enough memory is available and defragging failed" ) \
 	X(Error_Destroyed_Allocated_Memory , 15 , "MemZone was destroyed with Allocated memory"          ) \
 	X(Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
 	X(Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
@@ -285,7 +284,7 @@ struct Zakero_MemZone
 [[]]          int         Zakero_MemZone_Destroy(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_DefragNow(Zakero_MemZone&) noexcept;
 [[]]          void        Zakero_MemZone_DefragDisable(Zakero_MemZone&) noexcept;
-[[]]          void        Zakero_MemZone_DefragEnable(Zakero_MemZone&, uint64_t) noexcept;
+[[]]          bool        Zakero_MemZone_DefragEnable(Zakero_MemZone&, uint64_t) noexcept;
 [[]]          void        Zakero_MemZone_ExpandDisable(Zakero_MemZone&) noexcept;
 [[]]          void        Zakero_MemZone_ExpandEnable(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
@@ -940,12 +939,12 @@ static Zakero_MemZone_Block* block_split_(Zakero_MemZone_Block* block
 [[nodiscard]] static bool defrag_is_valid_(const uint64_t defrag
 	) noexcept
 {
-	if((defrag & Zakero_MemZone_Defrag_Mask_) == 0)
+	if((defrag & ~Zakero_MemZone_Defrag_Mask_) == 0)
 	{
-		return false;
+		return true;
 	}
 
-	return true;
+	return false;
 }
 
 // }}}
@@ -2111,7 +2110,7 @@ TEST_CASE("/c/defragdisable/") // {{{
  *   details.
  * }}
  */
-void Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
+bool Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
 	, uint64_t defrag
 	) noexcept
 {
@@ -2120,7 +2119,7 @@ void Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'memzone' has not been initialized.");
 #		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-		return;
+		return false;
 #		endif // }}}
 	}
 
@@ -2128,12 +2127,14 @@ void Zakero_MemZone_DefragEnable(Zakero_MemZone& memzone
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'defrag' has unsupported value");
 #		ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
-		return;
+		return false;
 #		endif // }}}
 	}
 #endif // }}}
 
 	memzone_defrag_enable_(memzone, defrag);
+
+	return true;
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2155,7 +2156,8 @@ TEST_CASE("/c/defragenable/") // {{{
 
 	SUBCASE("Invalid") // {{{
 	{
-		Zakero_MemZone_DefragEnable(memzone, ~0);
+		bool result = Zakero_MemZone_DefragEnable(memzone, ~0);
+		CHECK_EQ(result , false);
 	} // }}}
 
 	Zakero_MemZone_DefragDisable(memzone);
@@ -2547,8 +2549,14 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 	CHECK_EQ(error , Zakero_MemZone_Error_Not_Enough_Memory);
 
 	// -----------------------------------
-	Zakero_MemZone_DefragNow(memzone);
+	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Allocate);
 	// -----------------------------------
+
+	error = Zakero_MemZone_Allocate(memzone
+		, (64 * 8)
+		, id_3
+		);
+	CHECK_EQ(error , Zakero_MemZone_Error_Not_Enough_Memory_Defrag);
 
 	error = Zakero_MemZone_Allocate(memzone
 		, (64 * 2)
@@ -2598,6 +2606,19 @@ TEST_CASE("/c/allocate/expand/") // {{{
 	// -----------------------------------
 	Zakero_MemZone_ExpandEnable(memzone);
 	// -----------------------------------
+
+	SUBCASE("Error: Acquired")
+	{
+		void* ptr = Zakero_MemZone_Acquire(memzone, id_1);
+		CHECK_NE(ptr , nullptr);
+
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_KILOBYTE(1)
+			, id_2
+			);
+		CHECK_EQ(error , Zakero_MemZone_Error_Not_Enough_Memory_Expand);
+		Zakero_MemZone_Release(memzone, id_1);
+	}
 
 	error = Zakero_MemZone_Allocate(memzone
 		, ZAKERO_KILOBYTE(1)
@@ -3376,27 +3397,45 @@ TEST_CASE("/c/free/") // {{{
 		CHECK_EQ(error , Zakero_MemZone_Error_Invalid_Parameter_Id);
 	} // }}}
 
-	error = Zakero_MemZone_Allocate(memzone
-		, ZAKERO_BYTE(128)
-		, id
-		);
-	CHECK_EQ(error , Zakero_MemZone_Error_None);
-	CHECK_NE(id    , 0);
-
 	SUBCASE("Happy Path") // {{{
 	{
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_BYTE(128)
+			, id
+			);
+		CHECK_EQ(error , Zakero_MemZone_Error_None);
+		CHECK_NE(id    , 0);
+
 		error = Zakero_MemZone_Free(memzone, id);
 		CHECK_EQ(error , Zakero_MemZone_Error_None);
 	} // }}}
 	SUBCASE("Is Acquired") // {{{
 	{
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_BYTE(128)
+			, id
+			);
+		CHECK_EQ(error , Zakero_MemZone_Error_None);
+		CHECK_NE(id    , 0);
+
 		(void)Zakero_MemZone_Acquire(memzone, id);
 
 		error = Zakero_MemZone_Free(memzone, id);
 		CHECK_EQ(error , Zakero_MemZone_Error_Id_Is_Acquired);
+
+		Zakero_MemZone_Release(memzone, id);
+		error = Zakero_MemZone_Free(memzone, id);
+		CHECK_EQ(error , Zakero_MemZone_Error_None);
 	} // }}}
 	SUBCASE("Free'ed 2x") // {{{
 	{
+		error = Zakero_MemZone_Allocate(memzone
+			, ZAKERO_BYTE(128)
+			, id
+			);
+		CHECK_EQ(error , Zakero_MemZone_Error_None);
+		CHECK_NE(id    , 0);
+
 		error = Zakero_MemZone_Free(memzone, id);
 		error = Zakero_MemZone_Free(memzone, id);
 		CHECK_EQ(error , Zakero_MemZone_Error_Invalid_Parameter_Id);
@@ -3859,7 +3898,7 @@ size_t Zakero_MemZone_Available_Largest(Zakero_MemZone& memzone
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
-TEST_CASE("/c/availalbe/largest/") // {{{
+TEST_CASE("/c/available/largest/") // {{{
 {
 	Zakero_MemZone memzone = {};
 
@@ -3922,6 +3961,8 @@ TEST_CASE("/c/availalbe/largest/") // {{{
 
 	CHECK_EQ(Zakero_MemZone_Available_Largest(memzone) , ZAKERO_BYTE(256));
 
+	Zakero_MemZone_Free(memzone, id_2);
+	Zakero_MemZone_Free(memzone, id_4);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 
@@ -3976,7 +4017,7 @@ size_t Zakero_MemZone_Available_Total(Zakero_MemZone& memzone
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
 
-TEST_CASE("/c/availalbe/total/") // {{{
+TEST_CASE("/c/available/total/") // {{{
 {
 	constexpr size_t TEST_SIZE = ZAKERO_BYTE(64);
 	constexpr size_t OVERHEAD  = sizeof(Zakero_MemZone_Block);
@@ -4021,6 +4062,7 @@ TEST_CASE("/c/availalbe/total/") // {{{
 
 	CHECK_EQ(Zakero_MemZone_Available_Total(memzone) , expected_size);
 
+	Zakero_MemZone_Free(memzone, id_2);
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
 

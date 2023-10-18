@@ -304,7 +304,6 @@ struct Zakero_MemZone
 [[nodiscard]] const char* Zakero_MemZone_Error_Message(int) noexcept;
 
 /*
-
 int Zakero_MemZone_Init_From(Zakero_MemZone& //memzone
 	, const Zakero_MemZone& //memzone
 	) noexcept;
@@ -313,24 +312,9 @@ int Zakero_MemZone_Init_From_FD(Zakero_MemZone& //memzone
 	, const int //fd
 	) noexcept;
 
-block_clear
-block_init
-block_move
-block_merge
-block_split
-block_swap
-block_find_id
-block_find_free
-block_next
-block_prev
 block_size
-block_is_free
 block_id
 block_id_set
-block_allocated
-block_allocated_set
-block_acquired
-block_acquired_set
  */
 
 } // extern "C"
@@ -1305,6 +1289,24 @@ static inline void memzone_defrag_enable_(Zakero_MemZone& memzone
 }
 
 // }}}
+// {{{ memzone_expand_disable_() -
+
+static inline void memzone_expand_disable_(Zakero_MemZone& memzone
+	) noexcept
+{
+	memzone.flag &= (~Zakero_MemZone_Expand_Enable_);
+}
+
+// }}}
+// {{{ memzone_expand_enable_() -
+
+static inline void memzone_expand_enable_(Zakero_MemZone& memzone
+	) noexcept
+{
+	memzone.flag |= Zakero_MemZone_Expand_Enable_;
+}
+
+// }}}
 // {{{ memzone_destroy_fd_() -
 
 #ifdef __linux__
@@ -2233,7 +2235,7 @@ void Zakero_MemZone_ExpandDisable(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.flag &= (~Zakero_MemZone_Expand_Enable_);
+	memzone_expand_disable_(memzone);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{
@@ -2300,7 +2302,7 @@ void Zakero_MemZone_ExpandEnable(Zakero_MemZone& memzone
 	}
 #endif
 
-	memzone.flag |= Zakero_MemZone_Expand_Enable_;
+	memzone_expand_enable_(memzone);
 }
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION_TEST // {{{

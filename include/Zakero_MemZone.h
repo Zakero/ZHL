@@ -289,9 +289,9 @@ struct Zakero_MemZone
 [[]]          void        Zakero_MemZone_ExpandEnable(Zakero_MemZone&) noexcept;
 [[]]          int         Zakero_MemZone_Allocate(Zakero_MemZone&, size_t, uint64_t&) noexcept;
 [[]]          int         Zakero_MemZone_Resize(Zakero_MemZone&, uint64_t, size_t) noexcept;
-[[]]          int         Zakero_MemZone_Free(Zakero_MemZone&, uint64_t id) noexcept;
-[[nodiscard]] void*       Zakero_MemZone_Acquire(Zakero_MemZone&, uint64_t id) noexcept;
-[[]]          int         Zakero_MemZone_Release(Zakero_MemZone&, uint64_t id) noexcept;
+[[]]          int         Zakero_MemZone_Free(Zakero_MemZone&, uint64_t) noexcept;
+[[nodiscard]] void*       Zakero_MemZone_Acquire(Zakero_MemZone&, uint64_t) noexcept;
+[[]]          int         Zakero_MemZone_Release(Zakero_MemZone&, uint64_t) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Available_Largest(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Available_Total(Zakero_MemZone&) noexcept;
 [[nodiscard]] size_t      Zakero_MemZone_Used_Largest(Zakero_MemZone&) noexcept;

@@ -21,24 +21,22 @@
 # 
 ###############################################################################
 
-readonly kernal_name="$(uname -s)"
+readonly project_dir="$(fossil info | grep local-root | sed 's/.*:  *\(.*\)/\1/')"
+cd ${project_dir}
 
+readonly kernal_name="$(uname -s)"
 if [ "${kernal_name}" = "Linux" ]
 then
-	readonly project_dir="$(fossil info | grep local-root | sed 's/.*:  *\(.*\)/\1/')"
 	readonly project_name="$(fossil info | grep project-name | sed 's/.*:  *\(.*\)/\1/')"
 
 	#readonly vim_command="konsole --separate --profile VIM -p 'TerminalColumns=274' -p 'TerminalRows=61' -e vim"
 	readonly vim_command="konsole --separate --profile VIM -e vim"
 	readonly vim_server="--servername ${project_name}"
 
-	cd ${project_dir}
 elif [ "${kernal_name}" = "Haiku" ]
 then
 	readonly vim_command="gvim"
 	readonly vim_server=""
-
-	cd /ZHL
 fi
 
 readonly vim_files="""

@@ -2398,7 +2398,7 @@ TEST_CASE("/c/expand/enable") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Allocate() ------------ Check Block Content -
+// {{{ Zakero_MemZone_Allocate() -
 
 /* {{function(name = Zakero_MemZone_Allocate
  *   , param =
@@ -2564,47 +2564,56 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 {
 	Zakero_MemZone memzone = {};
 
+	size_t   mem_size = 64; // Bytes
+	void*    ptr      = nullptr;
+	void*    ptr_2    = nullptr;
+
 	int error = Zakero_MemZone_Init(memzone
 		, Zakero_MemZone_Mode_RAM
-		, (64 * 4) + (sizeof(Zakero_MemZone_Block) * 2)
+		, (mem_size * 4) + (sizeof(Zakero_MemZone_Block) * 2)
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 
+	// 1111------------
 	uint64_t id_1 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		, 64
+		, mem_size
 		, id_1
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 	CHECK_NE(id_1  , 0);
-	memset(Zakero_MemZone_Acquire(memzone, id_1), 0x11, 64);
+	memset(Zakero_MemZone_Acquire(memzone, id_1), 0x11, mem_size);
 	Zakero_MemZone_Release(memzone, id_1);
 
+	// 11113333--------
 	uint64_t id_3 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		, 64
+		, mem_size
 		, id_3
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 	CHECK_NE(id_3  , 0);
-	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, 64);
+	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, mem_size);
 	Zakero_MemZone_Release(memzone, id_3);
 
+	// 111133332222----
 	uint64_t id_2 = 0;
 	error = Zakero_MemZone_Allocate(memzone
-		, 64
+		, mem_size
 		, id_2
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 	CHECK_NE(id_2  , 0);
-	memset(Zakero_MemZone_Acquire(memzone, id_2), 0x22, 64);
+	ptr_2 = Zakero_MemZone_Acquire(memzone, id_2);
+	memset(ptr_2, 0x22, Zakero_MemZone_SizeOf(memzone, id_2));
 	Zakero_MemZone_Release(memzone, id_2);
 
+	// 1111----2222----
 	error = Zakero_MemZone_Free(memzone, id_3);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 
 	error = Zakero_MemZone_Allocate(memzone
-		, (64 * 2)
+		, (mem_size * 2)
 		, id_3
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_Not_Enough_Memory);
@@ -2613,19 +2622,31 @@ TEST_CASE("/c/allocate/defrag/") // {{{
 	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Allocate);
 	// -----------------------------------
 
+	// 1111----2222----
+	ptr = Zakero_MemZone_Acquire(memzone, id_2);
 	error = Zakero_MemZone_Allocate(memzone
-		, (64 * 8)
+		, (mem_size * 2)
 		, id_3
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_Not_Enough_Memory_Defrag);
+	ptr = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK_EQ(ptr                           , ptr_2);
+	CHECK_EQ(((uint8_t*)ptr)[0]            , 0x22);
+	CHECK_EQ(((uint8_t*)ptr)[mem_size - 1] , 0x22);
 
+	// 1111222233333333
+	Zakero_MemZone_Release(memzone, id_2);
 	error = Zakero_MemZone_Allocate(memzone
-		, (64 * 2)
+		, (mem_size * 2)
 		, id_3
 		);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
 	CHECK_NE(id_3  , 0);
-	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, (64 * 2));
+	memset(Zakero_MemZone_Acquire(memzone, id_3), 0x33, (mem_size * 2));
+
+	ptr = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK_EQ(((uint8_t*)ptr)[0]            , 0x22);
+	CHECK_EQ(((uint8_t*)ptr)[mem_size - 1] , 0x22);
 
 	Zakero_MemZone_Release(memzone, id_1);
 	Zakero_MemZone_Free(memzone, id_1);
@@ -3624,22 +3645,27 @@ void* Zakero_MemZone_Acquire(Zakero_MemZone& memzone
 	}
 #endif // }}}
 
-	if(memzone_defrag_on_acquire_(memzone) == true)
-	{
-		Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-		defrag_single_pass_(block);
-	}
-
-	Zakero_MemZone_Block* block = memzone_block_first_(memzone);
-	block = block_find_id_(block, id);
+	Zakero_MemZone_Block* block = nullptr;
 
 #if ZAKERO_MEMZONE_VALIDATE_IS_ENABLED // {{{
+	block = memzone_block_first_(memzone);
+	block = block_find_id_(block, id);
+
 	if(block == nullptr)
 	{
 		ZAKERO_MEMZONE_LOG_ERROR("Parameter 'id(%lu)' doses not exist.", id);
 		return nullptr;
 	}
 #endif // }}}
+
+	if(memzone_defrag_on_acquire_(memzone) == true)
+	{
+		block = memzone_block_first_(memzone);
+		defrag_single_pass_(block);
+	}
+
+	block = memzone_block_first_(memzone);
+	block = block_find_id_(block, id);
 
 	block_acquired_set_(block, true);
 	void* ptr = (void*)block_data_(block);

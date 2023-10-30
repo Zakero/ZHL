@@ -216,26 +216,26 @@
  * Error Codes used internally.
  */
 #define ZAKERO_MEMZONE__ERROR_DATA \
-	X(Error_None                       ,  0 , "No Error"                                             ) \
-	X(Error_Init_Failure_Name          ,  1 , "Failed to initialize the MemZone name"                ) \
-	X(Error_Init_Failure_FD            ,  2 , "Failed to initialize the MemZone FD"                  ) \
-	X(Error_Init_Failure_RAM           ,  3 , "Failed to initialize the MemZone RAM"                 ) \
-	X(Error_Invalid_Parameter_Name     ,  4 , "The 'name' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Size     ,  5 , "The 'size' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Mode     ,  6 , "The 'mode' parameter is not valid"                    ) \
-	X(Error_Invalid_Parameter_Expand   ,  7 , "The 'expand' parameter is not valid"                  ) \
-	X(Error_Invalid_Parameter_Defrag   ,  8 , "The 'defrag' parameter is not valid"                  ) \
-	X(Error_Invalid_Parameter_Id       ,  9 , "The 'id' parameter is not valid"                      ) \
-	X(Error_Already_Initialized        , 10 , "MemZone has already been initialized"                 ) \
-	X(Error_Not_Initialized            , 11 , "MemZone has not been initialized"                     ) \
-	X(Error_Not_Enough_Memory          , 12 , "Not enough memory is available"                       ) \
-	X(Error_Not_Enough_Memory_Expand   , 13 , "Not enough memory is available and expanding failed"  ) \
-	X(Error_Not_Enough_Memory_Defrag   , 14 , "Not enough memory is available and defragging failed" ) \
-	X(Error_Destroyed_Allocated_Memory , 15 , "MemZone was destroyed with Allocated memory"          ) \
-	X(Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
-	X(Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
-	X(Error_Id_Is_Not_Acquired         , 18 , "The ID has not been aquired"                          ) \
-	X(Error_Resize_Too_Small           , 19 , "The resize request was too small to succeed"          ) \
+	X(Zakero_MemZone_Error_None                       ,  0 , "No Error"                                             ) \
+	X(Zakero_MemZone_Error_Init_Failure_Name          ,  1 , "Failed to initialize the MemZone name"                ) \
+	X(Zakero_MemZone_Error_Init_Failure_FD            ,  2 , "Failed to initialize the MemZone FD"                  ) \
+	X(Zakero_MemZone_Error_Init_Failure_RAM           ,  3 , "Failed to initialize the MemZone RAM"                 ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Name     ,  4 , "The 'name' parameter is not valid"                    ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Size     ,  5 , "The 'size' parameter is not valid"                    ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Mode     ,  6 , "The 'mode' parameter is not valid"                    ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Expand   ,  7 , "The 'expand' parameter is not valid"                  ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Defrag   ,  8 , "The 'defrag' parameter is not valid"                  ) \
+	X(Zakero_MemZone_Error_Invalid_Parameter_Id       ,  9 , "The 'id' parameter is not valid"                      ) \
+	X(Zakero_MemZone_Error_Already_Initialized        , 10 , "MemZone has already been initialized"                 ) \
+	X(Zakero_MemZone_Error_Not_Initialized            , 11 , "MemZone has not been initialized"                     ) \
+	X(Zakero_MemZone_Error_Not_Enough_Memory          , 12 , "Not enough memory is available"                       ) \
+	X(Zakero_MemZone_Error_Not_Enough_Memory_Expand   , 13 , "Not enough memory is available and expanding failed"  ) \
+	X(Zakero_MemZone_Error_Not_Enough_Memory_Defrag   , 14 , "Not enough memory is available and defragging failed" ) \
+	X(Zakero_MemZone_Error_Destroyed_Allocated_Memory , 15 , "MemZone was destroyed with Allocated memory"          ) \
+	X(Zakero_MemZone_Error_Destroyed_Acquired_Memory  , 16 , "MemZone was destroyed with Acquired memory"           ) \
+	X(Zakero_MemZone_Error_Id_Is_Acquired             , 17 , "Operation can not be done on an acquired ID"          ) \
+	X(Zakero_MemZone_Error_Id_Is_Not_Acquired         , 18 , "The ID has not been aquired"                          ) \
+	X(Zakero_MemZone_Error_Resize_Too_Small           , 19 , "The resize request was too small to succeed"          ) \
 
 #define ZAKERO_BYTE(val_)     (val_)
 #define ZAKERO_KILOBYTE(val_) (val_ * 1024)
@@ -248,8 +248,8 @@
 extern "C"
 {
 
-#define X(name_, value_, mesg_) \
-constexpr int Zakero_MemZone_ ## name_ = value_;
+#define X(error_name_, error_code_, error_message_) \
+constexpr int error_name_ = error_code_;
 ZAKERO_MEMZONE__ERROR_DATA
 #undef X
 
@@ -324,10 +324,10 @@ namespace zakero
 	class MemZone
 	{
 		public:
-#define X(name_, val_, mesg_) \
-			static constexpr int name_ = val_;
+#			define X(error_name_, error_code_, error_message_) \
+			static constexpr int error_name_ = error_code_;
 			ZAKERO_MEMZONE__ERROR_DATA
-#undef X
+#			undef X
 			static constexpr size_t Size_Max = (size_t)std::numeric_limits<off_t>::max();
 
 			enum class Alignment : uint8_t
@@ -4369,10 +4369,11 @@ const char* Zakero_MemZone_Error_Message(int error_code
 	switch(error_code)
 	{
 		default:
-#define X(error_name_, error_code_, error_message_) \
+			[[fallthrough]];
+#		define X(error_name_, error_code_, error_message_) \
 		case error_code_: return error_message_;
-ZAKERO_MEMZONE__ERROR_DATA
-#undef X
+		ZAKERO_MEMZONE__ERROR_DATA
+#		undef X
 	}
 
 	return nullptr;
@@ -4426,10 +4427,10 @@ namespace
 			{
 				switch(condition)
 				{
-#define X(name_, val_, mesg_) \
-					case val_: return mesg_;
+#					define X(error_name_, error_code_, error_message_) \
+					case error_code_: return error_message_;
 					ZAKERO_MEMZONE__ERROR_DATA
-#undef X
+#					undef X
 				}
 
 				return "Unknown error condition";

@@ -1558,6 +1558,7 @@ TEST_CASE("/c/init/") // {{{
 	} // }}}
 #endif // }}}
 #if __linux__ // {{{ Invalid Mode
+#endif // }}}
 	SUBCASE("Invalid Mode: Zakero_MemZone_Mode (fake)") // {{{
 	{
 		error = Zakero_MemZone_Init(memzone
@@ -1567,7 +1568,6 @@ TEST_CASE("/c/init/") // {{{
 
 		CHECK_EQ(error , Zakero_MemZone_Error_Invalid_Parameter_Mode);
 	} // }}}
-#endif // }}}
 	SUBCASE("Invalid Size: 0") // {{{
 	{
 		error = Zakero_MemZone_Init(memzone

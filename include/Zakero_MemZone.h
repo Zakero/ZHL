@@ -2262,7 +2262,7 @@ TEST_CASE("/c/defragenable/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_ExpandDisable() ------- Check Block Content -
+// {{{ Zakero_MemZone_ExpandDisable() -
 
 /* {{function(name = Zakero_MemZone_ExpandDisable
  *   , param =
@@ -2331,7 +2331,7 @@ TEST_CASE("/c/expand/disable") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_ExpandEnable() -------- Check Block Content -
+// {{{ Zakero_MemZone_ExpandEnable() -
 
 /* {{function(name = Zakero_MemZone_ExpandEnable
  *   , parm =
@@ -2384,6 +2384,12 @@ TEST_CASE("/c/expand/enable") // {{{
 	Zakero_MemZone_ExpandEnable(memzone);
 	error = Zakero_MemZone_Allocate(memzone, ZAKERO_KILOBYTE(2), id);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
+
+	void* ptr = Zakero_MemZone_Acquire(memzone, id);
+	memset(ptr, 0xff, Zakero_MemZone_SizeOf(memzone, id));
+	CHECK_EQ(((uint8_t*)ptr)[0]                      , 0xff);
+	CHECK_EQ(((uint8_t*)ptr)[ZAKERO_KILOBYTE(2) - 1] , 0xff);
+	Zakero_MemZone_Release(memzone, id);
 
 	Zakero_MemZone_Free(memzone, id);
 	Zakero_MemZone_Destroy(memzone);

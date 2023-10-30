@@ -2127,7 +2127,7 @@ TEST_CASE("/c/defragdisable/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_DefragEnable() -------- Check Block Content -
+// {{{ Zakero_MemZone_DefragEnable() -
 
 /* {{function(name = Zakero_MemZone_DefragEnable
  *   , param =
@@ -2200,36 +2200,57 @@ TEST_CASE("/c/defragenable/") // {{{
 	size_t   mem_size = 64; // Bytes
 	uint64_t id_1     = 0;
 	uint64_t id_2     = 0;
+	void*    ptr      = nullptr;
 	void*    ptr_1    = nullptr;
 	void*    ptr_2    = nullptr;
 
+	// 1111------------
 	error = Zakero_MemZone_Allocate(memzone, mem_size, id_1);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
-	ptr_2 = Zakero_MemZone_Acquire(memzone, id_1);
-	memset(ptr_2, 0xff, Zakero_MemZone_SizeOf(memzone, id_1));
+	ptr_1 = Zakero_MemZone_Acquire(memzone, id_1);
+	memset(ptr_1, 0x11, Zakero_MemZone_SizeOf(memzone, id_1));
+	CHECK_EQ(((uint8_t*)ptr_1)[0]            , 0x11);
+	CHECK_EQ(((uint8_t*)ptr_1)[mem_size - 1] , 0x11);
 	Zakero_MemZone_Release(memzone, id_1);
 
+	// 11112222--------
 	error = Zakero_MemZone_Allocate(memzone, mem_size, id_2);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
-	ptr_1 = Zakero_MemZone_Acquire(memzone, id_2);
-	memset(ptr_1, 0x11, Zakero_MemZone_SizeOf(memzone, id_2));
+	ptr_2 = Zakero_MemZone_Acquire(memzone, id_2);
+	memset(ptr_2, 0x22, Zakero_MemZone_SizeOf(memzone, id_2));
+	CHECK_EQ(((uint8_t*)ptr_2)[0]            , 0x22);
+	CHECK_EQ(((uint8_t*)ptr_2)[mem_size - 1] , 0x22);
 	Zakero_MemZone_Release(memzone, id_2);
 
 	//----------------------------------------
 
+	// ----2222--------
 	Zakero_MemZone_Free(memzone, id_1);
-	CHECK_EQ(ptr_1 , Zakero_MemZone_Acquire(memzone, id_2));
+
+	ptr = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK_EQ(ptr                           , ptr_2);
+	CHECK_EQ(((uint8_t*)ptr)[0]            , 0x22);
+	CHECK_EQ(((uint8_t*)ptr)[mem_size - 1] , 0x22);
 	Zakero_MemZone_Release(memzone, id_2);
 
+	// 11112222--------
 	error = Zakero_MemZone_Allocate(memzone, mem_size, id_1);
 	CHECK_EQ(error , Zakero_MemZone_Error_None);
-	CHECK_EQ(ptr_2 , Zakero_MemZone_Acquire(memzone, id_1));
+
+	ptr = Zakero_MemZone_Acquire(memzone, id_1);
+	CHECK_EQ(ptr, ptr_1);
 	Zakero_MemZone_Release(memzone, id_1);
 
 	Zakero_MemZone_DefragEnable(memzone, Zakero_MemZone_Defrag_On_Free);
 
+	// ----2222-------- (free)
+	// 2222------------ (defrag)
 	Zakero_MemZone_Free(memzone, id_1);
-	CHECK_EQ(ptr_2 , Zakero_MemZone_Acquire(memzone, id_2));
+
+	ptr = Zakero_MemZone_Acquire(memzone, id_2);
+	CHECK_EQ(ptr                           , ptr_1);
+	CHECK_EQ(((uint8_t*)ptr)[0]            , 0x22);
+	CHECK_EQ(((uint8_t*)ptr)[mem_size - 1] , 0x22);
 	Zakero_MemZone_Release(memzone, id_2);
 
 	//----------------------------------------

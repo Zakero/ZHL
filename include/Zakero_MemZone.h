@@ -196,7 +196,7 @@
  * Macros
  */
 
-// {{{ Macros
+// {{{ Macros -
 
 /**
  * \internal
@@ -241,7 +241,7 @@
 #define ZAKERO_GIGABYTE(val_) (ZAKERO_MEGABYTE(val_) * 1024)
 
 // }}}
-// {{{ Declaration : C
+// {{{ Declaration : C -
 
 extern "C"
 {
@@ -314,7 +314,7 @@ block_id_set
 } // extern "C"
 
 // }}}
-// {{{ Declaration : C++
+// {{{ Declaration : C++ -
 namespace zakero
 {
 	// {{{ Declaration
@@ -357,12 +357,12 @@ namespace zakero
 	// }}}
 }
 // }}}
-// {{{ Implementation
+// {{{ Implementation -
 
 #ifdef ZAKERO_MEMZONE_IMPLEMENTATION
 
-// {{{ Macros
-// {{{ Macros : Doxygen
+// {{{ Macros -
+// {{{ Macros : Doxygen -
 
 #ifdef ZAKERO__DOXYGEN_DEFINE_DOCS
 
@@ -827,6 +827,12 @@ static Zakero_MemZone_Block* block_merge_with_prev_(Zakero_MemZone_Block* block
 			, block_data_(block)
 			, block_size
 			);
+
+		if(block_size < block_prev->size)
+		{
+			uint8_t* tmp = (uint8_t*)block_data_(block_prev) + block_size;
+			memset(tmp, 0x00, block_prev->size - block_size);
+		}
 	}
 
 	// Merging complete
@@ -2724,7 +2730,7 @@ TEST_CASE("/c/allocate/expand/") // {{{
 #endif // }}}
 
 // }}}
-// {{{ Zakero_MemZone_Resize() -------------- Check Block Content -
+// {{{ Zakero_MemZone_Resize() -
 
 /* {{function(nam = Zakero_MemZone_Resize
  *   , param =
@@ -2888,7 +2894,7 @@ int Zakero_MemZone_Resize(Zakero_MemZone& memzone
 
 	if(memzone_defrag_on_resize_(memzone) == true)
 	{
-		Zakero_MemZone_Block* block = memzone_block_first_(memzone);
+		block = memzone_block_first_(memzone);
 		defrag_single_pass_(block);
 	}
 
@@ -3188,7 +3194,7 @@ TEST_CASE("/c/resize/boundary/") // {{{
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
-TEST_CASE("/c/resize/defrag/broken/") // {{{
+TEST_CASE("/c/resize/defrag/") // {{{
 {
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
@@ -3302,7 +3308,7 @@ TEST_CASE("/c/resize/defrag/broken/") // {{{
 	SUBCASE("Resize: Larger From Defrag") // {{{
 	{
 		// -11a22--
-		// 11322aa-
+		// 11--22aa
 		size_t   mem_size = 64; // Bytes
 		uint64_t id_x     = 0;
 		uint64_t id_1     = 0;
@@ -3356,7 +3362,7 @@ TEST_CASE("/c/resize/defrag/broken/") // {{{
 
 	Zakero_MemZone_Destroy(memzone);
 } // }}}
-TEST_CASE("/c/resize/expand/broken/") // {{{
+TEST_CASE("/c/resize/expand/") // {{{
 {
 	Zakero_MemZone memzone = {};
 	int            error   = 0;
@@ -3371,7 +3377,7 @@ TEST_CASE("/c/resize/expand/broken/") // {{{
 
 	SUBCASE("Resize: Larger") // {{{
 	{
-		// 1111xx-
+		// 1111xx--
 		// 1111xxxx
 		size_t   mem_size = 64; // Bytes
 		uint64_t id_x     = 0;

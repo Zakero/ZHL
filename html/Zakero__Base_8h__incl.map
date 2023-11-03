@@ -1,7 +1,9 @@
 <map id="Zakero_Base.h" name="Zakero_Base.h">
-<area shape="rect" id="node1" title="Zakero Base." alt="" coords="104,5,213,32"/>
-<area shape="rect" id="node2" title=" " alt="" coords="5,80,67,107"/>
-<area shape="rect" id="node3" title=" " alt="" coords="91,80,147,107"/>
-<area shape="rect" id="node4" title=" " alt="" coords="171,80,226,107"/>
-<area shape="rect" id="node5" title=" " alt="" coords="250,80,307,107"/>
+<area shape="rect" id="node1" title="Zakero Base." alt="" coords="186,5,305,31"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,79,72,104"/>
+<area shape="rect" id="node3" title=" " alt="" coords="96,79,157,104"/>
+<area shape="rect" id="node4" title=" " alt="" coords="181,79,232,104"/>
+<area shape="rect" id="node5" title=" " alt="" coords="256,79,315,104"/>
+<area shape="rect" id="node6" title=" " alt="" coords="339,79,463,104"/>
+<area shape="rect" id="node7" title=" " alt="" coords="487,79,550,104"/>
 </map>

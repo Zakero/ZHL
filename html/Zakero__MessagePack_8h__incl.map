@@ -1,11 +1,13 @@
 <map id="Zakero_MessagePack.h" name="Zakero_MessagePack.h">
-<area shape="rect" id="node1" title="Zakero MessagePack." alt="" coords="245,5,408,32"/>
-<area shape="rect" id="node2" title=" " alt="" coords="5,80,67,107"/>
-<area shape="rect" id="node3" title=" " alt="" coords="91,80,146,107"/>
-<area shape="rect" id="node4" title=" " alt="" coords="171,80,224,107"/>
-<area shape="rect" id="node5" title=" " alt="" coords="249,80,303,107"/>
-<area shape="rect" id="node6" title=" " alt="" coords="328,80,427,107"/>
-<area shape="rect" id="node7" title=" " alt="" coords="451,80,511,107"/>
-<area shape="rect" id="node8" title=" " alt="" coords="535,80,593,107"/>
-<area shape="rect" id="node9" title=" " alt="" coords="617,80,701,107"/>
+<area shape="rect" id="node1" title="Zakero MessagePack." alt="" coords="329,5,503,31"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,79,72,104"/>
+<area shape="rect" id="node3" title=" " alt="" coords="96,79,155,104"/>
+<area shape="rect" id="node4" title=" " alt="" coords="179,79,237,104"/>
+<area shape="rect" id="node5" title=" " alt="" coords="261,79,312,104"/>
+<area shape="rect" id="node6" title=" " alt="" coords="336,79,395,104"/>
+<area shape="rect" id="node7" title=" " alt="" coords="419,79,517,104"/>
+<area shape="rect" id="node8" title=" " alt="" coords="541,79,649,104"/>
+<area shape="rect" id="node9" title=" " alt="" coords="673,79,741,104"/>
+<area shape="rect" id="node10" title=" " alt="" coords="765,79,827,104"/>
+<area shape="rect" id="node11" title=" " alt="" coords="851,79,943,104"/>
 </map>

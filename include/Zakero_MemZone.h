@@ -171,8 +171,7 @@
  * \endparversion
  *
  *
- * \copyright [Mozilla Public License 
- * v2](https://www.mozilla.org/en-US/MPL/2.0/) 
+ * \copyright [Mozilla Public License v2](https://www.mozilla.org/en-US/MPL/2.0/) 
  *
  *
  * \author Andrew "Zakero" Moore
